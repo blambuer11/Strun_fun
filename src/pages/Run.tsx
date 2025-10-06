@@ -30,8 +30,37 @@ const Run = () => {
   const [isMinting, setIsMinting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      toast({
+        title: "Oturum Gerekli",
+        description: "Koşuyu takip etmek için giriş yapmalısınız.",
+        variant: "destructive",
+      });
+      navigate("/login");
+    }
+  }, [user, loading, navigate, toast]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if no user
+  if (!user) {
+    return null;
+  }
 
   useEffect(() => {
     if (isRunning && !isPaused) {
@@ -93,21 +122,12 @@ const Run = () => {
   };
 
   const handleStop = async () => {
-    console.log('handleStop called', { isRunning, user: !!user, startTime: !!startTime });
+    console.log('handleStop called', { isRunning, startTime: !!startTime });
     
     if (!isRunning) {
       toast({
         title: "Hata",
         description: "Koşu aktif değil!",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!user) {
-      toast({
-        title: "Hata",
-        description: "Kullanıcı bulunamadı!",
         variant: "destructive",
       });
       return;
