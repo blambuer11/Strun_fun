@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import BottomNav from "@/components/BottomNav";
 import { 
   Users,
   Plus,
@@ -149,6 +150,8 @@ const Group = () => {
           </div>
         </Card>
       </div>
+      
+      <BottomNav />
     </div>
   );
 };

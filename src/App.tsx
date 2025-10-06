@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import EmailAuth from "./pages/EmailAuth";
 import Dashboard from "./pages/Dashboard";
 import Run from "./pages/Run";
 import Profile from "./pages/Profile";
@@ -26,6 +27,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Login />} />
+            <Route path="/email-auth" element={<EmailAuth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/run" element={<Run />} />
             <Route path="/profile" element={<Profile />} />

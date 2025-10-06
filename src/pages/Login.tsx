@@ -1,20 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Activity, Mail, Lock, Zap } from "lucide-react";
+import { Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signUp, signIn } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -22,149 +17,110 @@ const Login = () => {
     }
   }, [user, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleGoogleLogin = async () => {
+    toast({
+      title: "Coming Soon",
+      description: "Google authentication will be available soon",
+    });
+  };
 
-    if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleAppleLogin = async () => {
+    toast({
+      title: "Coming Soon",
+      description: "Apple authentication will be available soon",
+    });
+  };
 
-    setLoading(true);
-
-    try {
-      const { error } = isLogin 
-        ? await signIn(email, password)
-        : await signUp(email, password);
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: isLogin ? "Welcome back!" : "Account created!",
-          description: `You've successfully ${isLogin ? "signed in" : "signed up"}!`,
-        });
-        if (!isLogin) {
-          navigate("/dashboard");
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleEmailLogin = () => {
+    navigate("/email-auth");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/10 to-secondary/10" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,hsl(142_76%_52%/0.1),transparent_50%)]" />
-      
-      {/* Floating orbs */}
-      <div className="absolute top-20 left-20 w-72 h-72 bg-accent/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-      
-      <Card className="w-full max-w-md p-8 bg-card/90 backdrop-blur-xl border-primary/20 relative z-10 shadow-2xl">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 bg-accent/30 blur-xl rounded-full" />
-            <div className="relative bg-gradient-to-br from-accent to-accent-glow p-4 rounded-2xl">
-              <Activity className="w-12 h-12 text-accent-foreground" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <Card className="w-full max-w-md p-8 bg-card border-border/50">
+        {/* Logo and Title */}
+        <div className="text-center mb-12">
+          <div className="inline-flex bg-gradient-to-br from-accent to-accent-glow p-3 rounded-2xl mb-6">
+            <Activity className="w-10 h-10 text-accent-foreground" />
           </div>
-          <h1 className="text-4xl font-bold text-gradient mb-2">Strun</h1>
-          <p className="text-muted-foreground text-center">Run. Claim. Earn. Dominate the streets.</p>
+          <h1 className="text-5xl font-bold text-foreground mb-3">Strun</h1>
+          <p className="text-muted-foreground text-lg">
+            Run to claim your territory on Solana
+          </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Mail className="w-4 h-4 text-accent" />
-              Email
-            </label>
-            <Input
-              type="email"
-              placeholder="runner@strun.app"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-input border-primary/20 focus:border-accent"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Lock className="w-4 h-4 text-accent" />
-              Password
-            </label>
-            <Input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="bg-input border-primary/20 focus:border-accent"
-            />
-          </div>
-
-          <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-            <Zap className="w-5 h-5" />
-            {loading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
+        {/* Auth Buttons */}
+        <div className="space-y-3">
+          <Button
+            variant="default"
+            size="lg"
+            className="w-full h-14 text-base bg-primary hover:bg-primary/90"
+            onClick={handleGoogleLogin}
+          >
+            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="currentColor"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="currentColor"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              />
+              <path
+                fill="currentColor"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              />
+            </svg>
+            Continue with Google
           </Button>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-accent transition-colors"
-            >
-              {isLogin ? "Need an account? " : "Already have an account? "}
-              <span className="text-accent font-semibold">
-                {isLogin ? "Sign up" : "Sign in"}
-              </span>
-            </button>
-          </div>
-        </form>
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full h-14 text-base bg-background hover:bg-muted border-border"
+            onClick={handleAppleLogin}
+          >
+            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+            </svg>
+            Continue with Apple
+          </Button>
 
-        {/* Features */}
-        <div className="mt-8 pt-8 border-t border-border/50">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-accent font-bold text-2xl">10+</div>
-              <div className="text-xs text-muted-foreground">XP per km</div>
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
             </div>
-            <div>
-              <div className="text-accent font-bold text-2xl">NFT</div>
-              <div className="text-xs text-muted-foreground">Land Claims</div>
-            </div>
-            <div>
-              <div className="text-accent font-bold text-2xl">Web3</div>
-              <div className="text-xs text-muted-foreground">Powered</div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-card text-muted-foreground">or</span>
             </div>
           </div>
+
+          <Button
+            variant="ghost"
+            size="lg"
+            className="w-full h-14 text-base border border-border hover:bg-muted"
+            onClick={handleEmailLogin}
+          >
+            Continue with Email
+          </Button>
         </div>
+
+        {/* Terms */}
+        <p className="text-center text-xs text-muted-foreground mt-8 leading-relaxed">
+          By continuing, you agree to our{" "}
+          <a href="#" className="text-foreground underline">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="#" className="text-foreground underline">
+            Privacy Policy
+          </a>
+          .
+        </p>
       </Card>
     </div>
   );

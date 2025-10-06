@@ -7,19 +7,16 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import BottomNav from "@/components/BottomNav";
 import { 
   User, 
   Award,
   Share2,
   Settings,
-  Mail,
   Zap,
-  Trophy,
-  MapPin,
   Activity,
   ArrowLeft,
   Copy,
-  Clock,
   LogOut,
   ChevronRight
 } from "lucide-react";
@@ -269,6 +266,8 @@ const Profile = () => {
           Log Out
         </Button>
       </div>
+      
+      <BottomNav />
     </div>
   );
 };

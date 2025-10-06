@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BottomNav from "@/components/BottomNav";
 import { 
   Trophy,
   User,
@@ -288,6 +289,8 @@ const Stats = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      <BottomNav />
     </div>
   );
 };

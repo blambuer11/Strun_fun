@@ -6,13 +6,13 @@ import {
   Play, 
   Square, 
   Pause,
-  MapPin,
   Timer,
   Activity,
   Zap,
-  Award
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import BottomNav from "@/components/BottomNav";
+import GoogleMap from "@/components/GoogleMap";
 
 const Run = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -86,24 +86,15 @@ const Run = () => {
         </div>
       </header>
 
-      {/* Map Placeholder */}
-      <div className="flex-1 relative bg-gradient-to-br from-primary/20 via-background to-secondary/20">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-accent/30 blur-3xl" />
-              <MapPin className="w-32 h-32 text-accent relative animate-pulse" />
-            </div>
-            <p className="text-muted-foreground">Map tracking simulation</p>
-            {isRunning && (
-              <div className="flex items-center justify-center gap-2 text-accent">
-                <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
-                <span>GPS Active</span>
-              </div>
-            )}
-          </div>
-        </div>
-
+      {/* Map */}
+      <div className="flex-1 relative">
+        <GoogleMap 
+          tracking={isRunning && !isPaused}
+          onLocationUpdate={(location) => {
+            console.log("Location updated:", location);
+          }}
+        />
+        
         {/* Floating Stats */}
         {isRunning && (
           <div className="absolute top-4 left-4 right-4 space-y-2">
@@ -171,11 +162,11 @@ const Run = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
             {[
               { icon: Activity, label: "Distance", value: `${distance.toFixed(2)} km` },
-              { icon: Timer, label: "Pace", value: duration > 0 ? `${(duration / 60 / distance).toFixed(1)} min/km` : "0 min/km" },
-              { icon: Award, label: "Area", value: `${(distance * 0.5).toFixed(2)} km²` },
+              { icon: Timer, label: "Pace", value: duration > 0 ? `${(duration / 60 / (distance || 1)).toFixed(1)} min/km` : "0 min/km" },
+              { icon: Zap, label: "XP", value: `+${Math.floor(distance * 10)}` },
             ].map((stat) => (
               <Card key={stat.label} className="p-3 bg-background/50 text-center">
                 <stat.icon className="w-5 h-5 text-accent mx-auto mb-1" />
@@ -186,6 +177,8 @@ const Run = () => {
           </div>
         </div>
       </div>
+      
+      <BottomNav />
     </div>
   );
 };

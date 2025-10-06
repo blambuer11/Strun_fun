@@ -6,18 +6,16 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import BottomNav from "@/components/BottomNav";
 import { 
   Map, 
-  User, 
-  Trophy, 
-  Wallet, 
-  Users, 
   Activity,
   MapPin,
   Zap,
   LogOut,
   Play,
-  Award
+  Award,
+  Trophy
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -206,31 +204,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 z-50">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-around">
-            {[
-              { icon: Map, label: "Run", active: false, path: "/run" },
-              { icon: User, label: "Profile", active: false, path: "/profile" },
-              { icon: Wallet, label: "Wallet", active: false, path: "/wallet" },
-              { icon: Activity, label: "Community", active: false, path: "/community" },
-              { icon: Users, label: "Group", active: true, path: "/dashboard" },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-1 transition-colors ${
-                  item.active ? "text-accent" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <item.icon className="w-6 h-6" />
-                <span className="text-xs">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 };
