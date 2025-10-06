@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BottomNav from "@/components/BottomNav";
 import GoogleMap from "@/components/GoogleMap";
 import { 
@@ -18,7 +19,8 @@ import {
   Crown,
   MessageCircle,
   Trophy,
-  Upload
+  Upload,
+  Filter
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,6 +64,11 @@ const Group = () => {
   const [newMessage, setNewMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Filter states
+  const [countryFilter, setCountryFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [sponsorshipFilter, setSponsorshipFilter] = useState<string>("all");
 
   // Create Group Form State
   const [formData, setFormData] = useState({
@@ -121,6 +128,11 @@ const Group = () => {
 
       setGroups(availableGroups);
       setMyGroups(userGroups);
+      
+      // Reset filters when groups are reloaded
+      setCountryFilter("all");
+      setCityFilter("all");
+      setSponsorshipFilter("all");
     } catch (error) {
       console.error("Error fetching groups:", error);
       toast({
@@ -267,6 +279,42 @@ const Group = () => {
     });
   };
 
+  // Extract unique countries and cities from location strings
+  // Expected format: "City, Country" or just "Location"
+  const getLocationParts = (location: string) => {
+    const parts = location.split(",").map(p => p.trim());
+    if (parts.length >= 2) {
+      return { city: parts[0], country: parts[1] };
+    }
+    return { city: location, country: "" };
+  };
+
+  const uniqueCountries = Array.from(
+    new Set(
+      groups.map(g => getLocationParts(g.location).country).filter(c => c !== "")
+    )
+  ).sort();
+
+  const uniqueCities = Array.from(
+    new Set(
+      groups.map(g => getLocationParts(g.location).city).filter(c => c !== "")
+    )
+  ).sort();
+
+  // Filter groups based on selected filters
+  const filteredGroups = groups.filter(group => {
+    const { city, country } = getLocationParts(group.location);
+    
+    const matchesCountry = countryFilter === "all" || country === countryFilter;
+    const matchesCity = cityFilter === "all" || city === cityFilter;
+    const matchesSponsorship = 
+      sponsorshipFilter === "all" ||
+      (sponsorshipFilter === "sponsored" && group.is_sponsored) ||
+      (sponsorshipFilter === "not-sponsored" && !group.is_sponsored);
+
+    return matchesCountry && matchesCity && matchesSponsorship;
+  });
+
   const GroupCard = ({ group, showActions = true }: { group: Group; showActions?: boolean }) => (
     <Card
       key={group.id}
@@ -403,8 +451,11 @@ const Group = () => {
                       id="location"
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder="Central Park"
+                      placeholder="City, Country (e.g., Istanbul, Turkey)"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Format: City, Country for better filtering
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="scheduled_at">Date & Time</Label>
@@ -488,6 +539,61 @@ const Group = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Filters */}
+        <Card className="p-4 bg-card/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Filter className="w-4 h-4 text-accent" />
+            <h3 className="font-semibold text-sm">Filter Groups</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs mb-1.5 block">Country</Label>
+              <Select value={countryFilter} onValueChange={setCountryFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Countries" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border z-50">
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {uniqueCountries.map(country => (
+                    <SelectItem key={country} value={country}>
+                      {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">City</Label>
+              <Select value={cityFilter} onValueChange={setCityFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Cities" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border z-50">
+                  <SelectItem value="all">All Cities</SelectItem>
+                  {uniqueCities.map(city => (
+                    <SelectItem key={city} value={city}>
+                      {city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">Sponsorship</Label>
+              <Select value={sponsorshipFilter} onValueChange={setSponsorshipFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Groups" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border z-50">
+                  <SelectItem value="all">All Groups</SelectItem>
+                  <SelectItem value="sponsored">Sponsored Only</SelectItem>
+                  <SelectItem value="not-sponsored">Not Sponsored</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Card>
+
         {/* Create Group CTA */}
         <Card className="p-6 bg-gradient-to-br from-accent/10 via-transparent to-primary/5 border-accent/30">
           <div className="flex items-center gap-4">
@@ -518,10 +624,19 @@ const Group = () => {
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Users className="w-5 h-5 text-accent" />
                   Available Groups
+                  <span className="text-sm font-normal text-muted-foreground">
+                    ({filteredGroups.length})
+                  </span>
                 </h3>
-                {groups.map((group) => (
-                  <GroupCard key={group.id} group={group} />
-                ))}
+                {filteredGroups.length === 0 ? (
+                  <Card className="p-6 text-center">
+                    <p className="text-muted-foreground">No groups match your filters</p>
+                  </Card>
+                ) : (
+                  filteredGroups.map((group) => (
+                    <GroupCard key={group.id} group={group} />
+                  ))
+                )}
               </div>
             )}
 
