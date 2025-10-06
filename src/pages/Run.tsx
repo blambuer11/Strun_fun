@@ -1,0 +1,193 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { 
+  Play, 
+  Square, 
+  Pause,
+  MapPin,
+  Timer,
+  Activity,
+  Zap,
+  Award
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+const Run = () => {
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [distance, setDistance] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [calories, setCalories] = useState(0);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRunning && !isPaused) {
+      interval = setInterval(() => {
+        setDuration((prev) => prev + 1);
+        setDistance((prev) => prev + 0.01);
+        setCalories((prev) => prev + 0.5);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, isPaused]);
+
+  const handleStart = () => {
+    setIsRunning(true);
+    setIsPaused(false);
+    toast({
+      title: "Run Started!",
+      description: "GPS tracking activated. Good luck!",
+    });
+  };
+
+  const handlePause = () => {
+    setIsPaused(!isPaused);
+    toast({
+      title: isPaused ? "Resumed" : "Paused",
+      description: isPaused ? "Keep going!" : "Take a breather",
+    });
+  };
+
+  const handleStop = () => {
+    if (!isRunning) return;
+    
+    const earnedXP = Math.floor(distance * 10);
+    toast({
+      title: "Run Complete!",
+      description: `Earned ${earnedXP} XP! Ready to mint NFT?`,
+    });
+    
+    setTimeout(() => {
+      navigate("/dashboard");
+    }, 2000);
+  };
+
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="border-b border-border/50 bg-card/50 backdrop-blur-lg p-4">
+        <div className="container mx-auto flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+            ← Back
+          </Button>
+          <h1 className="text-xl font-bold text-gradient">Track Run</h1>
+          <div className="w-16" />
+        </div>
+      </header>
+
+      {/* Map Placeholder */}
+      <div className="flex-1 relative bg-gradient-to-br from-primary/20 via-background to-secondary/20">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-accent/30 blur-3xl" />
+              <MapPin className="w-32 h-32 text-accent relative animate-pulse" />
+            </div>
+            <p className="text-muted-foreground">Map tracking simulation</p>
+            {isRunning && (
+              <div className="flex items-center justify-center gap-2 text-accent">
+                <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
+                <span>GPS Active</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Floating Stats */}
+        {isRunning && (
+          <div className="absolute top-4 left-4 right-4 space-y-2">
+            <Card className="p-4 bg-card/90 backdrop-blur-lg">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-accent">{distance.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">km</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-accent">{formatTime(duration)}</div>
+                  <div className="text-xs text-muted-foreground">time</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-accent">{Math.floor(calories)}</div>
+                  <div className="text-xs text-muted-foreground">kcal</div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-3 bg-card/90 backdrop-blur-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-accent" />
+                  <span className="text-sm font-medium">XP Earning</span>
+                </div>
+                <span className="text-accent font-bold">+{Math.floor(distance * 10)} XP</span>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Control Panel */}
+      <div className="border-t border-border/50 bg-card/95 backdrop-blur-lg p-6">
+        <div className="container mx-auto space-y-4">
+          {!isRunning ? (
+            <Button 
+              variant="hero" 
+              size="xl" 
+              className="w-full"
+              onClick={handleStart}
+            >
+              <Play className="w-6 h-6" />
+              Start Run
+            </Button>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <Button 
+                variant={isPaused ? "accent" : "warning"}
+                size="lg"
+                onClick={handlePause}
+              >
+                {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                {isPaused ? "Resume" : "Pause"}
+              </Button>
+              <Button 
+                variant="destructive"
+                size="lg"
+                onClick={handleStop}
+              >
+                <Square className="w-5 h-5" />
+                Stop Run
+              </Button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: Activity, label: "Distance", value: `${distance.toFixed(2)} km` },
+              { icon: Timer, label: "Pace", value: duration > 0 ? `${(duration / 60 / distance).toFixed(1)} min/km` : "0 min/km" },
+              { icon: Award, label: "Area", value: `${(distance * 0.5).toFixed(2)} km²` },
+            ].map((stat) => (
+              <Card key={stat.label} className="p-3 bg-background/50 text-center">
+                <stat.icon className="w-5 h-5 text-accent mx-auto mb-1" />
+                <div className="text-xs text-muted-foreground">{stat.label}</div>
+                <div className="font-bold text-sm">{stat.value}</div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Run;
