@@ -22,6 +22,7 @@ const GoogleMap = ({
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
   const [path, setPath] = useState<google.maps.Polyline | null>(null);
   const pathCoordinates = useRef<google.maps.LatLngLiteral[]>([]);
+  const polygonRef = useRef<google.maps.Polygon | null>(null);
 
   useEffect(() => {
     // Load Google Maps script
@@ -105,12 +106,39 @@ const GoogleMap = ({
     };
   }, []);
 
-  // Update path from external prop
+  // Update path and polygon from external prop
   useEffect(() => {
     if (externalPath && path && externalPath.length > 0) {
       path.setPath(externalPath);
     }
-  }, [externalPath, path]);
+
+    // Update or create polygon for filled area visualization
+    if (!map) return;
+
+    if (!externalPath || externalPath.length < 3) {
+      // Clear polygon if not enough points
+      if (polygonRef.current) {
+        polygonRef.current.setMap(null);
+        polygonRef.current = null;
+      }
+      return;
+    }
+
+    // Update or create polygon
+    if (polygonRef.current) {
+      polygonRef.current.setPath(externalPath);
+    } else {
+      polygonRef.current = new google.maps.Polygon({
+        paths: externalPath,
+        strokeColor: "#0066ff",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#0066ff",
+        fillOpacity: 0.25,
+        map: map,
+      });
+    }
+  }, [externalPath, path, map]);
 
   // Handle location tracking
   useEffect(() => {

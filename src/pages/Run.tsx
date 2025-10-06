@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Play, 
   Square, 
@@ -24,6 +25,9 @@ const Run = () => {
   const [calories, setCalories] = useState(0);
   const [coordinates, setCoordinates] = useState<Array<{ lat: number; lng: number }>>([]);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
+  const [runData, setRunData] = useState<any>(null);
+  const [isMinting, setIsMinting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -99,7 +103,7 @@ const Run = () => {
 
     try {
       // Save run to database
-      const { data: runData, error: runError } = await supabase
+      const { data: savedRun, error: runError } = await supabase
         .from("runs")
         .insert({
           user_id: user.id,
@@ -134,52 +138,70 @@ const Run = () => {
           .eq("id", user.id);
       }
 
+      // Store run data and show summary modal
+      setRunData(savedRun);
+      setShowSummary(true);
+
       toast({
-        title: "Run Complete!",
-        description: `Earned ${earnedXP} XP! Distance: ${distance.toFixed(2)} km`,
+        title: "Koşu Tamamlandı!",
+        description: `${earnedXP} XP kazandınız! Mesafe: ${distance.toFixed(2)} km`,
       });
-
-      // Mint NFT if area is large enough
-      if (coordinates.length > 3 && distance > 0.5) {
-        await mintLandNFT(runData.id, coordinates);
-      }
-
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
     } catch (error) {
       console.error("Error saving run:", error);
       toast({
-        title: "Error",
-        description: "Failed to save run. Please try again.",
+        title: "Hata",
+        description: "Koşu kaydedilemedi. Lütfen tekrar deneyin.",
         variant: "destructive",
       });
     }
   };
 
-  const mintLandNFT = async (runId: string, coords: Array<{ lat: number; lng: number }>) => {
+  const mintLandNFT = async () => {
+    if (!runData || !user || coordinates.length < 3) {
+      toast({
+        title: "Hata",
+        description: "NFT oluşturmak için yeterli koşu verisi yok.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsMinting(true);
+
     try {
       // Calculate polygon area
-      const area = calculatePolygonArea(coords);
-      
-      const { error } = await supabase
-        .from("land_nfts")
-        .insert({
-          user_id: user!.id,
-          run_id: runId,
-          name: `Territory-${new Date().getTime()}`,
-          polygon_coordinates: coords,
-          area_size: area,
-        });
+      const area = calculatePolygonArea(coordinates);
+
+      // Call edge function to mint NFT with Pinata
+      const { data, error } = await supabase.functions.invoke('mint-land-nft', {
+        body: {
+          coordinates,
+          runId: runData.id,
+          userId: user.id,
+          area,
+        },
+      });
 
       if (error) throw error;
 
       toast({
-        title: "NFT Minted!",
-        description: `Your territory (${area.toFixed(2)} km²) has been claimed!`,
+        title: "NFT Başarıyla Oluşturuldu! 🎉",
+        description: `Alanınız IPFS'e kaydedildi. CID: ${data.ipfsCid.substring(0, 12)}...`,
       });
+
+      setShowSummary(false);
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
     } catch (error) {
       console.error("Error minting NFT:", error);
+      toast({
+        title: "Hata",
+        description: "NFT oluşturulamadı. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMinting(false);
     }
   };
 
@@ -314,6 +336,71 @@ const Run = () => {
       </div>
       
       <BottomNav />
+
+      {/* Run Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Koşu Özeti</DialogTitle>
+            <DialogDescription>
+              Koştuğunuz alanı NFT'ye çevirin ve blockchain'de kaydedin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Card className="p-4 bg-background/50">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-accent">{distance.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">km</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-accent">{formatTime(duration)}</div>
+                  <div className="text-xs text-muted-foreground">süre</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-accent">{Math.floor(calories)}</div>
+                  <div className="text-xs text-muted-foreground">kcal</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-accent">+{Math.floor(distance * 10)}</div>
+                  <div className="text-xs text-muted-foreground">XP</div>
+                </div>
+              </div>
+            </Card>
+            {coordinates.length >= 3 && (
+              <div className="text-sm text-muted-foreground text-center">
+                Koştuğunuz alan {coordinates.length} koordinat noktasından oluşuyor
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            {coordinates.length >= 3 && distance > 0.5 ? (
+              <Button 
+                onClick={mintLandNFT} 
+                disabled={isMinting}
+                className="w-full"
+                size="lg"
+              >
+                {isMinting ? "NFT Oluşturuluyor..." : "🏆 Koştuğun Alanı NFT'ye Çevir"}
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">
+                NFT oluşturmak için en az 0.5 km koşmalısınız
+              </p>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowSummary(false);
+                navigate("/dashboard");
+              }}
+              className="w-full"
+            >
+              Dashboard'a Dön
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
