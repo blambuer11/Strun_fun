@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,10 +19,29 @@ const Login = () => {
   }, [user, navigate]);
 
   const handleGoogleLogin = async () => {
-    toast({
-      title: "Coming Soon",
-      description: "Google authentication will be available soon",
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign in with Google",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAppleLogin = async () => {
