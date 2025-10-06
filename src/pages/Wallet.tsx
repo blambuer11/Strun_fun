@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,20 +9,84 @@ import {
   Wallet as WalletIcon,
   ArrowUpRight,
   ArrowDownLeft,
-  CheckCircle2,
-  XCircle,
+  Copy,
   Zap,
   Map as MapIcon
 } from "lucide-react";
+import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Wallet = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { publicKey, loading: walletLoading } = useWallet();
+  const [balance, setBalance] = useState({
+    sol: 0,
+    xp: 0,
+  });
+  const [nftCount, setNftCount] = useState(0);
 
   const transactions = [
     { id: 1, type: "receive", amount: "1.2 SOL", status: "completed", time: "4h" },
     { id: 2, type: "send", amount: "0.5 SOL", status: "completed", time: "5d" },
     { id: 3, type: "receive", amount: "2.0 SOL", status: "completed", time: "1w" },
   ];
+
+  useEffect(() => {
+    if (user) {
+      fetchBalance();
+      fetchNFTCount();
+    }
+  }, [user]);
+
+  const fetchBalance = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("xp")
+        .eq("id", user?.id)
+        .single();
+
+      if (profile) {
+        setBalance({
+          sol: 0, // SOL balance from blockchain
+          xp: profile.xp,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching balance:", error);
+    }
+  };
+
+  const fetchNFTCount = async () => {
+    try {
+      const { count } = await supabase
+        .from("land_nfts")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user?.id);
+
+      setNftCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching NFT count:", error);
+    }
+  };
+
+  const copyAddress = () => {
+    if (publicKey) {
+      navigator.clipboard.writeText(publicKey);
+      toast({
+        title: "Copied!",
+        description: "Wallet address copied to clipboard",
+      });
+    }
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -37,6 +102,34 @@ const Wallet = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Wallet Address */}
+        {walletLoading ? (
+          <Card className="p-6 bg-gradient-to-br from-accent/10 via-card to-primary/5 border-accent/30">
+            <div className="text-center">
+              <p className="text-muted-foreground">Loading wallet...</p>
+            </div>
+          </Card>
+        ) : publicKey ? (
+          <Card className="p-6 bg-gradient-to-br from-accent/10 via-card to-primary/5 border-accent/30">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Wallet Address</p>
+                <p className="font-mono text-base font-bold">{formatAddress(publicKey)}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={copyAddress}>
+                <Copy className="w-5 h-5" />
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-6 bg-gradient-to-br from-warning/10 via-card to-primary/5 border-warning/30">
+            <div className="text-center">
+              <WalletIcon className="w-12 h-12 mx-auto mb-3 text-warning" />
+              <p className="text-muted-foreground">No wallet found</p>
+            </div>
+          </Card>
+        )}
+
         {/* Wallet Balance */}
         <Card className="p-8 bg-gradient-to-br from-primary/20 via-card to-secondary/20 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,hsl(220_70%_50%/0.2),transparent)]" />
@@ -48,7 +141,7 @@ const Wallet = () => {
             
             <div>
               <h2 className="text-sm text-muted-foreground mb-1">Strun Wallet</h2>
-              <div className="text-4xl font-bold text-gradient mb-1">12.5 SOL</div>
+              <div className="text-4xl font-bold text-gradient mb-1">{balance.sol.toFixed(2)} SOL</div>
               <p className="text-sm text-muted-foreground">Balance</p>
             </div>
           </div>
@@ -65,7 +158,7 @@ const Wallet = () => {
                 </div>
                 <div>
                   <div className="font-bold">SOL</div>
-                  <div className="text-sm text-muted-foreground">12.5 SOL</div>
+                  <div className="text-sm text-muted-foreground">{balance.sol.toFixed(2)} SOL</div>
                 </div>
               </div>
               <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
@@ -78,7 +171,7 @@ const Wallet = () => {
                 </div>
                 <div>
                   <div className="font-bold">XP</div>
-                  <div className="text-sm text-muted-foreground">5,200 XP</div>
+                  <div className="text-sm text-muted-foreground">{balance.xp.toLocaleString()} XP</div>
                 </div>
               </div>
               <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
@@ -92,10 +185,10 @@ const Wallet = () => {
             <h3 className="text-lg font-bold">LandNFTs</h3>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Owned</span>
-              <span className="font-bold text-accent">3 NFTs</span>
+              <span className="font-bold text-accent">{nftCount} NFTs</span>
             </div>
           </div>
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full" onClick={() => navigate("/profile")}>
             <MapIcon className="w-4 h-4 mr-2" />
             View Collection
             <ArrowUpRight className="w-4 h-4 ml-auto" />

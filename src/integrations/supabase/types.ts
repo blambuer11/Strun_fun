@@ -252,6 +252,8 @@ export type Database = {
           id: string
           level: number
           referral_code: string
+          solana_encrypted_key: string | null
+          solana_public_key: string | null
           updated_at: string
           username: string | null
           xp: number
@@ -263,6 +265,8 @@ export type Database = {
           id: string
           level?: number
           referral_code: string
+          solana_encrypted_key?: string | null
+          solana_public_key?: string | null
           updated_at?: string
           username?: string | null
           xp?: number
@@ -274,6 +278,8 @@ export type Database = {
           id?: string
           level?: number
           referral_code?: string
+          solana_encrypted_key?: string | null
+          solana_public_key?: string | null
           updated_at?: string
           username?: string | null
           xp?: number

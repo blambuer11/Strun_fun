@@ -1,1 +1,4 @@
 project_id = "ysutwfzdpfvziasxbbvn"
+
+[functions.create-solana-wallet]
+verify_jwt = false
