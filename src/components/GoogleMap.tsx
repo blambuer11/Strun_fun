@@ -153,7 +153,7 @@ const GoogleMap = ({
     };
   }, [tracking, map, marker, path, onLocationUpdate, externalPath]);
 
-  return <div ref={mapRef} className="w-full h-full rounded-lg" />;
+  return <div ref={mapRef} className="absolute inset-0 w-full h-full rounded-lg" />;
 };
 
 export default GoogleMap;
