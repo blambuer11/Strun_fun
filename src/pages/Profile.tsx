@@ -89,6 +89,42 @@ const Profile = () => {
     enabled: !!user?.id,
   });
 
+  // Fetch transactions
+  const { data: transactions } = useQuery({
+    queryKey: ["transactions", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch recent runs
+  const { data: recentRuns } = useQuery({
+    queryKey: ["recent-runs", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("runs")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
   const xp = profile?.xp || 0;
   const level = Math.floor(xp / 1000) + 1;
   const referralCode = profile?.referral_code || "";
@@ -553,6 +589,103 @@ const Profile = () => {
               <div className="text-2xl font-bold">{stats?.nfts || 0}</div>
             </div>
           </div>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card className="p-6 bg-card/95">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-accent/10 p-2 rounded-lg">
+              <Activity className="w-5 h-5 text-accent" />
+            </div>
+            <h3 className="text-lg font-bold">Recent Activity</h3>
+          </div>
+          {recentRuns && recentRuns.length > 0 ? (
+            <div className="space-y-3">
+              {recentRuns.map((run) => (
+                <div
+                  key={run.id}
+                  className="flex items-center justify-between p-4 bg-background/50 rounded-lg hover:bg-background/70 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-accent" />
+                    </div>
+                    <div>
+                      <div className="font-medium">Run Completed</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(run.completed_at).toLocaleDateString()} • {Number(run.distance).toFixed(2)} km
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-accent">+{run.xp_earned} XP</div>
+                    <div className="text-xs text-muted-foreground">
+                      {Math.floor(Number(run.duration) / 60)} min
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No recent activity</p>
+            </div>
+          )}
+        </Card>
+
+        {/* Transaction History */}
+        <Card className="p-6 bg-card/95">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-primary/10 p-2 rounded-lg">
+              <Activity className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold">Transaction History</h3>
+          </div>
+          {transactions && transactions.length > 0 ? (
+            <div className="space-y-3">
+              {transactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between p-4 bg-background/50 rounded-lg hover:bg-background/70 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      tx.type === 'reward' ? 'bg-accent/10' : 'bg-primary/10'
+                    }`}>
+                      <span className="text-xl">
+                        {tx.type === 'reward' ? '🎁' : tx.type === 'referral' ? '👥' : '💰'}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="font-medium capitalize">{tx.type}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(tx.created_at).toLocaleDateString()}
+                        {tx.description && ` • ${tx.description}`}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-sm font-bold ${
+                      tx.type === 'reward' || tx.type === 'referral' ? 'text-accent' : 'text-primary'
+                    }`}>
+                      {Number(tx.amount).toFixed(4)} {tx.currency}
+                    </div>
+                    {tx.transaction_hash && (
+                      <div className="text-xs text-muted-foreground truncate max-w-[100px]">
+                        {tx.transaction_hash.slice(0, 8)}...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No transactions yet</p>
+            </div>
+          )}
         </Card>
 
         {/* Logout */}
