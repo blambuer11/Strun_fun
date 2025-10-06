@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
 import GoogleMap from "@/components/GoogleMap";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 const Run = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -279,7 +280,11 @@ const Run = () => {
           <Button variant="ghost" onClick={() => navigate("/dashboard")}>
             ← Back
           </Button>
-          <h1 className="text-xl font-bold text-gradient">Track Run</h1>
+          <img 
+            src={strunLogo} 
+            alt="Strun Logo" 
+            className="h-8 w-auto object-contain"
+          />
           <div className="w-16" />
         </div>
       </header>

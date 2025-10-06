@@ -13,6 +13,7 @@ import {
   Share,
   MoreHorizontal
 } from "lucide-react";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 const Community = () => {
   const navigate = useNavigate();
@@ -62,8 +63,11 @@ const Community = () => {
         <div className="container mx-auto">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Users2 className="w-6 h-6 text-accent" />
-              <h1 className="text-xl font-bold">Community</h1>
+              <img 
+                src={strunLogo} 
+                alt="Strun Logo" 
+                className="h-8 w-auto object-contain"
+              />
             </div>
             <Button variant="ghost" size="icon">
               <Search className="w-5 h-5" />

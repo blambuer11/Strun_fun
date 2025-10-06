@@ -23,6 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 interface Group {
   id: string;
@@ -360,7 +361,11 @@ const Group = () => {
           <Button variant="ghost" onClick={() => navigate("/dashboard")}>
             ← Back
           </Button>
-          <h1 className="text-xl font-bold">Group Runs</h1>
+          <img 
+            src={strunLogo} 
+            alt="Strun Logo" 
+            className="h-8 w-auto object-contain"
+          />
           
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>

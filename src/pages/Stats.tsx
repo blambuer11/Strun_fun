@@ -24,6 +24,7 @@ import {
   Share2
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, ResponsiveContainer } from "recharts";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 const Stats = () => {
   const navigate = useNavigate();
@@ -150,11 +151,12 @@ const Stats = () => {
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-accent to-accent-glow p-2 rounded-xl">
-              <Activity className="w-6 h-6 text-accent-foreground" />
-            </div>
+            <img 
+              src={strunLogo} 
+              alt="Strun Logo" 
+              className="h-10 w-auto object-contain"
+            />
             <div>
-              <h1 className="text-xl font-bold text-gradient">Strun</h1>
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
           </div>

@@ -26,6 +26,7 @@ import {
   X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -297,10 +298,12 @@ const Profile = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold">Profile</h1>
-          <Button variant="ghost" size="icon">
-            <Settings className="w-5 h-5" />
-          </Button>
+          <img 
+            src={strunLogo} 
+            alt="Strun Logo" 
+            className="h-8 w-auto object-contain"
+          />
+          <div className="w-10" />
         </div>
       </header>
 

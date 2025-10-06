@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -24,10 +24,13 @@ const Login = () => {
       <Card className="w-full max-w-md p-8 bg-card border-border/50">
         {/* Logo and Title */}
         <div className="text-center mb-12">
-          <div className="inline-flex bg-gradient-to-br from-accent to-accent-glow p-3 rounded-2xl mb-6">
-            <Activity className="w-10 h-10 text-accent-foreground" />
+          <div className="inline-flex mb-6">
+            <img 
+              src={strunLogo} 
+              alt="Strun Logo" 
+              className="h-24 w-auto object-contain"
+            />
           </div>
-          <h1 className="text-5xl font-bold text-foreground mb-3">Strun</h1>
           <p className="text-muted-foreground text-lg">
             Run to claim your territory on Solana
           </p>

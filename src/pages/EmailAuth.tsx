@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 const EmailAuth = () => {
   const [email, setEmail] = useState("");
@@ -82,6 +83,13 @@ const EmailAuth = () => {
         </Button>
 
         <div className="text-center mb-8">
+          <div className="inline-flex mb-4">
+            <img 
+              src={strunLogo} 
+              alt="Strun Logo" 
+              className="h-16 w-auto object-contain"
+            />
+          </div>
           <h1 className="text-3xl font-bold mb-2">
             {isLogin ? "Welcome back" : "Create account"}
           </h1>

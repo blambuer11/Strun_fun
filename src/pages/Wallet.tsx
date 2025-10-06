@@ -17,6 +17,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import strunLogo from "@/assets/strun-logo.jpg";
 
 const Wallet = () => {
   const navigate = useNavigate();
@@ -96,7 +97,11 @@ const Wallet = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold">Wallet</h1>
+          <img 
+            src={strunLogo} 
+            alt="Strun Logo" 
+            className="h-8 w-auto object-contain"
+          />
           <div className="w-10" />
         </div>
       </header>
