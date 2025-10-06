@@ -164,9 +164,9 @@ const Dashboard = () => {
             {[
               { icon: Map, label: "Run", active: false, path: "/run" },
               { icon: User, label: "Profile", active: false, path: "/profile" },
-              { icon: Activity, label: "Home", active: true, path: "/dashboard" },
-              { icon: Users, label: "Group", active: false, path: "/group" },
-              { icon: Trophy, label: "Stats", active: false, path: "/stats" },
+              { icon: Wallet, label: "Wallet", active: false, path: "/wallet" },
+              { icon: Activity, label: "Community", active: false, path: "/community" },
+              { icon: Users, label: "Group", active: true, path: "/dashboard" },
             ].map((item) => (
               <button
                 key={item.label}
