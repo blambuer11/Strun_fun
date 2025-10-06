@@ -93,7 +93,34 @@ const Run = () => {
   };
 
   const handleStop = async () => {
-    if (!isRunning || !user || !startTime) return;
+    console.log('handleStop called', { isRunning, user: !!user, startTime: !!startTime });
+    
+    if (!isRunning) {
+      toast({
+        title: "Hata",
+        description: "Koşu aktif değil!",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!user) {
+      toast({
+        title: "Hata",
+        description: "Kullanıcı bulunamadı!",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!startTime) {
+      toast({
+        title: "Hata",
+        description: "Başlangıç zamanı bulunamadı!",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsRunning(false);
     setIsPaused(false);
