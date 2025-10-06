@@ -368,12 +368,12 @@ const Group = () => {
                 <Plus className="w-5 h-5" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-              <DialogHeader>
+            <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0">
+              <DialogHeader className="px-6 pt-6 pb-2">
                 <DialogTitle>Create Group Run</DialogTitle>
               </DialogHeader>
-              <ScrollArea className="flex-1 pr-4">
-                <div className="space-y-4 py-4">
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-4 pb-4">
                   <div>
                     <Label htmlFor="name">Group Name</Label>
                     <Input
@@ -472,7 +472,7 @@ const Group = () => {
                   )}
                 </div>
               </ScrollArea>
-              <div className="pt-4 border-t">
+              <div className="px-6 py-4 border-t bg-background/50 backdrop-blur-sm">
                 <Button onClick={handleCreateGroup} className="w-full" variant="accent">
                   Create Group
                 </Button>
