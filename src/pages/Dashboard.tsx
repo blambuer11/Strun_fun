@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Map, 
   User, 
@@ -18,40 +21,86 @@ import {
 } from "lucide-react";
 
 const Dashboard = () => {
-  const [userEmail, setUserEmail] = useState("");
-  const [xp, setXp] = useState(150);
-  const [isRunning, setIsRunning] = useState(false);
+  const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const email = localStorage.getItem("strun_user");
-    if (!email) {
+    if (!authLoading && !user) {
       navigate("/");
-    } else {
-      setUserEmail(email);
     }
-  }, [navigate]);
+  }, [user, authLoading, navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("strun_user");
-    navigate("/");
-  };
+  // Fetch profile data
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
-  const handleStartRun = () => {
-    setIsRunning(true);
-    navigate("/run");
-  };
+  // Fetch runs count
+  const { data: runsData } = useQuery({
+    queryKey: ["runs-count", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { count: 0 };
+      const { count, error } = await supabase
+        .from("runs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      
+      if (error) throw error;
+      return { count: count || 0 };
+    },
+    enabled: !!user?.id,
+  });
 
+  // Fetch NFTs count
+  const { data: nftsData } = useQuery({
+    queryKey: ["nfts-count", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { count: 0 };
+      const { count, error } = await supabase
+        .from("land_nfts")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      
+      if (error) throw error;
+      return { count: count || 0 };
+    },
+    enabled: !!user?.id,
+  });
+
+  const xp = profile?.xp || 0;
   const level = Math.floor(xp / 1000) + 1;
   const xpInLevel = xp % 1000;
   const progressPercent = (xpInLevel / 1000) * 100;
 
   const stats = [
-    { label: "Total Runs", value: "12", icon: Activity },
-    { label: "Land NFTs", value: "5", icon: MapPin },
+    { label: "Total Runs", value: runsData?.count?.toString() || "0", icon: Activity },
+    { label: "Land NFTs", value: nftsData?.count?.toString() || "0", icon: MapPin },
     { label: "Total XP", value: xp.toLocaleString(), icon: Zap },
     { label: "Level", value: level, icon: Award },
   ];
+
+  if (authLoading || !profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="w-12 h-12 text-accent mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,10 +113,10 @@ const Dashboard = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gradient">Strun</h1>
-              <p className="text-xs text-muted-foreground">{userEmail}</p>
+              <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
+          <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
@@ -125,7 +174,7 @@ const Dashboard = () => {
               variant="hero" 
               size="xl" 
               className="w-full max-w-xs"
-              onClick={handleStartRun}
+              onClick={() => navigate("/run")}
             >
               <Play className="w-6 h-6" />
               Start Run

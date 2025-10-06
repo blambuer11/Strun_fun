@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { 
   User, 
   Award,
@@ -25,23 +28,63 @@ import { useToast } from "@/hooks/use-toast";
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, signOut, loading: authLoading } = useAuth();
   const [googleFit, setGoogleFit] = useState(true);
   const [appleHealth, setAppleHealth] = useState(false);
 
-  const userEmail = localStorage.getItem("strun_user") || "runner@strun.app";
-  const userName = "Ethan Carter";
-  const userHandle = "@ethan.carter";
-  const joinDate = "Joined 2023";
-  const xp = 750;
-  const level = Math.floor(xp / 1000) + 1;
-  const referralCode = "STRUN-ETHAN-2024";
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/");
+    }
+  }, [user, authLoading, navigate]);
 
-  const achievements = [
-    { name: "First Run", description: "Complete your first run", unlocked: true },
-    { name: "Territory Pioneer", description: "Mint your first LandNFT", unlocked: true },
-    { name: "Speed Demon", description: "Run 10km in under 50 minutes", unlocked: false },
-    { name: "Community Leader", description: "Get 10 referrals", unlocked: false },
-  ];
+  // Fetch profile data
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch runs and NFTs count
+  const { data: stats } = useQuery({
+    queryKey: ["profile-stats", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { runs: 0, nfts: 0, distance: 0, time: 0 };
+      
+      const [runsResult, nftsResult, runsData] = await Promise.all([
+        supabase.from("runs").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("land_nfts").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("runs").select("distance, duration").eq("user_id", user.id),
+      ]);
+
+      const totalDistance = runsData.data?.reduce((sum, run) => sum + Number(run.distance), 0) || 0;
+      const totalTime = runsData.data?.reduce((sum, run) => sum + Number(run.duration), 0) || 0;
+      
+      return {
+        runs: runsResult.count || 0,
+        nfts: nftsResult.count || 0,
+        distance: totalDistance,
+        time: Math.floor(totalTime / 3600), // convert to hours
+      };
+    },
+    enabled: !!user?.id,
+  });
+
+  const xp = profile?.xp || 0;
+  const level = Math.floor(xp / 1000) + 1;
+  const referralCode = profile?.referral_code || "";
+  const userEmail = profile?.email || "";
+  const userName = profile?.username || "Runner";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);
@@ -51,10 +94,27 @@ const Profile = () => {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("strun_user");
-    navigate("/");
+  const handleLogout = async () => {
+    await signOut();
   };
+
+  if (authLoading || !profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="w-12 h-12 text-accent mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const achievements = [
+    { name: "First Run", description: "Complete your first run", unlocked: true },
+    { name: "Territory Pioneer", description: "Mint your first LandNFT", unlocked: true },
+    { name: "Speed Demon", description: "Run 10km in under 50 minutes", unlocked: false },
+    { name: "Community Leader", description: "Get 10 referrals", unlocked: false },
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -86,8 +146,8 @@ const Profile = () => {
             </div>
 
             <h2 className="text-2xl font-bold mb-1">{userName}</h2>
-            <p className="text-sm text-muted-foreground mb-1">{userHandle}</p>
-            <p className="text-xs text-muted-foreground">{joinDate}</p>
+            <p className="text-sm text-muted-foreground mb-1">{userEmail}</p>
+            <p className="text-xs text-muted-foreground">Joined {new Date(profile.created_at).toLocaleDateString()}</p>
           </div>
         </Card>
 
@@ -171,16 +231,16 @@ const Profile = () => {
           <div className="grid grid-cols-2 gap-3">
             <div className="p-4 bg-primary/5 rounded-xl">
               <div className="text-xs text-muted-foreground mb-1">Total Runs</div>
-              <div className="text-2xl font-bold">26</div>
+              <div className="text-2xl font-bold">{stats?.runs || 0}</div>
             </div>
             <div className="p-4 bg-accent/5 rounded-xl">
               <div className="text-xs text-muted-foreground mb-1">Total Distance</div>
-              <div className="text-2xl font-bold">150 km</div>
+              <div className="text-2xl font-bold">{stats?.distance?.toFixed(0) || 0} km</div>
             </div>
           </div>
           <div className="p-4 bg-secondary/5 rounded-xl mt-3">
             <div className="text-xs text-muted-foreground mb-1">Total Time</div>
-            <div className="text-2xl font-bold">120 hrs</div>
+            <div className="text-2xl font-bold">{stats?.time || 0} hrs</div>
           </div>
         </Card>
 

@@ -1,35 +1,78 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Activity, Mail, Lock, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, signUp, signIn } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simulate authentication
-    if (email && password) {
-      localStorage.setItem("strun_user", email);
-      toast({
-        title: isLogin ? "Welcome back!" : "Account created!",
-        description: `You've successfully ${isLogin ? "signed in" : "signed up"}. Earned 50 XP!`,
-      });
-      navigate("/dashboard");
-    } else {
+    if (!email || !password) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = isLogin 
+        ? await signIn(email, password)
+        : await signUp(email, password);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: isLogin ? "Welcome back!" : "Account created!",
+          description: `You've successfully ${isLogin ? "signed in" : "signed up"}!`,
+        });
+        if (!isLogin) {
+          navigate("/dashboard");
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,9 +129,9 @@ const Login = () => {
             />
           </div>
 
-          <Button type="submit" variant="hero" size="lg" className="w-full">
+          <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
             <Zap className="w-5 h-5" />
-            {isLogin ? "Sign In" : "Create Account"}
+            {loading ? "Loading..." : (isLogin ? "Sign In" : "Create Account")}
           </Button>
 
           <div className="text-center">
