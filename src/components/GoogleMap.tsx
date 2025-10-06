@@ -23,6 +23,27 @@ const GoogleMap = ({
   const [path, setPath] = useState<google.maps.Polyline | null>(null);
   const pathCoordinates = useRef<google.maps.LatLngLiteral[]>([]);
   const polygonRef = useRef<google.maps.Polygon | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get user's initial location
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (error) => {
+        console.error("Error getting initial location:", error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  }, []);
 
   useEffect(() => {
     // Load Google Maps script
@@ -33,8 +54,11 @@ const GoogleMap = ({
     
     script.onload = () => {
       if (mapRef.current && window.google) {
+        // Use user location if available, otherwise use provided center
+        const initialCenter = userLocation || center;
+        
         const mapInstance = new google.maps.Map(mapRef.current, {
-          center,
+          center: initialCenter,
           zoom,
           disableDefaultUI: false,
           zoomControl: true,
@@ -70,9 +94,9 @@ const GoogleMap = ({
           onMapReady(mapInstance);
         }
 
-        // Create marker
+        // Create marker at user location or default center
         const newMarker = new google.maps.Marker({
-          position: center,
+          position: initialCenter,
           map: mapInstance,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
@@ -104,7 +128,7 @@ const GoogleMap = ({
         document.head.removeChild(script);
       }
     };
-  }, []);
+  }, [userLocation]);
 
   // Update path and polygon from external prop
   useEffect(() => {
@@ -167,11 +191,11 @@ const GoogleMap = ({
         }
       },
       (error) => {
-        console.error("Geolocation error:", error);
+        console.error("Geolocation tracking error:", error);
       },
       {
         enableHighAccuracy: true,
-        timeout: 5000,
+        timeout: 10000,
         maximumAge: 0,
       }
     );

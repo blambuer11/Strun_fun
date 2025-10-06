@@ -100,18 +100,52 @@ const Run = () => {
 
   const toRad = (value: number) => (value * Math.PI) / 180;
 
-  const handleStart = () => {
-    setIsRunning(true);
-    setIsPaused(false);
-    setStartTime(new Date());
-    setCoordinates([]);
-    setDistance(0);
-    setDuration(0);
-    setCalories(0);
-    toast({
-      title: "Run Started!",
-      description: "GPS tracking activated. Good luck!",
-    });
+  const handleStart = async () => {
+    try {
+      // Request location permission and get initial position
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const initialLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+
+      setCoordinates([initialLocation]);
+      setIsRunning(true);
+      setIsPaused(false);
+      setStartTime(new Date());
+      setDistance(0);
+      setDuration(0);
+      setCalories(0);
+      
+      toast({
+        title: "Run Started!",
+        description: "GPS tracking activated. Good luck!",
+      });
+    } catch (error: any) {
+      console.error("Location permission error:", error);
+      
+      let errorMessage = "Could not access location.";
+      if (error.code === 1) {
+        errorMessage = "Location permission denied. Please enable location access in your device settings.";
+      } else if (error.code === 2) {
+        errorMessage = "Location unavailable. Please check your device settings.";
+      } else if (error.code === 3) {
+        errorMessage = "Location request timeout. Please try again.";
+      }
+      
+      toast({
+        title: "Location Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePause = () => {
