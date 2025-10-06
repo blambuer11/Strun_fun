@@ -26,7 +26,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, signOut, loading: authLoading } = useAuth();
-  const [googleFit, setGoogleFit] = useState(true);
+  const [googleFit, setGoogleFit] = useState(false);
   const [appleHealth, setAppleHealth] = useState(false);
 
   useEffect(() => {
@@ -91,6 +91,35 @@ const Profile = () => {
     });
   };
 
+  const handleShareReferral = () => {
+    const referralLink = `${window.location.origin}/?ref=${referralCode}`;
+    navigator.clipboard.writeText(referralLink);
+    toast({
+      title: "Referral Link Copied!",
+      description: "Share this link with friends to earn 50 XP each",
+    });
+  };
+
+  const handleGoogleFitToggle = (checked: boolean) => {
+    setGoogleFit(checked);
+    toast({
+      title: checked ? "Google Fit Connected" : "Google Fit Disconnected",
+      description: checked 
+        ? "Your runs and steps will now sync with Google Fit" 
+        : "Google Fit sync has been disabled",
+    });
+  };
+
+  const handleAppleHealthToggle = (checked: boolean) => {
+    setAppleHealth(checked);
+    toast({
+      title: checked ? "Apple Health Connected" : "Apple Health Disconnected",
+      description: checked 
+        ? "Your runs and steps will now sync with Apple Health" 
+        : "Apple Health sync has been disabled",
+    });
+  };
+
   const handleLogout = async () => {
     await signOut();
   };
@@ -148,55 +177,117 @@ const Profile = () => {
           </div>
         </Card>
 
-        {/* XP Progress */}
-        <Card className="p-6 bg-card/95">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold">XP</h3>
-            <span className="text-sm text-accent font-bold">{xp}/1000</span>
-          </div>
-          <Progress value={(xp / 1000) * 100} className="h-2 mb-2" />
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Level {level}</span>
-            <span>Level {level + 1}</span>
-          </div>
-        </Card>
-
-        {/* Referral Code */}
-        <Card className="p-6 bg-card/95">
-          <h3 className="text-sm font-bold mb-3">Referral Code</h3>
+        {/* Settings Section */}
+        <div className="space-y-6">
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-primary/5 px-4 py-3 rounded-lg font-mono text-sm">
-              {referralCode}
-            </code>
-            <Button variant="ghost" size="icon" onClick={handleCopy}>
-              <Copy className="w-4 h-4" />
-            </Button>
-            <Button variant="default" size="icon">
-              <Share2 className="w-4 h-4" />
-            </Button>
+            <Settings className="w-5 h-5 text-accent" />
+            <h2 className="text-xl font-bold">Settings</h2>
           </div>
-        </Card>
 
-        {/* Health Permissions */}
-        <Card className="p-6 bg-card/95">
-          <h3 className="text-sm font-bold mb-4">Health Permissions</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">Google Fit</div>
-                <div className="text-xs text-muted-foreground">Sync steps and runs</div>
+          {/* XP System */}
+          <Card className="p-6 bg-card/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-accent/10 p-2 rounded-lg">
+                <Zap className="w-5 h-5 text-accent" />
               </div>
-              <Switch checked={googleFit} onCheckedChange={setGoogleFit} />
+              <h3 className="text-lg font-bold">XP System</h3>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">Apple Health</div>
-                <div className="text-xs text-muted-foreground">Sync steps and runs</div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-muted-foreground">Current XP</span>
+                <span className="text-sm text-accent font-bold">{xp} XP</span>
               </div>
-              <Switch checked={appleHealth} onCheckedChange={setAppleHealth} />
+              <Progress value={(xp % 1000 / 1000) * 100} className="h-3" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Level {level}</span>
+                <span>{1000 - (xp % 1000)} XP to Level {level + 1}</span>
+              </div>
+              <div className="pt-3 border-t border-border/50">
+                <div className="text-xs text-muted-foreground space-y-2">
+                  <p>• Complete runs: +100-200 XP</p>
+                  <p>• Mint NFTs: +150 XP</p>
+                  <p>• Referrals: +50 XP per friend</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+
+          {/* Referral System */}
+          <Card className="p-6 bg-card/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Share2 className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">Referral System</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Invite friends and earn 50 XP for each signup!
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Your Referral Code</label>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-primary/5 px-4 py-3 rounded-lg font-mono text-sm">
+                    {referralCode}
+                  </code>
+                  <Button variant="ghost" size="icon" onClick={handleCopy}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Your Referral Link</label>
+                <Button 
+                  variant="default" 
+                  className="w-full h-12"
+                  onClick={handleShareReferral}
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Copy & Share Referral Link
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Health Integrations */}
+          <Card className="p-6 bg-card/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-accent/10 p-2 rounded-lg">
+                <Activity className="w-5 h-5 text-accent" />
+              </div>
+              <h3 className="text-lg font-bold">Health Integrations</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Connect your health apps to automatically sync your runs and activity
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                    <span className="text-xl">🏃</span>
+                  </div>
+                  <div>
+                    <div className="font-medium">Google Fit</div>
+                    <div className="text-xs text-muted-foreground">Sync steps, distance and runs</div>
+                  </div>
+                </div>
+                <Switch checked={googleFit} onCheckedChange={handleGoogleFitToggle} />
+              </div>
+              <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
+                    <span className="text-xl">❤️</span>
+                  </div>
+                  <div>
+                    <div className="font-medium">Apple Health</div>
+                    <div className="text-xs text-muted-foreground">Sync steps, distance and runs</div>
+                  </div>
+                </div>
+                <Switch checked={appleHealth} onCheckedChange={handleAppleHealthToggle} />
+              </div>
+            </div>
+          </Card>
+        </div>
 
         {/* Achievements */}
         <Card className="p-6 bg-card/95">
@@ -224,7 +315,12 @@ const Profile = () => {
 
         {/* Quick Stats */}
         <Card className="p-6 bg-card/95">
-          <h3 className="text-sm font-bold mb-4">Quick Stats</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-primary/10 p-2 rounded-lg">
+              <Activity className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold">Activity Overview</h3>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="p-4 bg-primary/5 rounded-xl">
               <div className="text-xs text-muted-foreground mb-1">Total Runs</div>
@@ -232,27 +328,16 @@ const Profile = () => {
             </div>
             <div className="p-4 bg-accent/5 rounded-xl">
               <div className="text-xs text-muted-foreground mb-1">Total Distance</div>
-              <div className="text-2xl font-bold">{stats?.distance?.toFixed(0) || 0} km</div>
+              <div className="text-2xl font-bold">{stats?.distance?.toFixed(1) || 0} km</div>
             </div>
-          </div>
-          <div className="p-4 bg-secondary/5 rounded-xl mt-3">
-            <div className="text-xs text-muted-foreground mb-1">Total Time</div>
-            <div className="text-2xl font-bold">{stats?.time || 0} hrs</div>
-          </div>
-        </Card>
-
-        {/* Linked Socials */}
-        <Card className="p-6 bg-card/95">
-          <h3 className="text-sm font-bold mb-4">Linked Socials</h3>
-          <div className="space-y-2">
-            <Button variant="ghost" className="w-full justify-between h-12">
-              <span>Twitter</span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" className="w-full justify-between h-12">
-              <span>Instagram</span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            <div className="p-4 bg-secondary/5 rounded-xl">
+              <div className="text-xs text-muted-foreground mb-1">Total Time</div>
+              <div className="text-2xl font-bold">{stats?.time || 0} hrs</div>
+            </div>
+            <div className="p-4 bg-accent/5 rounded-xl">
+              <div className="text-xs text-muted-foreground mb-1">NFTs Minted</div>
+              <div className="text-2xl font-bold">{stats?.nfts || 0}</div>
+            </div>
           </div>
         </Card>
 
