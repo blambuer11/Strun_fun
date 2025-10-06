@@ -37,8 +37,8 @@ const Run = () => {
   useEffect(() => {
     if (!loading && !user) {
       toast({
-        title: "Oturum Gerekli",
-        description: "Koşuyu takip etmek için giriş yapmalısınız.",
+        title: "Login Required",
+        description: "You must login to track runs.",
         variant: "destructive",
       });
       navigate("/login");
@@ -51,7 +51,7 @@ const Run = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Yükleniyor...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -126,8 +126,8 @@ const Run = () => {
     
     if (!isRunning) {
       toast({
-        title: "Hata",
-        description: "Koşu aktif değil!",
+        title: "Error",
+        description: "Run is not active!",
         variant: "destructive",
       });
       return;
@@ -135,8 +135,8 @@ const Run = () => {
     
     if (!startTime) {
       toast({
-        title: "Hata",
-        description: "Başlangıç zamanı bulunamadı!",
+        title: "Error",
+        description: "Start time not found!",
         variant: "destructive",
       });
       return;
@@ -190,14 +190,14 @@ const Run = () => {
       setShowSummary(true);
 
       toast({
-        title: "Koşu Tamamlandı!",
-        description: `${earnedXP} XP kazandınız! Mesafe: ${distance.toFixed(2)} km`,
+        title: "Run Complete!",
+        description: `Earned ${earnedXP} XP! Distance: ${distance.toFixed(2)} km`,
       });
     } catch (error) {
       console.error("Error saving run:", error);
       toast({
-        title: "Hata",
-        description: "Koşu kaydedilemedi. Lütfen tekrar deneyin.",
+        title: "Error",
+        description: "Failed to save run. Please try again.",
         variant: "destructive",
       });
     }
@@ -206,8 +206,8 @@ const Run = () => {
   const mintLandNFT = async () => {
     if (!runData || !user || coordinates.length < 3) {
       toast({
-        title: "Hata",
-        description: "NFT oluşturmak için yeterli koşu verisi yok.",
+        title: "Error",
+        description: "Not enough run data to mint NFT.",
         variant: "destructive",
       });
       return;
@@ -232,8 +232,8 @@ const Run = () => {
       if (error) throw error;
 
       toast({
-        title: "NFT Başarıyla Oluşturuldu! 🎉",
-        description: `Alanınız IPFS'e kaydedildi. CID: ${data.ipfsCid.substring(0, 12)}...`,
+        title: "NFT Successfully Minted! 🎉",
+        description: `Your territory saved to IPFS. CID: ${data.ipfsCid.substring(0, 12)}...`,
       });
 
       setShowSummary(false);
@@ -243,8 +243,8 @@ const Run = () => {
     } catch (error) {
       console.error("Error minting NFT:", error);
       toast({
-        title: "Hata",
-        description: "NFT oluşturulamadı. Lütfen tekrar deneyin.",
+        title: "Error",
+        description: "Failed to mint NFT. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -388,9 +388,9 @@ const Run = () => {
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Koşu Özeti</DialogTitle>
+            <DialogTitle>Run Summary</DialogTitle>
             <DialogDescription>
-              Koştuğunuz alanı NFT'ye çevirin ve blockchain'de kaydedin
+              Mint your run area as NFT and save on blockchain
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -402,7 +402,7 @@ const Run = () => {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-accent">{formatTime(duration)}</div>
-                  <div className="text-xs text-muted-foreground">süre</div>
+                  <div className="text-xs text-muted-foreground">time</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-accent">{Math.floor(calories)}</div>
@@ -416,7 +416,7 @@ const Run = () => {
             </Card>
             {coordinates.length >= 3 && (
               <div className="text-sm text-muted-foreground text-center">
-                Koştuğunuz alan {coordinates.length} koordinat noktasından oluşuyor
+                Your run area consists of {coordinates.length} coordinate points
               </div>
             )}
           </div>
@@ -428,11 +428,11 @@ const Run = () => {
                 className="w-full"
                 size="lg"
               >
-                {isMinting ? "NFT Oluşturuluyor..." : "🏆 Koştuğun Alanı NFT'ye Çevir"}
+                {isMinting ? "Minting NFT..." : "🏆 Mint Run Area as NFT"}
               </Button>
             ) : (
               <p className="text-sm text-muted-foreground text-center">
-                NFT oluşturmak için en az 0.5 km koşmalısınız
+                You must run at least 0.5 km to mint NFT
               </p>
             )}
             <Button 
@@ -443,7 +443,7 @@ const Run = () => {
               }}
               className="w-full"
             >
-              Dashboard'a Dön
+              Return to Dashboard
             </Button>
           </DialogFooter>
         </DialogContent>
