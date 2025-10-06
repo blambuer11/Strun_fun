@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import {
   Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
 import GoogleMap from "@/components/GoogleMap";
 
@@ -20,24 +22,58 @@ const Run = () => {
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
   const [calories, setCalories] = useState(0);
+  const [coordinates, setCoordinates] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [startTime, setStartTime] = useState<Date | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     if (isRunning && !isPaused) {
-      interval = setInterval(() => {
+      timerRef.current = setInterval(() => {
         setDuration((prev) => prev + 1);
-        setDistance((prev) => prev + 0.01);
         setCalories((prev) => prev + 0.5);
       }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, [isRunning, isPaused]);
+
+  const calculateDistance = (coords: Array<{ lat: number; lng: number }>) => {
+    if (coords.length < 2) return 0;
+    
+    let totalDistance = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const R = 6371; // Earth's radius in km
+      const dLat = toRad(coords[i + 1].lat - coords[i].lat);
+      const dLon = toRad(coords[i + 1].lng - coords[i].lng);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(coords[i].lat)) * Math.cos(toRad(coords[i + 1].lat)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      totalDistance += R * c;
+    }
+    return totalDistance;
+  };
+
+  const toRad = (value: number) => (value * Math.PI) / 180;
 
   const handleStart = () => {
     setIsRunning(true);
     setIsPaused(false);
+    setStartTime(new Date());
+    setCoordinates([]);
+    setDistance(0);
+    setDuration(0);
+    setCalories(0);
     toast({
       title: "Run Started!",
       description: "GPS tracking activated. Good luck!",
@@ -52,18 +88,111 @@ const Run = () => {
     });
   };
 
-  const handleStop = () => {
-    if (!isRunning) return;
+  const handleStop = async () => {
+    if (!isRunning || !user || !startTime) return;
+    
+    setIsRunning(false);
+    setIsPaused(false);
     
     const earnedXP = Math.floor(distance * 10);
-    toast({
-      title: "Run Complete!",
-      description: `Earned ${earnedXP} XP! Ready to mint NFT?`,
-    });
+    const pace = duration > 0 ? distance / (duration / 3600) : 0;
+
+    try {
+      // Save run to database
+      const { data: runData, error: runError } = await supabase
+        .from("runs")
+        .insert({
+          user_id: user.id,
+          distance: distance,
+          duration: duration,
+          calories: Math.floor(calories),
+          pace: pace,
+          xp_earned: earnedXP,
+          route_coordinates: coordinates,
+          started_at: startTime.toISOString(),
+          completed_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (runError) throw runError;
+
+      // Update user XP
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("xp, level")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        const newXP = profile.xp + earnedXP;
+        const newLevel = Math.floor(newXP / 1000) + 1;
+        
+        await supabase
+          .from("profiles")
+          .update({ xp: newXP, level: newLevel })
+          .eq("id", user.id);
+      }
+
+      toast({
+        title: "Run Complete!",
+        description: `Earned ${earnedXP} XP! Distance: ${distance.toFixed(2)} km`,
+      });
+
+      // Mint NFT if area is large enough
+      if (coordinates.length > 3 && distance > 0.5) {
+        await mintLandNFT(runData.id, coordinates);
+      }
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
+    } catch (error) {
+      console.error("Error saving run:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save run. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const mintLandNFT = async (runId: string, coords: Array<{ lat: number; lng: number }>) => {
+    try {
+      // Calculate polygon area
+      const area = calculatePolygonArea(coords);
+      
+      const { error } = await supabase
+        .from("land_nfts")
+        .insert({
+          user_id: user!.id,
+          run_id: runId,
+          name: `Territory-${new Date().getTime()}`,
+          polygon_coordinates: coords,
+          area_size: area,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "NFT Minted!",
+        description: `Your territory (${area.toFixed(2)} km²) has been claimed!`,
+      });
+    } catch (error) {
+      console.error("Error minting NFT:", error);
+    }
+  };
+
+  const calculatePolygonArea = (coords: Array<{ lat: number; lng: number }>) => {
+    if (coords.length < 3) return 0;
     
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 2000);
+    let area = 0;
+    for (let i = 0; i < coords.length; i++) {
+      const j = (i + 1) % coords.length;
+      area += coords[i].lat * coords[j].lng;
+      area -= coords[j].lat * coords[i].lng;
+    }
+    return Math.abs(area / 2) * 12365; // Approximate km² conversion
   };
 
   const formatTime = (seconds: number) => {
@@ -90,8 +219,14 @@ const Run = () => {
       <div className="flex-1 relative">
         <GoogleMap 
           tracking={isRunning && !isPaused}
+          path={coordinates}
           onLocationUpdate={(location) => {
-            console.log("Location updated:", location);
+            if (isRunning && !isPaused) {
+              const newCoord = { lat: location.lat, lng: location.lng };
+              setCoordinates((prev) => [...prev, newCoord]);
+              const newDistance = calculateDistance([...coordinates, newCoord]);
+              setDistance(newDistance);
+            }
           }}
         />
         

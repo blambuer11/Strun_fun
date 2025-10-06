@@ -6,6 +6,7 @@ interface GoogleMapProps {
   onMapReady?: (map: google.maps.Map) => void;
   tracking?: boolean;
   onLocationUpdate?: (location: { lat: number; lng: number }) => void;
+  path?: Array<{ lat: number; lng: number }>;
 }
 
 const GoogleMap = ({
@@ -13,7 +14,8 @@ const GoogleMap = ({
   zoom = 15,
   onMapReady,
   tracking = false,
-  onLocationUpdate
+  onLocationUpdate,
+  path: externalPath
 }: GoogleMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -103,6 +105,13 @@ const GoogleMap = ({
     };
   }, []);
 
+  // Update path from external prop
+  useEffect(() => {
+    if (externalPath && path && externalPath.length > 0) {
+      path.setPath(externalPath);
+    }
+  }, [externalPath, path]);
+
   // Handle location tracking
   useEffect(() => {
     if (!tracking || !map || !marker || !path) return;
@@ -118,9 +127,11 @@ const GoogleMap = ({
         marker.setPosition(newLocation);
         map.panTo(newLocation);
 
-        // Add to path
-        pathCoordinates.current.push(newLocation);
-        path.setPath(pathCoordinates.current);
+        // Only add to internal path if no external path is provided
+        if (!externalPath) {
+          pathCoordinates.current.push(newLocation);
+          path.setPath(pathCoordinates.current);
+        }
 
         // Call callback
         if (onLocationUpdate) {
@@ -140,7 +151,7 @@ const GoogleMap = ({
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [tracking, map, marker, path, onLocationUpdate]);
+  }, [tracking, map, marker, path, onLocationUpdate, externalPath]);
 
   return <div ref={mapRef} className="w-full h-full rounded-lg" />;
 };
