@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Map, User, Wallet, Users, Activity } from "lucide-react";
+import { Map, User, Wallet, Users, Activity, MessageSquare } from "lucide-react";
 
 const BottomNav = () => {
   const navigate = useNavigate();
@@ -8,6 +8,7 @@ const BottomNav = () => {
   const navItems = [
     { icon: Map, label: "Run", path: "/run" },
     { icon: Activity, label: "Stats", path: "/stats" },
+    { icon: MessageSquare, label: "Community", path: "/community" },
     { icon: Users, label: "Group", path: "/group" },
     { icon: Wallet, label: "Wallet", path: "/wallet" },
     { icon: User, label: "Profile", path: "/profile" },
