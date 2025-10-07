@@ -74,8 +74,8 @@ export const CommentsDialog = ({ open, onOpenChange, postId, onCommentAdded }: C
   const handleSubmit = async () => {
     if (!user) {
       toast({
-        title: "Authentication required",
-        description: "Please log in to comment",
+        title: "Giriş yapmanız gerekiyor",
+        description: "Yorum yapmak için lütfen giriş yapın",
         variant: "destructive",
       });
       return;
@@ -85,18 +85,23 @@ export const CommentsDialog = ({ open, onOpenChange, postId, onCommentAdded }: C
 
     setIsLoading(true);
     try {
-      const { error: insertError } = await supabase
+      console.log("Inserting comment:", { post_id: postId, user_id: user.id, content: newComment.trim() });
+      
+      const { data, error: insertError } = await supabase
         .from("comments")
         .insert({
           post_id: postId,
           user_id: user.id,
           content: newComment.trim(),
-        });
+        })
+        .select();
 
       if (insertError) {
         console.error("Comment insert error:", insertError);
         throw insertError;
       }
+
+      console.log("Comment inserted successfully:", data);
 
       // Update comments count
       const { data: post } = await supabase
