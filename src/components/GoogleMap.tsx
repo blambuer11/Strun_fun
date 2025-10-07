@@ -1,15 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-// Extend Window interface for Google Maps
-declare global {
-  interface Window {
-    google: any;
-  }
-}
-
-// Use any for google references to avoid type errors
-const google = (window as any).google;
-
 interface GoogleMapProps {
   center?: { lat: number; lng: number };
   zoom?: number;
@@ -58,7 +48,7 @@ const GoogleMap = ({
 
   // Load Google Maps script only once
   useEffect(() => {
-    if (window.google) {
+    if ((window as any).google) {
       setScriptLoaded(true);
       return;
     }
@@ -83,11 +73,11 @@ const GoogleMap = ({
 
   // Initialize map when both script and user location are ready
   useEffect(() => {
-    if (!scriptLoaded || !mapRef.current || !window.google || map) return;
+    if (!scriptLoaded || !mapRef.current || !(window as any).google || map) return;
 
     const initialCenter = userLocation || center;
     
-    const mapInstance = new google.maps.Map(mapRef.current, {
+    const mapInstance = new (window as any).google.maps.Map(mapRef.current, {
       center: initialCenter,
       zoom,
       disableDefaultUI: false,
@@ -125,11 +115,11 @@ const GoogleMap = ({
     }
 
     // Create marker at user location or default center
-    const newMarker = new google.maps.Marker({
+    const newMarker = new (window as any).google.maps.Marker({
       position: initialCenter,
       map: mapInstance,
       icon: {
-        path: google.maps.SymbolPath.CIRCLE,
+        path: (window as any).google.maps.SymbolPath.CIRCLE,
         scale: 8,
         fillColor: "#10b981",
         fillOpacity: 1,
@@ -140,7 +130,7 @@ const GoogleMap = ({
     setMarker(newMarker);
 
     // Create polyline for path
-    const newPath = new google.maps.Polyline({
+    const newPath = new (window as any).google.maps.Polyline({
       strokeColor: "#10b981",
       strokeOpacity: 1.0,
       strokeWeight: 4,
@@ -171,7 +161,7 @@ const GoogleMap = ({
     if (polygonRef.current) {
       polygonRef.current.setPath(externalPath);
     } else {
-      polygonRef.current = new google.maps.Polygon({
+      polygonRef.current = new (window as any).google.maps.Polygon({
         paths: externalPath,
         strokeColor: "#0066ff",
         strokeOpacity: 0.8,
