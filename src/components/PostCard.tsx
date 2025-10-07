@@ -35,7 +35,14 @@ export const PostCard = ({ post, userLiked, userReposted, onUpdate }: PostCardPr
   const { toast } = useToast();
 
   const handleLike = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to like posts",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       if (isLiked) {
@@ -75,7 +82,14 @@ export const PostCard = ({ post, userLiked, userReposted, onUpdate }: PostCardPr
   };
 
   const handleRepost = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to repost",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       if (isReposted) {
@@ -169,7 +183,17 @@ export const PostCard = ({ post, userLiked, userReposted, onUpdate }: PostCardPr
             variant="ghost"
             size="sm"
             className="gap-2 hover:text-accent"
-            onClick={() => setCommentsOpen(true)}
+            onClick={() => {
+              if (!user) {
+                toast({
+                  title: "Authentication required",
+                  description: "Please log in to comment",
+                  variant: "destructive",
+                });
+                return;
+              }
+              setCommentsOpen(true);
+            }}
           >
             <MessageCircle className="w-4 h-4" />
             <span className="text-sm">{post.comments_count}</span>
