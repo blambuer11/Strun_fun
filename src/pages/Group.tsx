@@ -315,6 +315,104 @@ const Group = () => {
     return matchesCountry && matchesCity && matchesSponsorship;
   });
 
+  const openGroupChat = async (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setShowChat(true);
+    
+    // Load chat messages
+    try {
+      const { data, error } = await supabase
+        .from("group_chat_messages")
+        .select(`
+          id,
+          message,
+          created_at,
+          user_id,
+          profiles:user_id (username, avatar_url)
+        `)
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const messages = (data || []).map(msg => ({
+        id: msg.id,
+        user_id: msg.user_id,
+        username: (msg.profiles as any)?.username || "Anonymous",
+        message: msg.message,
+        created_at: msg.created_at,
+      }));
+
+      setChatMessages(messages);
+
+      // Subscribe to realtime updates
+      const channel = supabase
+        .channel(`group_chat_${groupId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'group_chat_messages',
+            filter: `group_id=eq.${groupId}`
+          },
+          async (payload) => {
+            // Fetch user profile for new message
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('id', payload.new.user_id)
+              .single();
+
+            setChatMessages(prev => [...prev, {
+              id: payload.new.id,
+              user_id: payload.new.user_id,
+              username: profile?.username || "Anonymous",
+              message: payload.new.message,
+              created_at: payload.new.created_at,
+            }]);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch (error) {
+      console.error("Error loading chat:", error);
+      toast({
+        title: "Hata",
+        description: "Sohbet yüklenemedi",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!user || !selectedGroupId || !newMessage.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from("group_chat_messages")
+        .insert({
+          group_id: selectedGroupId,
+          user_id: user.id,
+          message: newMessage.trim(),
+        });
+
+      if (error) throw error;
+
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Hata",
+        description: "Mesaj gönderilemedi",
+        variant: "destructive",
+      });
+    }
+  };
+
   const GroupCard = ({ group, showActions = true }: { group: Group; showActions?: boolean }) => (
     <Card
       key={group.id}
@@ -370,10 +468,7 @@ const Group = () => {
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => {
-                    setSelectedGroupId(group.id);
-                    setShowChat(true);
-                  }}
+                  onClick={() => openGroupChat(group.id)}
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Chat
@@ -383,7 +478,7 @@ const Group = () => {
                   className="flex-1"
                   onClick={() => handleLeaveGroup(group.id)}
                 >
-                  Leave
+                  Ayrıl
                 </Button>
               </>
             ) : (
@@ -392,7 +487,7 @@ const Group = () => {
                 className="w-full"
                 onClick={() => handleJoinGroup(group.id)}
               >
-                Join Group
+                Gruba Katıl
               </Button>
             )}
           </div>
@@ -676,6 +771,75 @@ const Group = () => {
       </div>
       
       <BottomNav />
+
+      {/* Group Chat Dialog */}
+      <Dialog open={showChat} onOpenChange={setShowChat}>
+        <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+            <DialogTitle>Grup Sohbeti</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 px-6 py-4">
+            <div className="space-y-4">
+              {chatMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3 ${
+                    msg.user_id === user?.id ? "flex-row-reverse" : ""
+                  }`}
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold">
+                      {msg.username[0]?.toUpperCase()}
+                    </div>
+                  </div>
+                  <div
+                    className={`flex-1 ${
+                      msg.user_id === user?.id ? "text-right" : ""
+                    }`}
+                  >
+                    <div className="text-xs text-muted-foreground mb-1">
+                      {msg.username}
+                    </div>
+                    <div
+                      className={`inline-block px-4 py-2 rounded-lg ${
+                        msg.user_id === user?.id
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-muted"
+                      }`}
+                    >
+                      {msg.message}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {new Date(msg.created_at).toLocaleTimeString("tr-TR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <div className="px-6 py-4 border-t flex-shrink-0">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Mesaj yaz..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+              <Button onClick={sendMessage} disabled={!newMessage.trim()}>
+                Gönder
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
