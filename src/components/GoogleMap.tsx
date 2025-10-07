@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
+// Extend Window interface for Google Maps
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
+// Use any for google references to avoid type errors
+const google = (window as any).google;
+
 interface GoogleMapProps {
   center?: { lat: number; lng: number };
   zoom?: number;
-  onMapReady?: (map: google.maps.Map) => void;
+  onMapReady?: (map: any) => void;
   tracking?: boolean;
   onLocationUpdate?: (location: { lat: number; lng: number }) => void;
   path?: Array<{ lat: number; lng: number }>;
@@ -18,12 +28,13 @@ const GoogleMap = ({
   path: externalPath
 }: GoogleMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
-  const [path, setPath] = useState<google.maps.Polyline | null>(null);
-  const pathCoordinates = useRef<google.maps.LatLngLiteral[]>([]);
-  const polygonRef = useRef<google.maps.Polygon | null>(null);
+  const [map, setMap] = useState<any>(null);
+  const [marker, setMarker] = useState<any>(null);
+  const [path, setPath] = useState<any>(null);
+  const pathCoordinates = useRef<Array<{ lat: number; lng: number }>>([]);
+  const polygonRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
 
   // Get user's initial location
   useEffect(() => {
@@ -45,90 +56,98 @@ const GoogleMap = ({
     );
   }, []);
 
+  // Load Google Maps script only once
   useEffect(() => {
-    // Load Google Maps script
+    if (window.google) {
+      setScriptLoaded(true);
+      return;
+    }
+
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBLxwAmL1BCnMp0cLJ3kYZEWDRdWENl5vA`;
     script.async = true;
     script.defer = true;
     
     script.onload = () => {
-      if (mapRef.current && window.google) {
-        // Use user location if available, otherwise use provided center
-        const initialCenter = userLocation || center;
-        
-        const mapInstance = new google.maps.Map(mapRef.current, {
-          center: initialCenter,
-          zoom,
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: true,
-          styles: [
-            {
-              featureType: "all",
-              elementType: "geometry",
-              stylers: [{ color: "#242f3e" }],
-            },
-            {
-              featureType: "all",
-              elementType: "labels.text.stroke",
-              stylers: [{ color: "#242f3e" }],
-            },
-            {
-              featureType: "all",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#746855" }],
-            },
-            {
-              featureType: "water",
-              elementType: "geometry",
-              stylers: [{ color: "#17263c" }],
-            },
-          ],
-        });
-
-        setMap(mapInstance);
-        if (onMapReady) {
-          onMapReady(mapInstance);
-        }
-
-        // Create marker at user location or default center
-        const newMarker = new google.maps.Marker({
-          position: initialCenter,
-          map: mapInstance,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#10b981",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2,
-          },
-        });
-        setMarker(newMarker);
-
-        // Create polyline for path
-        const newPath = new google.maps.Polyline({
-          strokeColor: "#10b981",
-          strokeOpacity: 1.0,
-          strokeWeight: 4,
-          map: mapInstance,
-        });
-        setPath(newPath);
-      }
+      setScriptLoaded(true);
     };
 
     document.head.appendChild(script);
 
     return () => {
-      // Clean up script on unmount
       if (document.head.contains(script)) {
         document.head.removeChild(script);
       }
     };
-  }, [userLocation]);
+  }, []);
+
+  // Initialize map when both script and user location are ready
+  useEffect(() => {
+    if (!scriptLoaded || !mapRef.current || !window.google || map) return;
+
+    const initialCenter = userLocation || center;
+    
+    const mapInstance = new google.maps.Map(mapRef.current, {
+      center: initialCenter,
+      zoom,
+      disableDefaultUI: false,
+      zoomControl: true,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+      styles: [
+        {
+          featureType: "all",
+          elementType: "geometry",
+          stylers: [{ color: "#242f3e" }],
+        },
+        {
+          featureType: "all",
+          elementType: "labels.text.stroke",
+          stylers: [{ color: "#242f3e" }],
+        },
+        {
+          featureType: "all",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#746855" }],
+        },
+        {
+          featureType: "water",
+          elementType: "geometry",
+          stylers: [{ color: "#17263c" }],
+        },
+      ],
+    });
+
+    setMap(mapInstance);
+    if (onMapReady) {
+      onMapReady(mapInstance);
+    }
+
+    // Create marker at user location or default center
+    const newMarker = new google.maps.Marker({
+      position: initialCenter,
+      map: mapInstance,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: "#10b981",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 2,
+      },
+    });
+    setMarker(newMarker);
+
+    // Create polyline for path
+    const newPath = new google.maps.Polyline({
+      strokeColor: "#10b981",
+      strokeOpacity: 1.0,
+      strokeWeight: 4,
+      map: mapInstance,
+    });
+    setPath(newPath);
+  }, [scriptLoaded, userLocation]);
 
   // Update path and polygon from external prop
   useEffect(() => {
