@@ -34,35 +34,7 @@ const Run = () => {
   const { user, loading } = useAuth();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      toast({
-        title: "Login Required",
-        description: "You must login to track runs.",
-        variant: "destructive",
-      });
-      navigate("/login");
-    }
-  }, [user, loading, navigate, toast]);
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render if no user
-  if (!user) {
-    return null;
-  }
-
+  // Timer effect - MUST be before conditional returns
   useEffect(() => {
     if (isRunning && !isPaused) {
       timerRef.current = setInterval(() => {
@@ -79,6 +51,35 @@ const Run = () => {
       }
     };
   }, [isRunning, isPaused]);
+
+  // Redirect to login if not authenticated - MUST be before conditional returns
+  useEffect(() => {
+    if (!loading && !user) {
+      toast({
+        title: "Login Required",
+        description: "You must login to track runs.",
+        variant: "destructive",
+      });
+      navigate("/login");
+    }
+  }, [user, loading, navigate, toast]);
+
+  // Show loading state - AFTER all hooks
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if no user - AFTER all hooks
+  if (!user) {
+    return null;
+  }
 
   const calculateDistance = (coords: Array<{ lat: number; lng: number }>) => {
     if (coords.length < 2) return 0;
