@@ -25,10 +25,20 @@ import {
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
+import { useHealthIntegration } from "@/hooks/useHealthIntegration";
+import { Card as UICard } from "@/components/ui/card";
 
 const Dashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const {
+    isGoogleFitConnected,
+    isAppleHealthConnected,
+    healthData,
+    requestGoogleFitPermission,
+    requestAppleHealthPermission,
+    syncHealthData,
+  } = useHealthIntegration();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -353,38 +363,108 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </Card>
 
-          {/* Health Data */}
+          {/* Health Data Integration */}
           <Card className="p-6 bg-card/95">
-            <h3 className="text-lg font-bold mb-4">Health Data</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Heart className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold mb-4">Health Data Integration</h3>
+            
+            {/* Connection Cards */}
+            <div className="space-y-3 mb-6">
+              <UICard className="p-4 bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-blue-500/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <div className="font-bold">Google Fit</div>
+                      <div className="text-xs text-muted-foreground">
+                        {isGoogleFitConnected ? 'Connected' : 'Not connected'}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant={isGoogleFitConnected ? "outline" : "default"}
+                    size="sm"
+                    onClick={requestGoogleFitPermission}
+                  >
+                    {isGoogleFitConnected ? 'Connected' : 'Connect'}
+                  </Button>
                 </div>
-                <div className="flex-1">
-                  <div className="font-bold">Heart Rate</div>
-                  <div className="text-sm text-muted-foreground">Average: 150 bpm</div>
+              </UICard>
+
+              <UICard className="p-4 bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-500/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                      <Heart className="w-5 h-5 text-red-500" />
+                    </div>
+                    <div>
+                      <div className="font-bold">Apple Health</div>
+                      <div className="text-xs text-muted-foreground">
+                        {isAppleHealthConnected ? 'Connected' : 'Not connected'}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant={isAppleHealthConnected ? "outline" : "default"}
+                    size="sm"
+                    onClick={requestAppleHealthPermission}
+                  >
+                    {isAppleHealthConnected ? 'Connected' : 'Connect'}
+                  </Button>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-secondary/5 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
-                  <Moon className="w-5 h-5 text-secondary" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold">Sleep Duration</div>
-                  <div className="text-sm text-muted-foreground">Average: 7 hours</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
-                  <Footprints className="w-5 h-5 text-accent" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold">Daily Steps</div>
-                  <div className="text-sm text-muted-foreground">Average: 8,000 steps</div>
-                </div>
-              </div>
+              </UICard>
             </div>
+
+            {/* Synced Data Display */}
+            {(isGoogleFitConnected || isAppleHealthConnected) && (
+              <>
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Footprints className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold">Daily Steps</div>
+                      <div className="text-sm text-muted-foreground">
+                        {healthData.steps.toLocaleString()} steps
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-accent" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold">Distance</div>
+                      <div className="text-sm text-muted-foreground">
+                        {healthData.distance.toFixed(2)} km
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 bg-secondary/5 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-secondary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold">Active Minutes</div>
+                      <div className="text-sm text-muted-foreground">
+                        {healthData.activeMinutes} minutes
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={syncHealthData}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Sync Now
+                </Button>
+              </>
+            )}
           </Card>
 
           {/* Export/Share */}

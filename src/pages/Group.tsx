@@ -20,12 +20,14 @@ import {
   MessageCircle,
   Trophy,
   Upload,
-  Filter
+  Filter,
+  Trash2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import strunLogo from "@/assets/strun-logo.jpg";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Group {
   id: string;
@@ -56,6 +58,7 @@ const Group = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isAdmin } = useIsAdmin();
   const [groups, setGroups] = useState<Group[]>([]);
   const [myGroups, setMyGroups] = useState<Group[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -268,6 +271,33 @@ const Group = () => {
     }
   };
 
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!isAdmin) return;
+
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', groupId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Group deleted successfully",
+      });
+
+      fetchGroups();
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete group",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -381,8 +411,8 @@ const Group = () => {
     } catch (error) {
       console.error("Error loading chat:", error);
       toast({
-        title: "Hata",
-        description: "Sohbet yüklenemedi",
+        title: "Error",
+        description: "Failed to load chat",
         variant: "destructive",
       });
     }
@@ -406,8 +436,8 @@ const Group = () => {
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
-        title: "Hata",
-        description: "Mesaj gönderilemedi",
+        title: "Error",
+        description: "Failed to send message",
         variant: "destructive",
       });
     }
@@ -478,17 +508,37 @@ const Group = () => {
                   className="flex-1"
                   onClick={() => handleLeaveGroup(group.id)}
                 >
-                  Ayrıl
+                  Leave
                 </Button>
+                {isAdmin && (
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDeleteGroup(group.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </>
             ) : (
-              <Button
-                variant={group.is_sponsored ? "warning" : "accent"}
-                className="w-full"
-                onClick={() => handleJoinGroup(group.id)}
-              >
-                Gruba Katıl
-              </Button>
+              <div className="flex gap-2 w-full">
+                <Button
+                  variant={group.is_sponsored ? "warning" : "accent"}
+                  className="flex-1"
+                  onClick={() => handleJoinGroup(group.id)}
+                >
+                  Join Group
+                </Button>
+                {isAdmin && (
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDeleteGroup(group.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -776,7 +826,7 @@ const Group = () => {
       <Dialog open={showChat} onOpenChange={setShowChat}>
         <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
-            <DialogTitle>Grup Sohbeti</DialogTitle>
+            <DialogTitle>Group Chat</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1 px-6 py-4">
             <div className="space-y-4">
@@ -823,7 +873,7 @@ const Group = () => {
           <div className="px-6 py-4 border-t flex-shrink-0">
             <div className="flex gap-2">
               <Input
-                placeholder="Mesaj yaz..."
+                placeholder="Write a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={(e) => {
@@ -834,7 +884,7 @@ const Group = () => {
                 }}
               />
               <Button onClick={sendMessage} disabled={!newMessage.trim()}>
-                Gönder
+                Send
               </Button>
             </div>
           </div>

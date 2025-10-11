@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Repeat2, MessageCircle, MoreHorizontal } from "lucide-react";
+import { Heart, Repeat2, MessageCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { CommentsDialog } from "./CommentsDialog";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PostCardProps {
   post: {
@@ -33,6 +40,31 @@ export const PostCard = ({ post, userLiked, userReposted, onUpdate }: PostCardPr
   const [commentsOpen, setCommentsOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isAdmin } = useIsAdmin();
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', post.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Post deleted successfully",
+      });
+
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleLike = async () => {
     if (!user) {
@@ -145,9 +177,21 @@ export const PostCard = ({ post, userLiked, userReposted, onUpdate }: PostCardPr
               <p className="text-sm mt-1 leading-relaxed">{post.content}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="w-4 h-4" />
-          </Button>
+          {(isAdmin || user?.id === post.user_id) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Post
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {post.image && (
