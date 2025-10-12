@@ -79,6 +79,23 @@ const Dashboard = () => {
     enabled: !!user?.id,
   });
 
+  // Fetch all runs data for stats calculation
+  const { data: allRuns } = useQuery({
+    queryKey: ["runs-all", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("runs")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
   // Fetch NFTs count and data
   const { data: nftsData } = useQuery({
     queryKey: ["nfts-count", user?.id],
@@ -112,28 +129,89 @@ const Dashboard = () => {
     enabled: !!user?.id,
   });
 
-  const weeklyData = [
-    { day: "Mon", runs: 1 },
-    { day: "Tue", runs: 2 },
-    { day: "Wed", runs: 1.5 },
-    { day: "Thu", runs: 2.5 },
-    { day: "Fri", runs: 1.8 },
-    { day: "Sat", runs: 2.2 },
-    { day: "Sun", runs: 1.2 },
-  ];
+  // Calculate real stats from runs data
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const monthlyData = [
-    { week: "W1", distance: 25 },
-    { week: "W2", distance: 42 },
-    { week: "W3", distance: 38 },
-    { week: "W4", distance: 55 },
-  ];
+  // Weekly runs data
+  const weeklyRuns = allRuns?.filter(run => new Date(run.completed_at) >= weekAgo) || [];
+  const weeklyData = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(now.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+    const dayRuns = weeklyRuns.filter(run => {
+      const runDate = new Date(run.completed_at);
+      return runDate.toDateString() === date.toDateString();
+    });
+    return {
+      day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()],
+      runs: dayRuns.reduce((sum, run) => sum + Number(run.distance), 0)
+    };
+  });
 
-  const paceData = [
-    { month: "Jan", pace: 5.8 },
-    { month: "Feb", pace: 5.5 },
-    { month: "Mar", pace: 5.3 },
-  ];
+  // Monthly distance data (by weeks)
+  const monthlyRuns = allRuns?.filter(run => new Date(run.completed_at) >= monthAgo) || [];
+  const monthlyData = Array.from({ length: 4 }, (_, i) => {
+    const weekStart = new Date(monthAgo.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+    const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const weekRuns = monthlyRuns.filter(run => {
+      const runDate = new Date(run.completed_at);
+      return runDate >= weekStart && runDate < weekEnd;
+    });
+    return {
+      week: `W${i + 1}`,
+      distance: weekRuns.reduce((sum, run) => sum + Number(run.distance), 0)
+    };
+  });
+
+  // Pace trends (last 3 months)
+  const paceData = Array.from({ length: 3 }, (_, i) => {
+    const monthStart = new Date(now.getFullYear(), now.getMonth() - (2 - i), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() - (2 - i) + 1, 0);
+    const monthRuns = allRuns?.filter(run => {
+      const runDate = new Date(run.completed_at);
+      return runDate >= monthStart && runDate <= monthEnd && run.pace;
+    }) || [];
+    const avgPace = monthRuns.length > 0 
+      ? monthRuns.reduce((sum, run) => sum + Number(run.pace), 0) / monthRuns.length
+      : 0;
+    return {
+      month: monthStart.toLocaleDateString('en-US', { month: 'short' }),
+      pace: avgPace
+    };
+  });
+
+  // Recent activity from runs and NFTs
+  const recentActivity = [
+    ...(allRuns?.slice(0, 5).map(run => ({
+      action: "Completed run",
+      xp: `+${run.xp_earned} XP`,
+      time: formatTimeAgo(new Date(run.completed_at)),
+      date: new Date(run.completed_at)
+    })) || []),
+    ...(myNFTs?.slice(0, 5).map(nft => ({
+      action: "Minted LandNFT",
+      xp: "+200 XP",
+      time: formatTimeAgo(new Date(nft.created_at)),
+      date: new Date(nft.created_at)
+    })) || [])
+  ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
+
+  function formatTimeAgo(date: Date) {
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  const totalWeeklyRuns = weeklyRuns.length;
+  const totalMonthlyDistance = monthlyData.reduce((sum, w) => sum + w.distance, 0);
+  const avgPace = paceData.length > 0 && paceData[paceData.length - 1].pace > 0 
+    ? paceData[paceData.length - 1].pace 
+    : 0;
 
   const xp = profile?.xp || 0;
   const level = Math.floor(xp / 1000) + 1;
@@ -246,19 +324,19 @@ const Dashboard = () => {
             Recent Activity
           </h3>
           <div className="space-y-3">
-            {[
-              { action: "Completed run", xp: "+120 XP", time: "2h ago" },
-              { action: "Minted LandNFT", xp: "+200 XP", time: "1d ago" },
-              { action: "Rental accepted", xp: "+50 XP", time: "2d ago" },
-            ].map((activity, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                <div>
-                  <div className="font-medium">{activity.action}</div>
-                  <div className="text-xs text-muted-foreground">{activity.time}</div>
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                  <div>
+                    <div className="font-medium">{activity.action}</div>
+                    <div className="text-xs text-muted-foreground">{activity.time}</div>
+                  </div>
+                  <div className="text-accent font-bold">{activity.xp}</div>
                 </div>
-                <div className="text-accent font-bold">{activity.xp}</div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-4">No recent activity</p>
+            )}
           </div>
         </Card>
 
@@ -277,7 +355,7 @@ const Dashboard = () => {
                 <span className="text-sm text-accent">↗ 410%</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">5</span>
+                <span className="text-3xl font-bold">{totalWeeklyRuns}</span>
                 <span className="text-sm text-muted-foreground">Runs</span>
                 <span className="text-xs text-muted-foreground ml-2">This Week</span>
               </div>
@@ -309,7 +387,7 @@ const Dashboard = () => {
                 <span className="text-sm text-accent">↗ 10%</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">120</span>
+                <span className="text-3xl font-bold">{totalMonthlyDistance.toFixed(1)}</span>
                 <span className="text-sm text-muted-foreground">km</span>
                 <span className="text-xs text-muted-foreground ml-2">This Month</span>
               </div>
@@ -339,7 +417,9 @@ const Dashboard = () => {
                 <span className="text-sm text-destructive">↓ 2%</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">5:30</span>
+                <span className="text-3xl font-bold">
+                  {avgPace > 0 ? avgPace.toFixed(2) : "--"}
+                </span>
                 <span className="text-sm text-muted-foreground">min/km</span>
                 <span className="text-xs text-muted-foreground ml-2">Last 3 Months</span>
               </div>
@@ -507,8 +587,43 @@ const Dashboard = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="h-32 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-12 h-12 text-primary/50" />
+                <div className="h-32 bg-primary/10 rounded-lg flex items-center justify-center relative overflow-hidden">
+                  {(() => {
+                    const coords = nft.polygon_coordinates;
+                    if (!coords || !Array.isArray(coords) || coords.length === 0) {
+                      return <MapPin className="w-12 h-12 text-primary/50" />;
+                    }
+                    
+                    const coordsArray = coords as Array<{lat?: number; latitude?: number; lng?: number; longitude?: number}>;
+                    const lats = coordsArray.map((c) => c.lat || c.latitude || 0);
+                    const lngs = coordsArray.map((c) => c.lng || c.longitude || 0);
+                    const minLat = Math.min(...lats);
+                    const maxLat = Math.max(...lats);
+                    const minLng = Math.min(...lngs);
+                    const maxLng = Math.max(...lngs);
+                    
+                    const points = coordsArray
+                      .map((coord) => {
+                        const lat = coord.lat || coord.latitude || 0;
+                        const lng = coord.lng || coord.longitude || 0;
+                        const x = ((lng - minLng) / (maxLng - minLng)) * 180 + 10;
+                        const y = 190 - ((lat - minLat) / (maxLat - minLat)) * 180;
+                        return `${x},${y}`;
+                      })
+                      .join(" ");
+                    
+                    return (
+                      <svg viewBox="0 0 200 200" className="w-full h-full">
+                        <polygon
+                          points={points}
+                          fill="hsl(var(--primary))"
+                          fillOpacity="0.3"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth="2"
+                        />
+                      </svg>
+                    );
+                  })()}
                 </div>
               </Card>
             ))
