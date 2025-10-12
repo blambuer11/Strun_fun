@@ -129,6 +129,78 @@ const Dashboard = () => {
     enabled: !!user?.id,
   });
 
+  // Fetch user posts
+  const { data: myPosts } = useQuery({
+    queryKey: ["posts-user", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch user comments
+  const { data: myComments } = useQuery({
+    queryKey: ["comments-user", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("comments")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch user achievements
+  const { data: myAchievements } = useQuery({
+    queryKey: ["achievements-user", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("user_achievements")
+        .select("*, achievements(*)")
+        .eq("user_id", user.id)
+        .order("unlocked_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch group memberships
+  const { data: myGroups } = useQuery({
+    queryKey: ["groups-user", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("group_members")
+        .select("*, groups(*)")
+        .eq("user_id", user.id)
+        .order("joined_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Calculate real stats from runs data
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -180,21 +252,53 @@ const Dashboard = () => {
     };
   });
 
-  // Recent activity from runs and NFTs
+  // Combine all recent activities
   const recentActivity = [
-    ...(allRuns?.slice(0, 5).map(run => ({
+    // Runs
+    ...(allRuns?.map(run => ({
       action: "Completed run",
       xp: `+${run.xp_earned} XP`,
       time: formatTimeAgo(new Date(run.completed_at)),
       date: new Date(run.completed_at)
     })) || []),
-    ...(myNFTs?.slice(0, 5).map(nft => ({
+    // NFTs
+    ...(myNFTs?.map(nft => ({
       action: "Minted LandNFT",
       xp: "+200 XP",
       time: formatTimeAgo(new Date(nft.created_at)),
       date: new Date(nft.created_at)
+    })) || []),
+    // Posts
+    ...(myPosts?.map(post => ({
+      action: "Created post",
+      xp: "+10 XP",
+      time: formatTimeAgo(new Date(post.created_at)),
+      date: new Date(post.created_at)
+    })) || []),
+    // Comments
+    ...(myComments?.map(comment => ({
+      action: "Added comment",
+      xp: "+5 XP",
+      time: formatTimeAgo(new Date(comment.created_at)),
+      date: new Date(comment.created_at)
+    })) || []),
+    // Achievements
+    ...(myAchievements?.map(achievement => ({
+      action: `Unlocked: ${achievement.achievements?.name || 'Achievement'}`,
+      xp: `+${achievement.achievements?.xp_reward || 0} XP`,
+      time: formatTimeAgo(new Date(achievement.unlocked_at)),
+      date: new Date(achievement.unlocked_at)
+    })) || []),
+    // Groups
+    ...(myGroups?.map(group => ({
+      action: `Joined ${group.groups?.name || 'group'}`,
+      xp: "+25 XP",
+      time: formatTimeAgo(new Date(group.joined_at)),
+      date: new Date(group.joined_at)
     })) || [])
-  ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 10);
 
   function formatTimeAgo(date: Date) {
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
