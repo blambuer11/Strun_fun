@@ -455,9 +455,59 @@ const Run = () => {
               </div>
             </Card>
             {coordinates.length >= 3 && (
-              <div className="text-sm text-muted-foreground text-center">
-                Your run area consists of {coordinates.length} coordinate points
-              </div>
+              <>
+                <Card className="p-4 bg-primary/10">
+                  <div className="h-40 relative overflow-hidden rounded-lg">
+                    {(() => {
+                      const coords = coordinates;
+                      if (coords.length < 3) return null;
+                      
+                      const lats = coords.map((c) => c.lat);
+                      const lngs = coords.map((c) => c.lng);
+                      const minLat = Math.min(...lats);
+                      const maxLat = Math.max(...lats);
+                      const minLng = Math.min(...lngs);
+                      const maxLng = Math.max(...lngs);
+                      
+                      const points = coords
+                        .map((coord) => {
+                          const x = ((coord.lng - minLng) / (maxLng - minLng)) * 280 + 10;
+                          const y = 290 - ((coord.lat - minLat) / (maxLat - minLat)) * 280;
+                          return `${x},${y}`;
+                        })
+                        .join(" ");
+                      
+                      return (
+                        <svg viewBox="0 0 300 300" className="w-full h-full">
+                          <polygon
+                            points={points}
+                            fill="hsl(var(--accent))"
+                            fillOpacity="0.3"
+                            stroke="hsl(var(--accent))"
+                            strokeWidth="3"
+                          />
+                          {coords.map((coord, i) => {
+                            const x = ((coord.lng - minLng) / (maxLng - minLng)) * 280 + 10;
+                            const y = 290 - ((coord.lat - minLat) / (maxLat - minLat)) * 280;
+                            return (
+                              <circle
+                                key={i}
+                                cx={x}
+                                cy={y}
+                                r="3"
+                                fill="hsl(var(--accent))"
+                              />
+                            );
+                          })}
+                        </svg>
+                      );
+                    })()}
+                  </div>
+                </Card>
+                <div className="text-sm text-muted-foreground text-center">
+                  Your run area: {coordinates.length} GPS points
+                </div>
+              </>
             )}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-col">
