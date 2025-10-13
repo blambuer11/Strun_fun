@@ -185,10 +185,93 @@ const Community = () => {
           ))}
         </div>
 
-       
-        
+        {/* About Strun Section */}
+        <div className="bg-gradient-to-br from-primary/5 via-accent/5 to-background border border-border/50 rounded-xl p-6 mb-4">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <img src={strunLogo} alt="Strun" className="h-8 w-8 rounded-full" />
+            Welcome to Strun
+          </h2>
           
-          
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Strun</strong> is a revolutionary Web3 fitness platform that combines running with blockchain technology. 
+              Track your runs, claim territory as NFTs, earn XP, and connect with a global community of runners.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-bold text-accent mb-1">🎯 XP System</h3>
+                <p className="text-muted-foreground">
+                  Earn XP by completing runs, minting LandNFTs, and engaging with the community. 
+                  Every 1000 XP = 1 Level. Higher levels unlock exclusive rewards and features.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-primary mb-1">🏃 Run Page</h3>
+                <p className="text-muted-foreground">
+                  Start tracking your runs with GPS. Record distance, pace, duration, and calories. 
+                  Each completed run earns you XP and unlocks the ability to mint the territory you covered as an NFT.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-accent mb-1">🗺️ LandNFT System</h3>
+                <p className="text-muted-foreground">
+                  After completing a run, mint the area you covered as a unique NFT on Solana blockchain. 
+                  Own virtual territory, collect NFTs from different locations, and build your running empire.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-primary mb-1">📊 Dashboard & Stats</h3>
+                <p className="text-muted-foreground">
+                  Track your progress, view your XP level, total runs, and NFT collection. 
+                  Monitor recent activities and compete on global leaderboards.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-accent mb-1">🎁 Rewards</h3>
+                <p className="text-muted-foreground">
+                  Unlock reward boxes at levels 1, 2, 5, 10, 15, 20, 25, and 30. 
+                  Each box contains random XP bonuses (50-500 XP) to boost your progress.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-primary mb-1">👥 Community</h3>
+                <p className="text-muted-foreground">
+                  Share your runs, post updates, like and comment on others&apos; achievements. 
+                  Connect with fellow runners and stay motivated together.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-accent mb-1">🏁 Group Runs</h3>
+                <p className="text-muted-foreground">
+                  Create or join sponsored group runs with prize pools. 
+                  Compete in challenges, win SOL tokens and XP, and run with your community.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-primary mb-1">💰 Wallet</h3>
+                <p className="text-muted-foreground">
+                  Manage your Solana wallet integrated with Strun. 
+                  View your SOL balance, track transactions, and manage your LandNFTs all in one place.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-border/50 pt-4 mt-4">
+              <p className="text-xs text-muted-foreground text-center">
+                Start your journey today • Run • Earn • Own • Compete
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Feed */}
       <div className="container mx-auto px-4 space-y-4 pb-24">
