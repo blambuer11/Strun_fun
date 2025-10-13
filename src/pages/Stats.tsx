@@ -26,7 +26,7 @@ import {
 import { RewardsSection } from "@/components/RewardsSection";
 import { LineChart, Line, BarChart, Bar, XAxis, ResponsiveContainer } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
-import statsHero from "@/assets/stats-hero.jpg";
+import { formatDistanceToNow } from "date-fns";
 
 const Stats = () => {
   const navigate = useNavigate();
@@ -83,6 +83,73 @@ const Stats = () => {
     enabled: !!user?.id,
   });
 
+  // Fetch recent activities
+  const { data: recentActivities } = useQuery({
+    queryKey: ["recent-activities", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const activities: Array<{ action: string; xp: string; time: string; created_at: Date }> = [];
+      
+      // Fetch recent runs
+      const { data: runs } = await supabase
+        .from("runs")
+        .select("xp_earned, completed_at")
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false })
+        .limit(3);
+      
+      if (runs) {
+        runs.forEach(run => {
+          activities.push({
+            action: "Completed run",
+            xp: `+${run.xp_earned} XP`,
+            time: formatDistanceToNow(new Date(run.completed_at), { addSuffix: true }),
+            created_at: new Date(run.completed_at)
+          });
+        });
+      }
+      
+      // Fetch recent NFT mints
+      const { data: nfts } = await supabase
+        .from("land_nfts")
+        .select("minted_at")
+        .eq("user_id", user.id)
+        .order("minted_at", { ascending: false })
+        .limit(2);
+      
+      if (nfts) {
+        nfts.forEach(nft => {
+          activities.push({
+            action: "Minted LandNFT",
+            xp: "+200 XP",
+            time: formatDistanceToNow(new Date(nft.minted_at), { addSuffix: true }),
+            created_at: new Date(nft.minted_at)
+          });
+        });
+      }
+      
+      // Sort by date and return top 3
+      return activities.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()).slice(0, 3);
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch leaderboard
+  const { data: leaderboardData } = useQuery({
+    queryKey: ["leaderboard"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, email, xp, avatar_url")
+        .order("xp", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const xp = profile?.xp || 0;
   const level = Math.floor(xp / 1000) + 1;
   const xpInLevel = xp % 1000;
@@ -124,13 +191,16 @@ const Stats = () => {
     { id: 3, area: "River Trail", size: "3.2 km²", date: "1 week ago" },
   ];
 
-  const leaderboard = [
-    { rank: 1, name: "SpeedRunner", xp: 5420, avatar: "🏃" },
-    { rank: 2, name: "TerritoryKing", xp: 4890, avatar: "👑" },
-    { rank: 3, name: "MapMaster", xp: 4560, avatar: "🗺️" },
-    { rank: 4, name: "NightRunner", xp: 3890, avatar: "🌙" },
-    { rank: 5, name: "You", xp: xp, avatar: "👤", isUser: true },
-  ];
+  const leaderboard = leaderboardData?.map((player, index) => {
+    const isCurrentUser = player.id === user?.id;
+    return {
+      rank: index + 1,
+      name: isCurrentUser ? "You" : (player.username || player.email?.split('@')[0] || "Anonymous"),
+      xp: player.xp,
+      avatar: isCurrentUser ? "👤" : ["🏃", "👑", "🗺️", "🌙", "⚡", "🔥", "💪", "🎯", "🌟", "🏆"][index % 10],
+      isUser: isCurrentUser,
+    };
+  }) || [];
 
   if (authLoading || !profile) {
     return (
@@ -160,12 +230,12 @@ const Stats = () => {
         </div>
       </header>
 
-      {/* Hero Image */}
-      <div className="w-full h-48 overflow-hidden">
+      {/* Animated Logo Hero */}
+      <div className="w-full bg-gradient-to-br from-primary/10 via-accent/5 to-background py-12 flex items-center justify-center overflow-hidden">
         <img 
-          src={statsHero} 
-          alt="Stats Dashboard" 
-          className="w-full h-full object-cover animate-fade-in"
+          src={strunLogo} 
+          alt="Strun Logo" 
+          className="h-32 w-auto object-contain animate-pulse-glow"
         />
       </div>
 
@@ -240,19 +310,19 @@ const Stats = () => {
                 Recent Activity
               </h3>
               <div className="space-y-3">
-                {[
-                  { action: "Completed run", xp: "+120 XP", time: "2h ago" },
-                  { action: "Minted LandNFT", xp: "+200 XP", time: "1d ago" },
-                  { action: "Rental accepted", xp: "+50 XP", time: "2d ago" },
-                ].map((activity, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                    <div>
-                      <div className="font-medium">{activity.action}</div>
-                      <div className="text-xs text-muted-foreground">{activity.time}</div>
+                {recentActivities && recentActivities.length > 0 ? (
+                  recentActivities.map((activity, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                      <div>
+                        <div className="font-medium">{activity.action}</div>
+                        <div className="text-xs text-muted-foreground">{activity.time}</div>
+                      </div>
+                      <div className="text-accent font-bold">{activity.xp}</div>
                     </div>
-                    <div className="text-accent font-bold">{activity.xp}</div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-4">No recent activity</p>
+                )}
               </div>
             </Card>
           </div>
