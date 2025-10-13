@@ -349,7 +349,11 @@ const Group = () => {
     setSelectedGroupId(groupId);
     setShowChat(true);
     
-    // Load chat messages
+    // Load chat messages immediately
+    await loadChatMessages(groupId);
+  };
+
+  const loadChatMessages = async (groupId: string) => {
     try {
       const { data, error } = await supabase
         .from("group_chat_messages")
@@ -358,7 +362,7 @@ const Group = () => {
           message,
           created_at,
           user_id,
-          profiles:user_id (username, avatar_url)
+          profiles (username, avatar_url)
         `)
         .eq("group_id", groupId)
         .order("created_at", { ascending: true });
