@@ -374,40 +374,6 @@ const Group = () => {
       }));
 
       setChatMessages(messages);
-
-      // Subscribe to realtime updates
-      const channel = supabase
-        .channel(`group_chat_${groupId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'group_chat_messages',
-            filter: `group_id=eq.${groupId}`
-          },
-          async (payload) => {
-            // Fetch user profile for new message
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('username, avatar_url')
-              .eq('id', payload.new.user_id)
-              .single();
-
-            setChatMessages(prev => [...prev, {
-              id: payload.new.id,
-              user_id: payload.new.user_id,
-              username: profile?.username || "Anonymous",
-              message: payload.new.message,
-              created_at: payload.new.created_at,
-            }]);
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     } catch (error) {
       console.error("Error loading chat:", error);
       toast({
@@ -417,6 +383,44 @@ const Group = () => {
       });
     }
   };
+
+  // Setup realtime subscription
+  useEffect(() => {
+    if (!selectedGroupId) return;
+
+    const channel = supabase
+      .channel(`group_chat_${selectedGroupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'group_chat_messages',
+          filter: `group_id=eq.${selectedGroupId}`
+        },
+        async (payload) => {
+          // Fetch user profile for new message
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', payload.new.user_id)
+            .single();
+
+          setChatMessages(prev => [...prev, {
+            id: payload.new.id,
+            user_id: payload.new.user_id,
+            username: profile?.username || "Anonymous",
+            message: payload.new.message,
+            created_at: payload.new.created_at,
+          }]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedGroupId]);
 
   const sendMessage = async () => {
     if (!user || !selectedGroupId || !newMessage.trim()) return;

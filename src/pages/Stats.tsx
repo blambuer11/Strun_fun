@@ -23,6 +23,7 @@ import {
   Download,
   Share2
 } from "lucide-react";
+import { RewardsSection } from "@/components/RewardsSection";
 import { LineChart, Line, BarChart, Bar, XAxis, ResponsiveContainer } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
 
@@ -170,6 +171,7 @@ const Stats = () => {
         <TabsList className="w-full rounded-none border-b border-border/50 bg-card h-12">
           <TabsTrigger value="dashboard" className="flex-1">Dashboard</TabsTrigger>
           <TabsTrigger value="leaderboards" className="flex-1">Leaderboards</TabsTrigger>
+          <TabsTrigger value="rewards" className="flex-1">Ödüller</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
@@ -294,6 +296,11 @@ const Stats = () => {
               </div>
             ))}
           </div>
+        </TabsContent>
+
+        {/* Rewards Tab */}
+        <TabsContent value="rewards" className="m-0">
+          {user?.id && <RewardsSection userLevel={level} userId={user.id} />}
         </TabsContent>
 
         {/* My Stats Tab */}

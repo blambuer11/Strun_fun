@@ -594,6 +594,36 @@ export type Database = {
           },
         ]
       }
+      user_rewards: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          id: string
+          is_claimed: boolean
+          reward_level: number
+          user_id: string
+          xp_amount: number | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          is_claimed?: boolean
+          reward_level: number
+          user_id: string
+          xp_amount?: number | null
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          is_claimed?: boolean
+          reward_level?: number
+          user_id?: string
+          xp_amount?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
