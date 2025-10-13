@@ -8,7 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { 
+import {
   Trophy,
   MapPin,
   Activity,
@@ -21,7 +21,7 @@ import {
   Moon,
   Footprints,
   Download,
-  Share2
+  Share2,
 } from "lucide-react";
 import { RewardsSection } from "@/components/RewardsSection";
 import { LineChart, Line, BarChart, Bar, XAxis, ResponsiveContainer } from "recharts";
@@ -42,12 +42,8 @@ const Stats = () => {
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
       if (error) throw error;
       return data;
     },
@@ -63,7 +59,7 @@ const Stats = () => {
         .from("runs")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
-      
+
       if (error) throw error;
       return { count: count || 0 };
     },
@@ -79,7 +75,7 @@ const Stats = () => {
         .from("land_nfts")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
-      
+
       if (error) throw error;
       return { count: count || 0 };
     },
@@ -152,11 +148,7 @@ const Stats = () => {
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img 
-              src={strunLogo} 
-              alt="Strun Logo" 
-              className="h-10 w-auto object-contain"
-            />
+            <img src={strunLogo} alt="Strun Logo" className="h-10 w-auto object-contain" />
             <div>
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
@@ -169,9 +161,15 @@ const Stats = () => {
 
       <Tabs defaultValue="dashboard" className="w-full">
         <TabsList className="w-full rounded-none border-b border-border/50 bg-card h-12">
-          <TabsTrigger value="dashboard" className="flex-1">Dashboard</TabsTrigger>
-          <TabsTrigger value="leaderboards" className="flex-1">Leaderboards</TabsTrigger>
-          <TabsTrigger value="rewards" className="flex-1">Ödüller</TabsTrigger>
+          <TabsTrigger value="dashboard" className="flex-1">
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="leaderboards" className="flex-1">
+            Leaderboards
+          </TabsTrigger>
+          <TabsTrigger value="rewards" className="flex-1">
+            Reward
+          </TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
@@ -182,18 +180,14 @@ const Stats = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-2xl font-bold">Level {level}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {xpInLevel} / 1000 XP
-                  </p>
+                  <p className="text-sm text-muted-foreground">{xpInLevel} / 1000 XP</p>
                 </div>
                 <div className="bg-accent/20 p-3 rounded-full">
                   <Trophy className="w-8 h-8 text-accent" />
                 </div>
               </div>
               <Progress value={progressPercent} className="h-3" />
-              <p className="text-xs text-muted-foreground mt-2">
-                {1000 - xpInLevel} XP to next level
-              </p>
+              <p className="text-xs text-muted-foreground mt-2">{1000 - xpInLevel} XP to next level</p>
             </Card>
 
             {/* Stats Grid */}
@@ -221,15 +215,8 @@ const Stats = () => {
                   <Map className="w-12 h-12 text-accent" />
                 </div>
                 <h3 className="text-2xl font-bold">Ready to Run?</h3>
-                <p className="text-muted-foreground">
-                  Start tracking your run and claim territory
-                </p>
-                <Button 
-                  variant="hero" 
-                  size="xl" 
-                  className="w-full max-w-xs"
-                  onClick={() => navigate("/run")}
-                >
+                <p className="text-muted-foreground">Start tracking your run and claim territory</p>
+                <Button variant="hero" size="xl" className="w-full max-w-xs" onClick={() => navigate("/run")}>
                   <Play className="w-6 h-6" />
                   Start Run
                 </Button>
@@ -268,9 +255,7 @@ const Stats = () => {
               <div
                 key={player.rank}
                 className={`p-4 rounded-xl flex items-center gap-4 ${
-                  player.isUser
-                    ? "bg-accent/20 border border-accent/30"
-                    : "bg-card"
+                  player.isUser ? "bg-accent/20 border border-accent/30" : "bg-card"
                 }`}
               >
                 <div
@@ -278,10 +263,10 @@ const Stats = () => {
                     player.rank === 1
                       ? "bg-warning text-warning-foreground"
                       : player.rank === 2
-                      ? "bg-muted text-foreground"
-                      : player.rank === 3
-                      ? "bg-warning/50 text-warning-foreground"
-                      : "bg-muted/50 text-muted-foreground"
+                        ? "bg-muted text-foreground"
+                        : player.rank === 3
+                          ? "bg-warning/50 text-warning-foreground"
+                          : "bg-muted/50 text-muted-foreground"
                   }`}
                 >
                   {player.rank}
@@ -289,9 +274,7 @@ const Stats = () => {
                 <div className="text-3xl">{player.avatar}</div>
                 <div className="flex-1">
                   <div className="font-bold">{player.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {player.xp.toLocaleString()} XP
-                  </div>
+                  <div className="text-sm text-muted-foreground">{player.xp.toLocaleString()} XP</div>
                 </div>
               </div>
             ))}
@@ -321,16 +304,10 @@ const Stats = () => {
               </div>
               <ResponsiveContainer width="100%" height={120}>
                 <LineChart data={weeklyData}>
-                  <Line 
-                    type="monotone" 
-                    dataKey="runs" 
-                    stroke="hsl(var(--accent))" 
-                    strokeWidth={3}
-                    dot={false}
-                  />
-                  <XAxis 
-                    dataKey="day" 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  <Line type="monotone" dataKey="runs" stroke="hsl(var(--accent))" strokeWidth={3} dot={false} />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -353,14 +330,10 @@ const Stats = () => {
               </div>
               <ResponsiveContainer width="100%" height={150}>
                 <BarChart data={monthlyData}>
-                  <Bar 
-                    dataKey="distance" 
-                    fill="hsl(var(--primary))" 
-                    radius={[8, 8, 0, 0]}
-                  />
-                  <XAxis 
-                    dataKey="week" 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  <Bar dataKey="distance" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -383,16 +356,10 @@ const Stats = () => {
               </div>
               <ResponsiveContainer width="100%" height={120}>
                 <LineChart data={paceData}>
-                  <Line 
-                    type="monotone" 
-                    dataKey="pace" 
-                    stroke="hsl(var(--accent))" 
-                    strokeWidth={3}
-                    dot={false}
-                  />
-                  <XAxis 
-                    dataKey="month" 
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  <Line type="monotone" dataKey="pace" stroke="hsl(var(--accent))" strokeWidth={3} dot={false} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -452,10 +419,7 @@ const Stats = () => {
         <TabsContent value="my-nfts" className="m-0">
           <div className="container mx-auto px-4 py-6 space-y-3 pb-24">
             {myNFTs.map((nft) => (
-              <Card
-                key={nft.id}
-                className="p-5 bg-card/95 hover:bg-card transition-colors"
-              >
+              <Card key={nft.id} className="p-5 bg-card/95 hover:bg-card transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <div className="font-bold text-lg">{nft.area}</div>
@@ -476,7 +440,7 @@ const Stats = () => {
           </div>
         </TabsContent>
       </Tabs>
-      
+
       <BottomNav />
     </div>
   );
