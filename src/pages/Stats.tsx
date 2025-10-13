@@ -26,6 +26,7 @@ import {
 import { RewardsSection } from "@/components/RewardsSection";
 import { LineChart, Line, BarChart, Bar, XAxis, ResponsiveContainer } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
+import statsHero from "@/assets/stats-hero.jpg";
 
 const Stats = () => {
   const navigate = useNavigate();
@@ -158,6 +159,15 @@ const Stats = () => {
           </Button>
         </div>
       </header>
+
+      {/* Hero Image */}
+      <div className="w-full h-48 overflow-hidden">
+        <img 
+          src={statsHero} 
+          alt="Stats Dashboard" 
+          className="w-full h-full object-cover animate-fade-in"
+        />
+      </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
         <TabsList className="w-full rounded-none border-b border-border/50 bg-card h-12">

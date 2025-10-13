@@ -7,6 +7,7 @@ import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { PostCard } from "@/components/PostCard";
 import { Search } from "lucide-react";
 import strunLogo from "@/assets/strun-logo.jpg";
+import communityHero from "@/assets/community-hero.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
@@ -172,6 +173,15 @@ const Community = () => {
           </div>
         </div>
       </header>
+
+      {/* Hero Image */}
+      <div className="w-full h-48 overflow-hidden">
+        <img 
+          src={communityHero} 
+          alt="Community" 
+          className="w-full h-full object-cover animate-fade-in"
+        />
+      </div>
 
       {/* Feed */}
       <div className="container mx-auto px-4 py-4 space-y-4 pb-24">

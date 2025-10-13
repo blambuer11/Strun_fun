@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import strunLogo from "@/assets/strun-logo.jpg";
+import groupHero from "@/assets/group-hero.jpg";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Group {
@@ -690,6 +691,15 @@ const Group = () => {
           </Dialog>
         </div>
       </header>
+
+      {/* Hero Image */}
+      <div className="w-full h-48 overflow-hidden">
+        <img 
+          src={groupHero} 
+          alt="Group Runs" 
+          className="w-full h-full object-cover animate-fade-in"
+        />
+      </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Filters */}
