@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import strunLogo from "@/assets/strun-logo.jpg";
+import { formatDistanceToNow } from "date-fns";
 
 const Wallet = () => {
   const navigate = useNavigate();
@@ -29,17 +30,13 @@ const Wallet = () => {
     xp: 0,
   });
   const [nftCount, setNftCount] = useState(0);
-
-  const transactions = [
-    { id: 1, type: "receive", amount: "1.2 SOL", status: "completed", time: "4h" },
-    { id: 2, type: "send", amount: "0.5 SOL", status: "completed", time: "5d" },
-    { id: 3, type: "receive", amount: "2.0 SOL", status: "completed", time: "1w" },
-  ];
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchBalance();
       fetchNFTCount();
+      fetchTransactions();
     }
   }, [user]);
 
@@ -72,6 +69,22 @@ const Wallet = () => {
       setNftCount(count || 0);
     } catch (error) {
       console.error("Error fetching NFT count:", error);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setTransactions(data || []);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
     }
   };
 
@@ -212,42 +225,92 @@ const Wallet = () => {
             </TabsList>
 
             <TabsContent value="all" className="space-y-3 m-0">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      tx.type === "receive" 
-                        ? "bg-accent/20" 
-                        : "bg-warning/20"
-                    }`}>
-                      {tx.type === "receive" ? (
-                        <ArrowDownLeft className="w-5 h-5 text-accent" />
-                      ) : (
-                        <ArrowUpRight className="w-5 h-5 text-warning" />
-                      )}
+              {transactions.length > 0 ? (
+                transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        tx.type === "earn" || tx.type === "receive" || tx.type === "reward"
+                          ? "bg-accent/20" 
+                          : "bg-warning/20"
+                      }`}>
+                        {tx.type === "earn" || tx.type === "receive" || tx.type === "reward" ? (
+                          <ArrowDownLeft className="w-5 h-5 text-accent" />
+                        ) : (
+                          <ArrowUpRight className="w-5 h-5 text-warning" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-bold">{tx.amount} {tx.currency}</div>
+                        <div className="text-sm text-muted-foreground capitalize">{tx.description || tx.type}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-bold">{tx.amount}</div>
-                      <div className="text-sm text-muted-foreground capitalize">{tx.type}</div>
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground">{tx.time}</div>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No transactions yet</p>
                 </div>
-              ))}
+              )}
             </TabsContent>
 
-            <TabsContent value="sends" className="m-0">
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No send transactions</p>
-              </div>
+            <TabsContent value="sends" className="space-y-3 m-0">
+              {transactions.filter(tx => tx.type === "send" || tx.type === "transfer").length > 0 ? (
+                transactions.filter(tx => tx.type === "send" || tx.type === "transfer").map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center bg-warning/20">
+                        <ArrowUpRight className="w-5 h-5 text-warning" />
+                      </div>
+                      <div>
+                        <div className="font-bold">{tx.amount} {tx.currency}</div>
+                        <div className="text-sm text-muted-foreground capitalize">{tx.description || tx.type}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No send transactions</p>
+                </div>
+              )}
             </TabsContent>
 
-            <TabsContent value="receives" className="m-0">
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No receive transactions</p>
-              </div>
+            <TabsContent value="receives" className="space-y-3 m-0">
+              {transactions.filter(tx => tx.type === "earn" || tx.type === "receive" || tx.type === "reward").length > 0 ? (
+                transactions.filter(tx => tx.type === "earn" || tx.type === "receive" || tx.type === "reward").map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center bg-accent/20">
+                        <ArrowDownLeft className="w-5 h-5 text-accent" />
+                      </div>
+                      <div>
+                        <div className="font-bold">{tx.amount} {tx.currency}</div>
+                        <div className="text-sm text-muted-foreground capitalize">{tx.description || tx.type}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No receive transactions</p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </Card>
