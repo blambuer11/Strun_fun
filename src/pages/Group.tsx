@@ -69,6 +69,10 @@ const Group = () => {
   const [showChat, setShowChat] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Leaderboard state
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
+
   // Filter states
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
@@ -78,7 +82,9 @@ const Group = () => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    location: "",
+    country: "",
+    city: "",
+    address: "",
     scheduled_at: "",
     prize_pool_xp: 0,
     prize_pool_sol: 0,
@@ -91,6 +97,7 @@ const Group = () => {
   useEffect(() => {
     if (user) {
       fetchGroups();
+      fetchLeaderboard();
     }
   }, [user]);
 
@@ -149,14 +156,97 @@ const Group = () => {
     }
   };
 
+  const fetchLeaderboard = async () => {
+    try {
+      // Get sponsored groups
+      const { data: sponsoredGroups, error: groupsError } = await supabase
+        .from("groups")
+        .select("id, name, sponsor_name")
+        .eq("is_sponsored", true);
+
+      if (groupsError) throw groupsError;
+
+      if (!sponsoredGroups || sponsoredGroups.length === 0) {
+        setLoadingLeaderboard(false);
+        return;
+      }
+
+      // Get members of sponsored groups with their profiles
+      const groupIds = sponsoredGroups.map(g => g.id);
+      const { data: members, error: membersError } = await supabase
+        .from("group_members")
+        .select(`
+          user_id,
+          group_id,
+          profiles (username, avatar_url, xp, level)
+        `)
+        .in("group_id", groupIds);
+
+      if (membersError) throw membersError;
+
+      // Get run statistics for each member
+      const leaderboard = await Promise.all(
+        (members || []).map(async (member: any) => {
+          const { data: runs } = await supabase
+            .from("runs")
+            .select("distance, xp_earned")
+            .eq("user_id", member.user_id);
+
+          const totalDistance = runs?.reduce((sum, run) => sum + parseFloat(String(run.distance || 0)), 0) || 0;
+          const totalXP = runs?.reduce((sum, run) => sum + (run.xp_earned || 0), 0) || 0;
+          const runCount = runs?.length || 0;
+
+          const group = sponsoredGroups.find(g => g.id === member.group_id);
+
+          return {
+            user_id: member.user_id,
+            username: member.profiles?.username || "Anonymous",
+            avatar_url: member.profiles?.avatar_url,
+            xp: member.profiles?.xp || 0,
+            level: member.profiles?.level || 1,
+            totalDistance: totalDistance,
+            totalXP: totalXP,
+            runCount: runCount,
+            groupName: group?.name,
+            sponsorName: group?.sponsor_name,
+          };
+        })
+      );
+
+      // Sort by total distance
+      const sortedLeaderboard = leaderboard
+        .filter(item => item.totalDistance > 0)
+        .sort((a, b) => b.totalDistance - a.totalDistance)
+        .slice(0, 10); // Top 10
+
+      setLeaderboardData(sortedLeaderboard);
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
   const handleCreateGroup = async () => {
     if (!user) return;
 
     try {
+      // Combine location fields
+      const location = `${formData.address}, ${formData.city}, ${formData.country}`;
+      
       const { data, error } = await supabase
         .from("groups")
         .insert({
-          ...formData,
+          name: formData.name,
+          description: formData.description,
+          location: location,
+          scheduled_at: formData.scheduled_at,
+          prize_pool_xp: formData.prize_pool_xp,
+          prize_pool_sol: formData.prize_pool_sol,
+          max_participants: formData.max_participants,
+          is_sponsored: formData.is_sponsored,
+          sponsor_name: formData.sponsor_name,
+          sponsor_banner_url: formData.sponsor_banner_url,
           creator_id: user.id,
         })
         .select()
@@ -195,7 +285,9 @@ const Group = () => {
       setFormData({
         name: "",
         description: "",
-        location: "",
+        country: "",
+        city: "",
+        address: "",
         scheduled_at: "",
         prize_pool_xp: 0,
         prize_pool_sol: 0,
@@ -600,16 +692,31 @@ const Group = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="location">Location</Label>
+                    <Label htmlFor="country">Country</Label>
                     <Input
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder="City, Country (e.g., Istanbul, Turkey)"
+                      id="country"
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                      placeholder="e.g., Turkey"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Format: City, Country for better filtering
-                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="e.g., Istanbul"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="e.g., Taksim Square"
+                    />
                   </div>
                   <div>
                     <Label htmlFor="scheduled_at">Date & Time</Label>
@@ -830,11 +937,56 @@ const Group = () => {
             <Trophy className="w-5 h-5 text-warning" />
             <h3 className="text-lg font-bold">Sponsored Event Leaderboard</h3>
           </div>
-          <div className="text-center py-8 text-muted-foreground">
-            <Trophy className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No sponsored events active</p>
-            <p className="text-sm">Win prizes by competing in sponsored runs!</p>
-          </div>
+          {loadingLeaderboard ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Loading leaderboard...</p>
+            </div>
+          ) : leaderboardData.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Trophy className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No sponsored events active</p>
+              <p className="text-sm">Win prizes by competing in sponsored runs!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {leaderboardData.map((entry, index) => (
+                <div
+                  key={entry.user_id}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/50"
+                >
+                  <div className="flex-shrink-0 w-8 text-center">
+                    {index === 0 && <Crown className="w-6 h-6 text-warning mx-auto" />}
+                    {index === 1 && <Trophy className="w-6 h-6 text-muted-foreground mx-auto" />}
+                    {index === 2 && <Trophy className="w-6 h-6 text-amber-600 mx-auto" />}
+                    {index > 2 && <span className="text-sm font-bold text-muted-foreground">#{index + 1}</span>}
+                  </div>
+                  <div className="flex-shrink-0">
+                    {entry.avatar_url ? (
+                      <img 
+                        src={entry.avatar_url} 
+                        alt={entry.username}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold">
+                        {entry.username[0]?.toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">{entry.username}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {entry.groupName} • {entry.sponsorName}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-accent">{entry.totalDistance.toFixed(2)} km</div>
+                    <div className="text-xs text-muted-foreground">{entry.runCount} runs</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
       
