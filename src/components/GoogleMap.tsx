@@ -80,33 +80,12 @@ const GoogleMap = ({
     const mapInstance = new (window as any).google.maps.Map(mapRef.current, {
       center: initialCenter,
       zoom,
+      mapTypeId: 'roadmap',
       disableDefaultUI: false,
       zoomControl: true,
-      mapTypeControl: false,
-      streetViewControl: false,
+      mapTypeControl: true,
+      streetViewControl: true,
       fullscreenControl: true,
-      styles: [
-        {
-          featureType: "all",
-          elementType: "geometry",
-          stylers: [{ color: "#242f3e" }],
-        },
-        {
-          featureType: "all",
-          elementType: "labels.text.stroke",
-          stylers: [{ color: "#242f3e" }],
-        },
-        {
-          featureType: "all",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#746855" }],
-        },
-        {
-          featureType: "water",
-          elementType: "geometry",
-          stylers: [{ color: "#17263c" }],
-        },
-      ],
     });
 
     setMap(mapInstance);
