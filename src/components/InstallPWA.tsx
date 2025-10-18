@@ -38,7 +38,7 @@ export const InstallPWA = () => {
     if (!deferredPrompt) {
       // For iOS, show instructions
       if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-        toast.info("Ana ekrana eklemek için Safari menüsünden 'Ana Ekrana Ekle' seçeneğini kullanın", {
+        toast.info("Use 'Add to Home Screen' from Safari menu to install", {
           duration: 5000,
         });
       }
@@ -49,7 +49,7 @@ export const InstallPWA = () => {
     const { outcome } = await deferredPrompt.userChoice;
     
     if (outcome === "accepted") {
-      toast.success("Strun ana ekranınıza eklendi!");
+      toast.success("Strun has been added to your home screen!");
     }
     
     setDeferredPrompt(null);
@@ -59,7 +59,7 @@ export const InstallPWA = () => {
   const handleDismiss = () => {
     setShowInstallPrompt(false);
     localStorage.setItem("pwa-install-dismissed", "true");
-    toast.info("İsterseniz daha sonra ayarlardan yükleyebilirsiniz");
+    toast.info("You can install it later from settings");
   };
 
   if (!showInstallPrompt) return null;
@@ -72,9 +72,9 @@ export const InstallPWA = () => {
             <Download className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-white mb-1">Strun'u Yükle</h3>
+            <h3 className="font-bold text-white mb-1">Install Strun</h3>
             <p className="text-sm text-white/90 mb-3">
-              Uygulamayı telefonunuza yükleyin ve çevrimdışı kullanın
+              Install the app on your phone and use it offline
             </p>
             <div className="flex gap-2">
               <Button
@@ -83,7 +83,7 @@ export const InstallPWA = () => {
                 variant="secondary"
                 className="flex-1"
               >
-                Yükle
+                Install
               </Button>
               <Button
                 onClick={handleDismiss}
