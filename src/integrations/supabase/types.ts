@@ -261,6 +261,45 @@ export type Database = {
           },
         ]
       }
+      partner_locations: {
+        Row: {
+          created_at: string | null
+          id: string
+          lat: number
+          lon: number
+          name: string
+          qr_secret: string
+          radius_m: number | null
+          sponsor_banner_url: string | null
+          sponsor_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lat: number
+          lon: number
+          name: string
+          qr_secret?: string
+          radius_m?: number | null
+          sponsor_banner_url?: string | null
+          sponsor_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lat?: number
+          lon?: number
+          name?: string
+          qr_secret?: string
+          radius_m?: number | null
+          sponsor_banner_url?: string | null
+          sponsor_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       post_likes: {
         Row: {
           created_at: string
@@ -504,6 +543,151 @@ export type Database = {
           },
         ]
       }
+      selfie_groups: {
+        Row: {
+          center_lat: number | null
+          center_lon: number | null
+          created_at: string | null
+          id: string
+          participant_count: number | null
+          proof_ipfs: string | null
+          status: string | null
+          task_id: string
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          center_lat?: number | null
+          center_lon?: number | null
+          created_at?: string | null
+          id?: string
+          participant_count?: number | null
+          proof_ipfs?: string | null
+          status?: string | null
+          task_id: string
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          center_lat?: number | null
+          center_lon?: number | null
+          created_at?: string | null
+          id?: string
+          participant_count?: number | null
+          proof_ipfs?: string | null
+          status?: string | null
+          task_id?: string
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "selfie_groups_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      selfie_participants: {
+        Row: {
+          id: string
+          image_ipfs: string
+          lat: number
+          lon: number
+          selfie_group_id: string
+          submitted_at: string | null
+          user_id: string
+          user_task_id: string
+        }
+        Insert: {
+          id?: string
+          image_ipfs: string
+          lat: number
+          lon: number
+          selfie_group_id: string
+          submitted_at?: string | null
+          user_id: string
+          user_task_id: string
+        }
+        Update: {
+          id?: string
+          image_ipfs?: string
+          lat?: number
+          lon?: number
+          selfie_group_id?: string
+          submitted_at?: string | null
+          user_id?: string
+          user_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "selfie_participants_selfie_group_id_fkey"
+            columns: ["selfie_group_id"]
+            isOneToOne: false
+            referencedRelation: "selfie_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "selfie_participants_user_task_id_fkey"
+            columns: ["user_task_id"]
+            isOneToOne: false
+            referencedRelation: "user_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          active_from: string | null
+          active_to: string | null
+          created_at: string | null
+          id: string
+          name: string
+          nft_metadata: Json | null
+          partner_location_id: string | null
+          rules: Json | null
+          task_type: string
+          updated_at: string | null
+          xp_reward: number | null
+        }
+        Insert: {
+          active_from?: string | null
+          active_to?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          nft_metadata?: Json | null
+          partner_location_id?: string | null
+          rules?: Json | null
+          task_type: string
+          updated_at?: string | null
+          xp_reward?: number | null
+        }
+        Update: {
+          active_from?: string | null
+          active_to?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          nft_metadata?: Json | null
+          partner_location_id?: string | null
+          rules?: Json | null
+          task_type?: string
+          updated_at?: string | null
+          xp_reward?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_partner_location_id_fkey"
+            columns: ["partner_location_id"]
+            isOneToOne: false
+            referencedRelation: "partner_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -651,6 +835,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_tasks: {
+        Row: {
+          created_at: string | null
+          device_meta: Json | null
+          end_ts: string | null
+          id: string
+          lat: number | null
+          lon: number | null
+          proof_ipfs: string | null
+          start_ts: string | null
+          status: string | null
+          suspicious: boolean | null
+          task_id: string
+          updated_at: string | null
+          user_id: string
+          xp_awarded: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_meta?: Json | null
+          end_ts?: string | null
+          id?: string
+          lat?: number | null
+          lon?: number | null
+          proof_ipfs?: string | null
+          start_ts?: string | null
+          status?: string | null
+          suspicious?: boolean | null
+          task_id: string
+          updated_at?: string | null
+          user_id: string
+          xp_awarded?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          device_meta?: Json | null
+          end_ts?: string | null
+          id?: string
+          lat?: number | null
+          lon?: number | null
+          proof_ipfs?: string | null
+          start_ts?: string | null
+          status?: string | null
+          suspicious?: boolean | null
+          task_id?: string
+          updated_at?: string | null
+          user_id?: string
+          xp_awarded?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

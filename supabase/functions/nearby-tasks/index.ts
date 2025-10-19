@@ -1,0 +1,115 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Calculate distance between two points using Haversine formula
+function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (deg: number) => deg * Math.PI / 180;
+  const R = 6371000; // Earth's radius in meters
+  
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const lat = parseFloat(url.searchParams.get('lat') || '0');
+    const lon = parseFloat(url.searchParams.get('lon') || '0');
+    const radiusM = parseInt(url.searchParams.get('radius_m') || '5000');
+
+    if (!lat || !lon) {
+      return new Response(
+        JSON.stringify({ error: 'lat and lon parameters required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Fetch all active tasks with their partner locations
+    const { data: tasks, error } = await supabase
+      .from('tasks')
+      .select(`
+        *,
+        partner_location:partner_locations(*)
+      `)
+      .or('active_from.is.null,active_from.lte.now()')
+      .or('active_to.is.null,active_to.gte.now()');
+
+    if (error) {
+      console.error('Error fetching tasks:', error);
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Filter tasks by distance
+    const nearbyTasks = (tasks || [])
+      .filter(task => {
+        if (!task.partner_location) return false;
+        const distance = distanceMeters(
+          lat, lon,
+          task.partner_location.lat,
+          task.partner_location.lon
+        );
+        return distance <= radiusM;
+      })
+      .map(task => {
+        const distance = distanceMeters(
+          lat, lon,
+          task.partner_location.lat,
+          task.partner_location.lon
+        );
+        return {
+          id: task.id,
+          name: task.name,
+          task_type: task.task_type,
+          xp_reward: task.xp_reward,
+          rules: task.rules,
+          distance_meters: Math.round(distance),
+          partner_location: {
+            id: task.partner_location.id,
+            name: task.partner_location.name,
+            lat: task.partner_location.lat,
+            lon: task.partner_location.lon,
+            radius_m: task.partner_location.radius_m,
+            sponsor_name: task.partner_location.sponsor_name,
+            sponsor_banner_url: task.partner_location.sponsor_banner_url
+          }
+        };
+      })
+      .sort((a, b) => a.distance_meters - b.distance_meters);
+
+    return new Response(
+      JSON.stringify({ tasks: nearbyTasks }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('Error in nearby-tasks:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
