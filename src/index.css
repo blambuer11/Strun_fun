@@ -8,53 +8,59 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 220 25% 10%;
-    --foreground: 210 40% 98%;
+    /* Strun Design System - Dark Mode Default */
+    --background: 222 47% 11%; /* Deep Night #0F172A */
+    --foreground: 210 40% 93%; /* Light text #E6EEF8 */
 
-    --card: 220 20% 14%;
-    --card-foreground: 210 40% 98%;
+    --card: 222 47% 11% / 0.6; /* Glass surface with transparency */
+    --card-foreground: 210 40% 93%;
 
-    --popover: 220 25% 12%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 93%;
 
-    --primary: 220 70% 50%;
+    --primary: 199 89% 48%; /* Energetic Blue #0EA5E9 */
     --primary-foreground: 210 40% 98%;
-    --primary-glow: 220 85% 65%;
+    --primary-glow: 199 100% 60%;
 
-    --secondary: 280 60% 55%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 172 85% 39%; /* Walrus Teal #0FB9A0 */
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 220 15% 25%;
+    --muted: 222 30% 20%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 142 76% 52%;
-    --accent-foreground: 220 25% 10%;
-    --accent-glow: 142 85% 60%;
+    --accent: 35 100% 56%; /* XP Gold #FFB020 */
+    --accent-foreground: 222 47% 11%;
+    --accent-glow: 35 100% 65%;
 
     --warning: 25 95% 53%;
-    --warning-foreground: 220 25% 10%;
+    --warning-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 22%;
-    --input: 220 15% 20%;
-    --ring: 142 76% 52%;
+    --border: 222 30% 18%;
+    --input: 222 30% 15%;
+    --ring: 199 89% 48%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem; /* 14px rounded corners */
 
-    --gradient-primary: linear-gradient(135deg, hsl(220 70% 50%), hsl(280 60% 55%));
-    --gradient-accent: linear-gradient(135deg, hsl(142 76% 52%), hsl(142 85% 60%));
-    --gradient-glow: radial-gradient(circle at center, hsl(142 76% 52% / 0.2), transparent);
+    /* Strun Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%), hsl(35 100% 56%));
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    --gradient-glow: radial-gradient(circle at center, hsl(199 89% 48% / 0.2), transparent);
+    --gradient-accent: linear-gradient(135deg, hsl(35 100% 56%), hsl(35 100% 65%));
     
-    --shadow-glow: 0 0 40px hsl(142 76% 52% / 0.3);
-    --shadow-primary: 0 0 30px hsl(220 70% 50% / 0.4);
+    /* Strun Shadows & Effects */
+    --shadow-glow: 0 0 40px hsl(199 89% 48% / 0.3);
+    --shadow-accent: 0 0 30px hsl(35 100% 56% / 0.4);
+    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.37);
+    --blur-glass: blur(12px);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 220 25% 10%;
-    --foreground: 210 40% 98%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 93%;
   }
 }
 
@@ -69,14 +75,24 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  .glow-accent {
+  /* Strun Glass Effects */
+  .glass {
+    background: var(--gradient-glass);
+    backdrop-filter: var(--blur-glass);
+    -webkit-backdrop-filter: var(--blur-glass);
+    box-shadow: var(--shadow-glass);
+  }
+  
+  /* Strun Glow Effects */
+  .glow-primary {
     box-shadow: var(--shadow-glow);
   }
   
-  .glow-primary {
-    box-shadow: var(--shadow-primary);
+  .glow-accent {
+    box-shadow: var(--shadow-accent);
   }
   
+  /* Strun Pulse Animation */
   .animate-pulse-glow {
     animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
@@ -84,18 +100,82 @@ All colors MUST be HSL.
   @keyframes pulse-glow {
     0%, 100% {
       opacity: 1;
-      box-shadow: 0 0 20px hsl(142 76% 52% / 0.5);
+      box-shadow: 0 0 20px hsl(199 89% 48% / 0.5);
     }
     50% {
       opacity: 0.8;
-      box-shadow: 0 0 40px hsl(142 76% 52% / 0.8);
+      box-shadow: 0 0 40px hsl(199 89% 48% / 0.8);
     }
   }
   
+  /* Strun Gradient Text */
   .text-gradient {
-    background: linear-gradient(135deg, hsl(142 76% 52%), hsl(220 70% 50%));
+    background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  
+  /* Strun XP Gradient */
+  .text-xp {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Strun Ripple Effect */
+  .ripple {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    animation: ripple 0.6s ease-out;
+  }
+  
+  @keyframes ripple {
+    to {
+      width: 300px;
+      height: 300px;
+      opacity: 0;
+    }
+  }
+  
+  /* Strun Trail Effect */
+  @keyframes trail {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+  }
+  
+  /* Strun Slide Up Animation */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out;
   }
 }
