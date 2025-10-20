@@ -7,6 +7,7 @@ interface GoogleMapProps {
   tracking?: boolean;
   onLocationUpdate?: (location: { lat: number; lng: number }) => void;
   path?: Array<{ lat: number; lng: number }>;
+  markers?: Array<{ lat: number; lng: number; label?: string }>;
 }
 
 const GoogleMap = ({
@@ -15,7 +16,8 @@ const GoogleMap = ({
   onMapReady,
   tracking = false,
   onLocationUpdate,
-  path: externalPath
+  path: externalPath,
+  markers = []
 }: GoogleMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
@@ -25,6 +27,7 @@ const GoogleMap = ({
   const polygonRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const markersRef = useRef<any[]>([]);
 
   // Get user's initial location
   useEffect(() => {
@@ -192,6 +195,43 @@ const GoogleMap = ({
       navigator.geolocation.clearWatch(watchId);
     };
   }, [tracking, map, marker, path, onLocationUpdate, externalPath]);
+
+  // Handle custom markers
+  useEffect(() => {
+    if (!map || !scriptLoaded) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+
+    // Add new markers
+    markers.forEach(markerData => {
+      const newMarker = new (window as any).google.maps.Marker({
+        position: { lat: markerData.lat, lng: markerData.lng },
+        map: map,
+        title: markerData.label,
+        icon: {
+          path: (window as any).google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#3b82f6",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+        },
+      });
+
+      if (markerData.label) {
+        const infoWindow = new (window as any).google.maps.InfoWindow({
+          content: markerData.label,
+        });
+        newMarker.addListener('click', () => {
+          infoWindow.open(map, newMarker);
+        });
+      }
+
+      markersRef.current.push(newMarker);
+    });
+  }, [markers, map, scriptLoaded]);
 
   return <div ref={mapRef} className="absolute inset-0 w-full h-full rounded-lg" />;
 };
