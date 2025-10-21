@@ -643,39 +643,57 @@ export type Database = {
           active_from: string | null
           active_to: string | null
           created_at: string | null
+          created_by: string | null
+          description: string | null
           id: string
+          lat: number | null
+          lon: number | null
           name: string
           nft_metadata: Json | null
           partner_location_id: string | null
           rules: Json | null
           task_type: string
+          title: string | null
           updated_at: string | null
+          verification_prompt: string | null
           xp_reward: number | null
         }
         Insert: {
           active_from?: string | null
           active_to?: string | null
           created_at?: string | null
+          created_by?: string | null
+          description?: string | null
           id?: string
+          lat?: number | null
+          lon?: number | null
           name: string
           nft_metadata?: Json | null
           partner_location_id?: string | null
           rules?: Json | null
           task_type: string
+          title?: string | null
           updated_at?: string | null
+          verification_prompt?: string | null
           xp_reward?: number | null
         }
         Update: {
           active_from?: string | null
           active_to?: string | null
           created_at?: string | null
+          created_by?: string | null
+          description?: string | null
           id?: string
+          lat?: number | null
+          lon?: number | null
           name?: string
           nft_metadata?: Json | null
           partner_location_id?: string | null
           rules?: Json | null
           task_type?: string
+          title?: string | null
           updated_at?: string | null
+          verification_prompt?: string | null
           xp_reward?: number | null
         }
         Relationships: [
@@ -910,6 +928,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_xp: {
+        Args: { user_id: string; xp_amount: number }
+        Returns: undefined
       }
     }
     Enums: {

@@ -23,9 +23,19 @@ import {
   Camera,
   Edit2,
   Check,
-  X
+  X,
+  Trophy,
+  MapPin,
+  Heart,
+  Moon,
+  Footprints,
+  TrendingUp,
+  Calendar
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useHealthIntegration } from "@/hooks/useHealthIntegration";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LineChart, Line, BarChart, Bar, XAxis, ResponsiveContainer } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
 
 const Profile = () => {
@@ -34,12 +44,19 @@ const Profile = () => {
   const { user, signOut, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [googleFit, setGoogleFit] = useState(false);
-  const [appleHealth, setAppleHealth] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  
+  const {
+    isGoogleFitConnected,
+    isAppleHealthConnected,
+    healthData,
+    requestGoogleFitPermission,
+    requestAppleHealthPermission,
+    syncHealthData,
+  } = useHealthIntegration();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -155,24 +172,16 @@ const Profile = () => {
     });
   };
 
-  const handleGoogleFitToggle = (checked: boolean) => {
-    setGoogleFit(checked);
-    toast({
-      title: checked ? "Google Fit Connected" : "Google Fit Disconnected",
-      description: checked 
-        ? "Your runs and steps will now sync with Google Fit" 
-        : "Google Fit sync has been disabled",
-    });
+  const handleGoogleFitToggle = async (checked: boolean) => {
+    if (checked) {
+      await requestGoogleFitPermission();
+    }
   };
 
-  const handleAppleHealthToggle = (checked: boolean) => {
-    setAppleHealth(checked);
-    toast({
-      title: checked ? "Apple Health Connected" : "Apple Health Disconnected",
-      description: checked 
-        ? "Your runs and steps will now sync with Apple Health" 
-        : "Apple Health sync has been disabled",
-    });
+  const handleAppleHealthToggle = async (checked: boolean) => {
+    if (checked) {
+      await requestAppleHealthPermission();
+    }
   };
 
   const handleAvatarClick = () => {
@@ -326,6 +335,23 @@ const Profile = () => {
     { name: "Community Leader", description: "Get 10 referrals", unlocked: false },
   ];
 
+  const weeklyData = [
+    { day: "Mon", runs: 1 },
+    { day: "Tue", runs: 2 },
+    { day: "Wed", runs: 1.5 },
+    { day: "Thu", runs: 2.5 },
+    { day: "Fri", runs: 1.8 },
+    { day: "Sat", runs: 2.2 },
+    { day: "Sun", runs: 1.2 },
+  ];
+
+  const monthlyData = [
+    { week: "W1", distance: 25 },
+    { week: "W2", distance: 42 },
+    { week: "W3", distance: 38 },
+    { week: "W4", distance: 55 },
+  ];
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -343,7 +369,15 @@ const Profile = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="w-full rounded-none border-b border-border/50 bg-card h-12 sticky top-[72px] z-40">
+          <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
+          <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
+          <TabsTrigger value="health" className="flex-1">Health</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="m-0">
+        <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
         {/* Profile Header */}
         <Card className="p-6 bg-card/95 relative overflow-hidden">
           <div className="flex flex-col items-center text-center">
@@ -521,7 +555,7 @@ const Profile = () => {
                     <div className="text-xs text-muted-foreground">Sync steps, distance and runs</div>
                   </div>
                 </div>
-                <Switch checked={googleFit} onCheckedChange={handleGoogleFitToggle} />
+                <Switch checked={isGoogleFitConnected} onCheckedChange={handleGoogleFitToggle} />
               </div>
               <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                 <div className="flex items-center gap-3">
@@ -533,7 +567,7 @@ const Profile = () => {
                     <div className="text-xs text-muted-foreground">Sync steps, distance and runs</div>
                   </div>
                 </div>
-                <Switch checked={appleHealth} onCheckedChange={handleAppleHealthToggle} />
+                <Switch checked={isAppleHealthConnected} onCheckedChange={handleAppleHealthToggle} />
               </div>
             </div>
           </Card>
@@ -698,6 +732,135 @@ const Profile = () => {
           Log Out
         </Button>
       </div>
+      </TabsContent>
+
+      {/* Stats Tab */}
+      <TabsContent value="stats" className="m-0">
+        <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
+          {/* XP Progress Card */}
+          <Card className="p-6 bg-gradient-to-br from-card via-card to-primary/5 border-primary/20">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">Level {level}</h2>
+                <p className="text-sm text-muted-foreground">{xp % 1000} / 1000 XP</p>
+              </div>
+              <div className="bg-accent/20 p-3 rounded-full">
+                <Trophy className="w-8 h-8 text-accent" />
+              </div>
+            </div>
+            <Progress value={((xp % 1000) / 1000) * 100} className="h-3" />
+            <p className="text-xs text-muted-foreground mt-2">{1000 - (xp % 1000)} XP to next level</p>
+          </Card>
+
+          {/* Weekly Runs Chart */}
+          <Card className="p-6 bg-card/95">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-accent" />
+                  Weekly Activity
+                </h3>
+                <span className="text-sm text-accent">Last 7 days</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={140}>
+              <LineChart data={weeklyData}>
+                <Line type="monotone" dataKey="runs" stroke="hsl(var(--accent))" strokeWidth={3} dot={false} />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Monthly Distance Chart */}
+          <Card className="p-6 bg-card/95">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  Monthly Distance
+                </h3>
+                <span className="text-sm text-primary">Last 4 weeks</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={monthlyData}>
+                <Bar dataKey="distance" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                <XAxis
+                  dataKey="week"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+      </TabsContent>
+
+      {/* Health Tab */}
+      <TabsContent value="health" className="m-0">
+        <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
+          {/* Health Data Sync */}
+          <Card className="p-6 bg-card/95">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-accent" />
+              Today's Health Data
+            </h3>
+            {(isGoogleFitConnected || isAppleHealthConnected) ? (
+              <>
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Footprints className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold">{healthData.steps.toLocaleString()} steps</div>
+                      <div className="text-sm text-muted-foreground">Daily Steps</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-accent" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold">{healthData.distance.toFixed(2)} km</div>
+                      <div className="text-sm text-muted-foreground">Distance Covered</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 bg-secondary/5 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
+                      <Heart className="w-5 h-5 text-secondary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold">{healthData.activeMinutes} min</div>
+                      <div className="text-sm text-muted-foreground">Active Minutes</div>
+                    </div>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full h-12"
+                  onClick={syncHealthData}
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  Sync Now
+                </Button>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Connect Google Fit or Apple Health to see your health data</p>
+              </div>
+            )}
+          </Card>
+        </div>
+      </TabsContent>
+      </Tabs>
       
       <BottomNav />
     </div>

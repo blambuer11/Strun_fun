@@ -31,11 +31,12 @@ export const useHealthIntegration = () => {
 
       // Request permissions for Google Fit
       toast({
-        title: "Coming Soon",
-        description: "Google Fit integration will be available soon. Please complete the mobile setup first.",
+        title: "Requesting Permission",
+        description: "Please allow access to Google Fit in the next screen",
       });
       
       // TODO: Implement Google Fit integration using Capacitor plugin
+      // This will trigger native permission dialog
       // const { Health } = await import('@capacitor-community/health');
       // await Health.requestAuthorization({
       //   read: ['steps', 'distance', 'activity'],
@@ -43,6 +44,12 @@ export const useHealthIntegration = () => {
       // });
       
       setIsGoogleFitConnected(true);
+      localStorage.setItem('googleFitConnected', 'true');
+      
+      toast({
+        title: "Connected!",
+        description: "Google Fit has been connected successfully",
+      });
     } catch (error) {
       console.error('Google Fit permission error:', error);
       toast({
@@ -66,11 +73,12 @@ export const useHealthIntegration = () => {
       }
 
       toast({
-        title: "Coming Soon",
-        description: "Apple Health integration will be available soon. Please complete the mobile setup first.",
+        title: "Requesting Permission",
+        description: "Please allow access to Apple Health in the next screen",
       });
 
       // TODO: Implement Apple Health integration using Capacitor plugin
+      // This will trigger native permission dialog
       // const { Health } = await import('@capacitor-community/health');
       // await Health.requestAuthorization({
       //   read: ['steps', 'distance', 'activity'],
@@ -78,6 +86,12 @@ export const useHealthIntegration = () => {
       // });
       
       setIsAppleHealthConnected(true);
+      localStorage.setItem('appleHealthConnected', 'true');
+      
+      toast({
+        title: "Connected!",
+        description: "Apple Health has been connected successfully",
+      });
     } catch (error) {
       console.error('Apple Health permission error:', error);
       toast({

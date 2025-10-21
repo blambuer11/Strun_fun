@@ -39,18 +39,37 @@ const SelfieCamera = ({ open, onClose, taskId, userTaskId, nonce, onSuccess }: S
 
   const startCamera = async () => {
     try {
+      // Request camera permission explicitly
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" }
+        video: { 
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       });
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setStreaming(true);
+        
+        toast({
+          title: "Camera Ready",
+          description: "Position yourself and the nonce code in frame",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Camera error:', error);
+      
+      let errorMessage = "Could not access camera";
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = "Camera permission denied. Please allow camera access in your browser settings.";
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = "No camera found on this device";
+      }
+      
       toast({
         title: "Camera Error",
-        description: "Could not access camera",
+        description: errorMessage,
         variant: "destructive",
       });
     }
