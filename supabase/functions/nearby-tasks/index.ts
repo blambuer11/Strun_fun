@@ -28,14 +28,11 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const lat = parseFloat(url.searchParams.get('lat') || '0');
-    const lon = parseFloat(url.searchParams.get('lon') || '0');
-    const radiusM = parseInt(url.searchParams.get('radius_m') || '5000');
+    const { lat, lon, radius_m = 5000 } = await req.json();
 
     if (!lat || !lon) {
       return new Response(
-        JSON.stringify({ error: 'lat and lon parameters required' }),
+        JSON.stringify({ error: 'Missing required parameters: lat, lon' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -45,15 +42,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch all active tasks with their partner locations
+    // Fetch all active tasks - support both new (lat/lon) and old (partner_location) formats
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select(`
         *,
         partner_location:partner_locations(*)
       `)
-      .or('active_from.is.null,active_from.lte.now()')
-      .or('active_to.is.null,active_to.gte.now()');
+      .eq('active', true);
 
     if (error) {
       console.error('Error fetching tasks:', error);
@@ -63,31 +59,39 @@ serve(async (req) => {
       );
     }
 
-    // Filter tasks by distance
+    // Filter and map tasks by distance
     const nearbyTasks = (tasks || [])
       .filter(task => {
-        if (!task.partner_location) return false;
-        const distance = distanceMeters(
-          lat, lon,
-          task.partner_location.lat,
-          task.partner_location.lon
-        );
-        return distance <= radiusM;
+        // Support tasks with direct lat/lon (new format)
+        if (task.lat && task.lon) return true;
+        // Support tasks with partner_location (old format)
+        if (task.partner_location) return true;
+        return false;
       })
       .map(task => {
-        const distance = distanceMeters(
-          lat, lon,
-          task.partner_location.lat,
-          task.partner_location.lon
-        );
+        // Calculate distance based on available location data
+        const taskLat = task.lat || task.partner_location?.lat;
+        const taskLon = task.lon || task.partner_location?.lon;
+        
+        if (!taskLat || !taskLon) return null;
+        
+        const distance = distanceMeters(lat, lon, taskLat, taskLon);
+        
         return {
           id: task.id,
           name: task.name,
+          title: task.title,
+          description: task.description,
           task_type: task.task_type,
           xp_reward: task.xp_reward,
           rules: task.rules,
           distance_meters: Math.round(distance),
-          partner_location: {
+          lat: taskLat,
+          lon: taskLon,
+          created_by: task.created_by,
+          partner_location_id: task.partner_location_id,
+          // Include partner_location if exists (for backward compatibility)
+          partner_location: task.partner_location ? {
             id: task.partner_location.id,
             name: task.partner_location.name,
             lat: task.partner_location.lat,
@@ -95,10 +99,11 @@ serve(async (req) => {
             radius_m: task.partner_location.radius_m,
             sponsor_name: task.partner_location.sponsor_name,
             sponsor_banner_url: task.partner_location.sponsor_banner_url
-          }
+          } : undefined
         };
       })
-      .sort((a, b) => a.distance_meters - b.distance_meters);
+      .filter(task => task && task.distance_meters <= radius_m)
+      .sort((a, b) => a!.distance_meters - b!.distance_meters);
 
     return new Response(
       JSON.stringify({ tasks: nearbyTasks }),

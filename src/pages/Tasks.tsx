@@ -11,6 +11,7 @@ import BottomNav from "@/components/BottomNav";
 import TasksMap from "@/components/TasksMap";
 import QRScanner from "@/components/QRScanner";
 import SelfieCamera from "@/components/SelfieCamera";
+import PhotoTaskCamera from "@/components/PhotoTaskCamera";
 import { supabase } from "@/integrations/supabase/client";
 import strunLogo from "@/assets/strun-logo.jpg";
 
@@ -24,12 +25,39 @@ const Tasks = () => {
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [generatingTask, setGeneratingTask] = useState(false);
 
-  const handleTaskSelect = (task: any) => {
+  const handleTaskSelect = async (task: any) => {
     setSelectedTask(task);
+    
+    if (!user?.id) return;
+    
+    // Create user_task entry
+    const { data: userTask, error } = await supabase
+      .from('user_tasks')
+      .insert({
+        user_id: user.id,
+        task_id: task.id,
+        status: 'pending',
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating user task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to join task",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (task.task_type === 'qr_scan') {
       setShowQRScanner(true);
     } else if (task.task_type === 'selfie_group') {
       setShowSelfieCamera(true);
+    } else if (task.task_type === 'photo') {
+      setSelectedTask({ ...task, userTaskId: userTask.id });
+      setShowSelfieCamera(true); // Reuse for photo
     }
   };
 
@@ -168,7 +196,36 @@ const Tasks = () => {
       <QRScanner open={showQRScanner} onClose={() => setShowQRScanner(false)} onSuccess={(xp) => console.log('Earned XP:', xp)} />
 
       {selectedTask?.task_type === 'selfie_group' && (
-        <SelfieCamera open={showSelfieCamera} onClose={() => setShowSelfieCamera(false)} taskId={selectedTask.id} userTaskId="" nonce={`STRUN-${Date.now().toString(36).toUpperCase()}`} onSuccess={() => setShowSelfieCamera(false)} />
+        <SelfieCamera 
+          open={showSelfieCamera} 
+          onClose={() => setShowSelfieCamera(false)} 
+          taskId={selectedTask.id} 
+          userTaskId={selectedTask.userTaskId || ""} 
+          nonce={`STRUN-${Date.now().toString(36).toUpperCase()}`} 
+          onSuccess={() => {
+            setShowSelfieCamera(false);
+            queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
+          }} 
+        />
+      )}
+      
+      {selectedTask?.task_type === 'photo' && (
+        <PhotoTaskCamera 
+          open={showSelfieCamera} 
+          onClose={() => {
+            setShowSelfieCamera(false);
+            setSelectedTask(null);
+          }} 
+          taskId={selectedTask.id} 
+          userTaskId={selectedTask.userTaskId || ""}
+          taskTitle={selectedTask.title || selectedTask.name || "Photo Task"}
+          taskDescription={selectedTask.description || "Take a photo"}
+          onSuccess={() => {
+            setShowSelfieCamera(false);
+            setSelectedTask(null);
+            queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
+          }} 
+        />
       )}
     </div>
   );

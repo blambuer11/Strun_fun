@@ -9,20 +9,17 @@ import GoogleMap from "./GoogleMap";
 
 interface Task {
   id: string;
-  name: string;
+  name?: string;
+  title?: string;
+  description?: string;
   task_type: string;
   xp_reward: number;
-  rules: any;
+  rules?: any;
   distance_meters: number;
-  partner_location: {
-    id: string;
-    name: string;
-    lat: number;
-    lon: number;
-    radius_m: number;
-    sponsor_name: string | null;
-    sponsor_banner_url: string | null;
-  };
+  lat: number;
+  lon: number;
+  created_by?: string;
+  partner_location_id?: string;
 }
 
 interface TasksMapProps {
@@ -138,9 +135,9 @@ const TasksMap = ({ onTaskSelect }: TasksMapProps) => {
               tracking={false}
               path={[]}
               markers={tasks.map(task => ({
-                lat: task.partner_location.lat,
-                lng: task.partner_location.lon,
-                label: task.name,
+                lat: task.lat,
+                lng: task.lon,
+                label: task.title || task.name || 'Task',
               }))}
               center={userLocation}
             />
@@ -193,12 +190,13 @@ const TasksMap = ({ onTaskSelect }: TasksMapProps) => {
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex-1">
                         <h4 className="font-display font-bold text-base group-hover:text-primary transition-colors">
-                          {task.name}
+                          {task.title || task.name || 'Task'}
                         </h4>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3" />
-                          {task.partner_location.name}
-                        </p>
+                        {task.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {task.description}
+                          </p>
+                        )}
                       </div>
                       
                       {/* XP Badge */}
@@ -232,12 +230,12 @@ const TasksMap = ({ onTaskSelect }: TasksMapProps) => {
                       </Badge>
                     </div>
 
-                    {/* Sponsor Info */}
-                    {task.partner_location.sponsor_name && (
+                    {/* Creator Info */}
+                    {task.created_by && task.created_by !== 'admin' && (
                       <div className="mt-3 pt-3 border-t border-border/30">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <span className="text-accent">★</span>
-                          Sponsored by {task.partner_location.sponsor_name}
+                          {task.created_by === 'system' ? 'AI Generated Task' : `Created by ${task.created_by}`}
                         </p>
                       </div>
                     )}

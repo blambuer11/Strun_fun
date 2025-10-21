@@ -5,3 +5,18 @@ verify_jwt = false
 
 [functions.mint-land-nft]
 verify_jwt = true
+
+[functions.nearby-tasks]
+verify_jwt = false
+
+[functions.qr-claim]
+verify_jwt = true
+
+[functions.selfie-submit]
+verify_jwt = true
+
+[functions.generate-location-task]
+verify_jwt = true
+
+[functions.verify-photo-task]
+verify_jwt = true
