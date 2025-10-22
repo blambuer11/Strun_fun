@@ -126,13 +126,12 @@ serve(async (req) => {
       .insert({
         title: taskData.title,
         description: taskData.description,
-        type: 'photo',
+        task_type: 'photo',
         lat: lat,
         lon: lon,
         xp_reward: 100,
         verification_prompt: taskData.verification_prompt,
         created_by: 'system',
-        active: true,
       })
       .select()
       .single();

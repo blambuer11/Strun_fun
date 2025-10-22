@@ -42,14 +42,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch all active tasks - support both new (lat/lon) and old (partner_location) formats
+    // Fetch all tasks - support both new (lat/lon) and old (partner_location) formats
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select(`
         *,
         partner_location:partner_locations(*)
-      `)
-      .eq('active', true);
+      `);
 
     if (error) {
       console.error('Error fetching tasks:', error);

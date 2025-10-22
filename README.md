@@ -83,7 +83,7 @@ These steps assume you have Node.js, PostgreSQL and Expo installed locally.
 
 Clone
 
-git clone https://github.com/your-org/strun.git
+git clone https://github.com/blambuer10/strun.git
 cd strun
 
 
