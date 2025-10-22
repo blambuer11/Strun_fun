@@ -24,6 +24,7 @@ const Tasks = () => {
   const [showSelfieCamera, setShowSelfieCamera] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [generatingTask, setGeneratingTask] = useState(false);
+  const [cityName, setCityName] = useState('');
 
   const handleTaskSelect = async (task: any) => {
     setSelectedTask(task);
@@ -75,6 +76,7 @@ const Tasks = () => {
           lat: position.coords.latitude,
           lon: position.coords.longitude,
           userId: user.id,
+          mode: 'single', // AI mode for single task
         },
       });
 
@@ -91,6 +93,40 @@ const Tasks = () => {
       toast({
         title: "Failed to Generate Task",
         description: error.message || "Could not create AI task",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingTask(false);
+    }
+  };
+
+  const handleGenerateCityTasks = async (cityName: string, count: number = 5) => {
+    if (!user?.id) return;
+    
+    setGeneratingTask(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-location-task', {
+        body: {
+          cityName,
+          userId: user.id,
+          mode: 'city',
+          count,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: `${count} Tasks Generated! 🌆`,
+        description: `Created ${count} new tasks for ${cityName}`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
+    } catch (error: any) {
+      console.error('Error generating city tasks:', error);
+      toast({
+        title: "Failed to Generate Tasks",
+        description: error.message || "Could not create city tasks",
         variant: "destructive",
       });
     } finally {
@@ -153,6 +189,7 @@ const Tasks = () => {
             </TabsList>
             
             <TabsContent value="nearby" className="space-y-4 mt-4">
+              {/* AI Single Task Card */}
               <Card className="p-6 glass border-accent/30 bg-gradient-to-br from-accent/5 to-transparent">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="bg-accent/20 p-2 rounded-lg">
@@ -174,6 +211,46 @@ const Tasks = () => {
                     </>
                   )}
                 </Button>
+              </Card>
+
+              {/* City Tasks Card */}
+              <Card className="p-6 glass border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-primary/20 p-2 rounded-lg">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold">City Tasks</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">Generate multiple tasks for any city in the world</p>
+                
+                <div className="space-y-3">
+                  <input 
+                    type="text" 
+                    placeholder="Enter city name (e.g., Istanbul, Turkey)" 
+                    value={cityName}
+                    onChange={(e) => setCityName(e.target.value)}
+                    className="w-full h-12 px-4 bg-background/50 border border-border/50 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => cityName.trim() && handleGenerateCityTasks(cityName.trim(), 5)}
+                      disabled={generatingTask || !cityName.trim()} 
+                      className="flex-1 h-12 bg-primary hover:bg-primary/90"
+                    >
+                      {generatingTask ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Target className="w-4 h-4 mr-2" />
+                          Generate 5 Tasks
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </Card>
               <TasksMap onTaskSelect={handleTaskSelect} />
             </TabsContent>
