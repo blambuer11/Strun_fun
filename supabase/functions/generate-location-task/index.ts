@@ -124,6 +124,7 @@ serve(async (req) => {
     const { data: task, error: taskError } = await supabase
       .from('tasks')
       .insert({
+        name: taskData.title, // Add name field (required by database)
         title: taskData.title,
         description: taskData.description,
         task_type: 'photo',
