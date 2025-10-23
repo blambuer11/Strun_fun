@@ -162,6 +162,23 @@ const Profile = () => {
     enabled: !!user,
   });
 
+  // Fetch created tasks (tasks user generated)
+  const { data: createdTasks } = useQuery({
+    queryKey: ["created-tasks", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("creator_id", user.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
   const xp = profile?.xp || 0;
   const level = Math.floor(xp / 1000) + 1;
   const referralCode = profile?.referral_code || "";
@@ -181,6 +198,16 @@ const Profile = () => {
       title: "Referral Code Copied!",
       description: "Share with friends to earn 50 XP",
     });
+  };
+
+  const handleCopyWalletAddress = () => {
+    if (profile?.solana_public_key) {
+      navigator.clipboard.writeText(profile.solana_public_key);
+      toast({
+        title: "Wallet Address Copied!",
+        description: "SOL address copied to clipboard",
+      });
+    }
   };
 
   const handleShareReferral = () => {
@@ -758,6 +785,67 @@ const Profile = () => {
       {/* Tasks History Tab */}
       <TabsContent value="tasks" className="m-0">
         <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
+          {/* Created Tasks Section */}
+          <Card className="p-6 bg-card/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <MapPin className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">My Created Tasks</h3>
+            </div>
+            {createdTasks && createdTasks.length > 0 ? (
+              <div className="space-y-3">
+                {createdTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between p-4 bg-background/50 rounded-lg hover:bg-background/70 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <MapPin className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{task.title || task.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(task.created_at).toLocaleDateString()}
+                          {task.location_name && ` • ${task.location_name}`}
+                        </div>
+                        <div className="flex gap-2 mt-1">
+                          <Badge 
+                            variant={task.status === 'published' ? 'default' : 'secondary'} 
+                            className="text-xs"
+                          >
+                            {task.status}
+                          </Badge>
+                          {task.type && (
+                            <Badge variant="outline" className="text-xs">
+                              {task.type.replace(/_/g, ' ')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-primary">
+                        {task.current_participants || 0}/{task.max_participants || '∞'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        participants
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No created tasks yet</p>
+                <p className="text-xs mt-1">Generate tasks on the Tasks page!</p>
+              </div>
+            )}
+          </Card>
+
+          {/* Completed Tasks Section */}
           <Card className="p-6 bg-card/95">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-accent/10 p-2 rounded-lg">
@@ -831,6 +919,42 @@ const Profile = () => {
       {/* Wallet Tab */}
       <TabsContent value="wallet" className="m-0">
         <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
+          {/* Wallet Address */}
+          <Card className="p-6 bg-card/95 border-primary/30">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Wallet className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">SOL Wallet Address</h3>
+            </div>
+            {profile?.solana_public_key ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-primary/5 px-4 py-3 rounded-lg font-mono text-xs break-all">
+                    {profile.solana_public_key}
+                  </code>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleCopyWalletAddress}
+                    className="shrink-0"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use this address to receive SOL rewards from completed tasks
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Wallet className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No wallet created yet</p>
+                <p className="text-xs mt-1">Wallet will be created automatically</p>
+              </div>
+            )}
+          </Card>
+
           {/* SOL Balance */}
           <Card className="p-6 bg-gradient-to-br from-success/10 to-success/5 border-success/30">
             <div className="flex items-center justify-between mb-4">
