@@ -33,10 +33,9 @@ interface Task {
 
 interface TasksMapProps {
   onTaskSelect?: (task: Task) => void;
-  onTaskDecline?: (taskId: string) => void;
 }
 
-const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
+const TasksMap = ({ onTaskSelect }: TasksMapProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -280,28 +279,16 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
                       </div>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 mt-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onTaskSelect) onTaskSelect(task);
-                        }}
-                        className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-lg font-medium hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
-                      >
-                        Accept Task
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onTaskDecline) onTaskDecline(task.id);
-                          setTasks(tasks.filter(t => t.id !== task.id));
-                        }}
-                        className="flex-1 px-4 py-2 bg-destructive/10 text-destructive rounded-lg font-medium hover:bg-destructive/20 transition-colors"
-                      >
-                        Decline
-                      </button>
-                    </div>
+                    {/* Action Button */}
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onTaskSelect) onTaskSelect(task);
+                      }}
+                      className="w-full mt-4"
+                    >
+                      View Task Details
+                    </Button>
                   </div>
                 </div>
               </Card>
