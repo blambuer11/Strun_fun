@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import TasksMap from "@/components/TasksMap";
+import BottomNav from "@/components/BottomNav";
 import { MapPin, Camera, Sparkles, Share2, CheckCircle2, Clock, Zap, Coins, Users } from "lucide-react";
 
 const Tasks = () => {
@@ -85,6 +86,10 @@ const Tasks = () => {
     }
   };
 
+  const handleDeclineTask = (taskId: string) => {
+    toast({ title: "Task Declined", description: "Task removed from list" });
+  };
+
   const handleShareTask = async (task: any) => {
     const text = `I completed "${task.name}" +${task.xp_reward} XP on Strun! 🏃‍♂️`;
     if (navigator.share) {
@@ -117,7 +122,7 @@ const Tasks = () => {
                 <MapPin className="w-4 h-4 mr-2" />Generate 3 Location Tasks
               </Button>
             </Card>
-            <TasksMap onTaskSelect={handleAcceptTask} />
+            <TasksMap onTaskSelect={handleAcceptTask} onTaskDecline={handleDeclineTask} />
           </TabsContent>
 
           <TabsContent value="sponsor" className="space-y-4">
@@ -177,6 +182,7 @@ const Tasks = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <BottomNav />
     </div>
   );
 };
