@@ -36,15 +36,29 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
   const loadNearbyTasks = async (lat: number, lon: number) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('nearby-tasks', {
-        body: { lat, lon, radius_m: 5000 }
+      const { data: tasksData, error: tasksError } = await supabase.functions.invoke("nearby-tasks", {
+        body: { lat, lon, radius_km: 10 },
       });
 
-      if (error) throw error;
+      if (tasksError) throw tasksError;
 
-      setTasks(data.tasks || []);
+      // Get user's declined and completed tasks
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        const { data: userTasks } = await supabase
+          .from("user_tasks")
+          .select("task_id, status")
+          .eq("user_id", userData.user.id)
+          .in("status", ["declined", "completed", "pending"]);
+
+        const excludedTaskIds = new Set(userTasks?.map(ut => ut.task_id) || []);
+        const filteredTasks = (tasksData.tasks || []).filter((task: Task) => !excludedTaskIds.has(task.id));
+        setTasks(filteredTasks);
+      } else {
+        setTasks(tasksData.tasks || []);
+      }
     } catch (error) {
-      console.error('Error loading tasks:', error);
+      console.error("Error loading tasks:", error);
       toast({
         title: "Error",
         description: "Failed to load nearby tasks",

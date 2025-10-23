@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import TasksMap from "@/components/TasksMap";
 import BottomNav from "@/components/BottomNav";
+import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { MapPin, Camera, Sparkles, Share2, CheckCircle2, Clock, Zap, Coins, Users } from "lucide-react";
 
 const Tasks = () => {
@@ -23,6 +24,8 @@ const Tasks = () => {
   const [maxParticipants, setMaxParticipants] = useState("");
   const [sponsorDescription, setSponsorDescription] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "rejected">("all");
+  const [verifyingTask, setVerifyingTask] = useState<any>(null);
+  const [verifyingUserTaskId, setVerifyingUserTaskId] = useState<string | null>(null);
 
   const loadMyTasks = async () => {
     if (!user) return;
@@ -86,8 +89,15 @@ const Tasks = () => {
     }
   };
 
-  const handleDeclineTask = (taskId: string) => {
-    toast({ title: "Task Declined", description: "Task removed from list" });
+  const handleDeclineTask = async (taskId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from("user_tasks").insert({ user_id: user.id, task_id: taskId, status: "declined" });
+      if (error) throw error;
+      toast({ title: "Task Declined", description: "Task removed permanently" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
   const handleShareTask = async (task: any) => {
@@ -164,11 +174,23 @@ const Tasks = () => {
                           <h4 className="font-bold">{t.name}</h4>
                           {t.location_name && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{t.location_name}</p>}
                           <p className="text-sm text-muted-foreground mt-1">{t.description}</p>
-                          <div className="flex gap-2 mt-2">
+                           <div className="flex gap-2 mt-2">
                             <Badge variant="outline">{ut.status}</Badge>
                             {t.challenge_type && <Badge variant="outline">{t.challenge_type}</Badge>}
                             <Badge className="bg-accent/20 text-accent">+{ut.xp_awarded || t.xp_reward} XP</Badge>
                           </div>
+                          {ut.status === 'pending' && (
+                            <Button 
+                              onClick={() => {
+                                setVerifyingTask(t);
+                                setVerifyingUserTaskId(ut.id);
+                              }} 
+                              className="w-full mt-3"
+                            >
+                              <Camera className="w-4 h-4 mr-2" />
+                              Complete & Verify
+                            </Button>
+                          )}
                           {ut.status === 'completed' && (
                             <Button onClick={() => handleShareTask(t)} variant="outline" size="sm" className="w-full mt-3"><Share2 className="w-4 h-4 mr-2" />Share</Button>
                           )}
@@ -182,6 +204,24 @@ const Tasks = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {verifyingTask && verifyingUserTaskId && (
+        <TaskVerificationDialog
+          open={!!verifyingTask}
+          onOpenChange={(open) => {
+            if (!open) {
+              setVerifyingTask(null);
+              setVerifyingUserTaskId(null);
+            }
+          }}
+          task={verifyingTask}
+          userTaskId={verifyingUserTaskId}
+          onVerified={() => {
+            loadMyTasks();
+          }}
+        />
+      )}
+
       <BottomNav />
     </div>
   );

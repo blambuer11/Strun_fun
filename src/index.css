@@ -2,65 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    /* Strun Design System - Dark Mode Default */
-    --background: 222 47% 11%; /* Deep Night #0F172A */
-    --foreground: 210 40% 93%; /* Light text #E6EEF8 */
-
-    --card: 222 47% 11% / 0.6; /* Glass surface with transparency */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 93%;
+    --card: 222 47% 11% / 0.6;
     --card-foreground: 210 40% 93%;
-
     --popover: 222 47% 14%;
     --popover-foreground: 210 40% 93%;
-
-    --primary: 199 89% 48%; /* Energetic Blue #0EA5E9 */
+    --primary: 199 89% 48%;
     --primary-foreground: 210 40% 98%;
     --primary-glow: 199 100% 60%;
-
-    --secondary: 172 85% 39%; /* Walrus Teal #0FB9A0 */
+    --secondary: 172 85% 39%;
     --secondary-foreground: 222 47% 11%;
-
     --muted: 222 30% 20%;
     --muted-foreground: 215 20% 65%;
-
-    --accent: 35 100% 56%; /* XP Gold #FFB020 */
+    --accent: 35 100% 56%;
     --accent-foreground: 222 47% 11%;
     --accent-glow: 35 100% 65%;
-
     --warning: 25 95% 53%;
     --warning-foreground: 222 47% 11%;
-
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 222 30% 18%;
     --input: 222 30% 15%;
     --ring: 199 89% 48%;
-
-    --radius: 0.875rem; /* 14px rounded corners */
-
-    /* Strun Gradients */
+    --radius: 0.875rem;
     --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%), hsl(35 100% 56%));
     --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
     --gradient-glow: radial-gradient(circle at center, hsl(199 89% 48% / 0.2), transparent);
     --gradient-accent: linear-gradient(135deg, hsl(35 100% 56%), hsl(35 100% 65%));
-    
-    /* Strun Shadows & Effects */
     --shadow-glow: 0 0 40px hsl(199 89% 48% / 0.3);
     --shadow-accent: 0 0 30px hsl(35 100% 56% / 0.4);
     --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.37);
     --blur-glass: blur(12px);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 93%;
   }
 }
 
@@ -68,14 +44,12 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
 
 @layer utilities {
-  /* Strun Glass Effects */
   .glass {
     background: var(--gradient-glass);
     backdrop-filter: var(--blur-glass);
@@ -83,7 +57,6 @@ All colors MUST be HSL.
     box-shadow: var(--shadow-glass);
   }
   
-  /* Strun Glow Effects */
   .glow-primary {
     box-shadow: var(--shadow-glow);
   }
@@ -92,9 +65,16 @@ All colors MUST be HSL.
     box-shadow: var(--shadow-accent);
   }
   
-  /* Strun Pulse Animation */
   .animate-pulse-glow {
     animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce 3s ease-in-out infinite;
+  }
+
+  .animate-ping-slow {
+    animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
   }
   
   @keyframes pulse-glow {
@@ -107,75 +87,13 @@ All colors MUST be HSL.
       box-shadow: 0 0 40px hsl(199 89% 48% / 0.8);
     }
   }
-  
-  /* Strun Gradient Text */
-  .text-gradient {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  /* Strun XP Gradient */
-  .text-xp {
-    background: var(--gradient-accent);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  /* Strun Ripple Effect */
-  .ripple {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .ripple::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    animation: ripple 0.6s ease-out;
-  }
-  
-  @keyframes ripple {
-    to {
-      width: 300px;
-      height: 300px;
-      opacity: 0;
-    }
-  }
-  
-  /* Strun Trail Effect */
-  @keyframes trail {
-    0% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(0.5);
-    }
-  }
-  
-  /* Strun Slide Up Animation */
-  @keyframes slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
+
+  @keyframes bounce {
+    0%, 100% {
       transform: translateY(0);
     }
-  }
-  
-  .animate-slide-up {
-    animation: slide-up 0.4s ease-out;
+    50% {
+      transform: translateY(-10px);
+    }
   }
 }

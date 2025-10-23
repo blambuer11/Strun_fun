@@ -210,19 +210,20 @@ const GoogleMap = ({
         position: { lat: markerData.lat, lng: markerData.lng },
         map: map,
         title: markerData.label,
+        animation: (window as any).google.maps.Animation.DROP,
         icon: {
           path: (window as any).google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: "#3b82f6",
-          fillOpacity: 1,
+          scale: 12,
+          fillColor: "#10b981",
+          fillOpacity: 0.9,
           strokeColor: "#ffffff",
-          strokeWeight: 2,
+          strokeWeight: 3,
         },
       });
 
       if (markerData.label) {
         const infoWindow = new (window as any).google.maps.InfoWindow({
-          content: markerData.label,
+          content: `<div style="padding:8px;font-weight:bold;color:#10b981;">${markerData.label}</div>`,
         });
         newMarker.addListener('click', () => {
           infoWindow.open(map, newMarker);
