@@ -165,10 +165,13 @@ Return ONLY a JSON array of ${count} tasks, no other text.`;
       radius_m: t.radius_m || 30,
       xp_reward: 50,
       sol_reward: 0,
-      location_name: t.location_name,
-      verification_prompt: t.verification_prompt,
       active_from: new Date().toISOString(),
-      meta: { generated_by: 'ai', city: cityName }
+      meta: { 
+        generated_by: 'ai', 
+        city: cityName,
+        location_name: t.location_name,
+        verification_prompt: t.verification_prompt
+      }
     }));
 
     const { data: tasks, error: insertError } = await supabase
