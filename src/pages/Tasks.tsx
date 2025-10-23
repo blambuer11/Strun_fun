@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import TasksMap from "@/components/TasksMap";
 import BottomNav from "@/components/BottomNav";
 import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
-import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2 } from "lucide-react";
+import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles } from "lucide-react";
 
 const Tasks = () => {
   const navigate = useNavigate();
@@ -27,6 +27,7 @@ const Tasks = () => {
   const [verifyingTask, setVerifyingTask] = useState<any>(null);
   const [verifyingUserTaskId, setVerifyingUserTaskId] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [generatingTasks, setGeneratingTasks] = useState(false);
 
   const loadMyTasks = async () => {
     if (!user) return;
@@ -94,6 +95,79 @@ const Tasks = () => {
   const handleCloseTaskModal = () => {
     setSelectedTask(null);
     setSelectedTaskDetail(null);
+  };
+
+  const handleGenerateTasks = async () => {
+    if (!user) {
+      toast({ title: "Login Required", description: "Please log in to generate tasks", variant: "destructive" });
+      return;
+    }
+
+    if (dailyTasksRemaining <= 0) {
+      toast({ 
+        title: "Daily Limit Reached", 
+        description: "You've used all 3 task generation slots today. Come back tomorrow!",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setGeneratingTasks(true);
+    try {
+      // Get user's current location
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const { data, error } = await supabase.functions.invoke("generate-location-task", {
+        body: { 
+          userId: user.id, 
+          lat: position.coords.latitude, 
+          lon: position.coords.longitude, 
+          count: 3 
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.limit_reached) {
+        toast({ 
+          title: "Daily Limit Reached", 
+          description: "You can only generate tasks 3 times per day",
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      toast({
+        title: "Tasks Generated! 🎯",
+        description: `${data.tasks?.length || 0} new tasks in ${data.city}. Check the map!`,
+      });
+
+      loadDailyLimit();
+      // Reload map to show new tasks
+      window.location.reload();
+    } catch (error: any) {
+      if (error.code === 1) {
+        toast({
+          title: "Location Permission Denied",
+          description: "Please enable location access to generate tasks",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: error.message || "Failed to generate tasks",
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setGeneratingTasks(false);
+    }
   };
 
   const handleAcceptTask = async (task: any) => {
@@ -271,6 +345,41 @@ const Tasks = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6">
+        {/* Generate Tasks Button */}
+        <Card className="p-4 glass border-accent/30 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-display font-bold text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                AI Task Generator
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Generate 3 location-based tasks near you
+              </p>
+            </div>
+            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"}>
+              {dailyTasksRemaining} left
+            </Badge>
+          </div>
+          <Button
+            onClick={handleGenerateTasks}
+            disabled={generatingTasks || dailyTasksRemaining <= 0}
+            className="w-full h-12"
+          >
+            {generatingTasks ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating Tasks...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Location Tasks
+              </>
+            )}
+          </Button>
+        </Card>
+
         {/* Top Info Panel */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <Card className="p-4 glass border-primary/30">

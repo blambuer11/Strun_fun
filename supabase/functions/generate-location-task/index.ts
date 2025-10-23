@@ -74,11 +74,14 @@ serve(async (req) => {
           city: cityName,
           type: 'content_photo',
           coordinates: { lat, lon },
+          lat,
+          lon,
           radius_m: 50,
           xp_reward: 100,
           sol_reward: solPerCompletion,
           max_participants: parseInt(maxParticipants),
           pool_id: pool.id,
+          status: 'published',
           active_from: new Date().toISOString(),
           meta: { sponsored: true, created_by: 'user' }
         })
@@ -162,9 +165,12 @@ Return ONLY a JSON array of ${count} tasks, no other text.`;
       city: cityName,
       type: t.type || 'content_photo',
       coordinates: t.coordinates || { lat, lon },
+      lat: t.coordinates?.lat || lat,
+      lon: t.coordinates?.lon || lon,
       radius_m: t.radius_m || 30,
       xp_reward: 50,
       sol_reward: 0,
+      status: 'published',
       active_from: new Date().toISOString(),
       meta: { 
         generated_by: 'ai', 
