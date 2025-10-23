@@ -239,6 +239,25 @@ const TasksMap = ({ onTaskSelect }: TasksMapProps) => {
                         </p>
                       </div>
                     )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onTaskSelect) onTaskSelect(task);
+                        }}
+                        className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-lg font-medium hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
+                      >
+                        Accept Task
+                      </button>
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 px-4 py-2 bg-destructive/10 text-destructive rounded-lg font-medium hover:bg-destructive/20 transition-colors"
+                      >
+                        Decline
+                      </button>
+                    </div>
                   </div>
                 </div>
               </Card>

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -138,6 +139,25 @@ const Profile = () => {
       
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch completed tasks history
+  const { data: completedTasks } = useQuery({
+    queryKey: ["completed-tasks", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("user_tasks")
+        .select("*, tasks(*)")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .order("end_ts", { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      return data;
     },
     enabled: !!user?.id,
   });
@@ -372,6 +392,7 @@ const Profile = () => {
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="w-full rounded-none border-b border-border/50 bg-card h-12 sticky top-[72px] z-40">
           <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
+          <TabsTrigger value="tasks" className="flex-1">Tasks</TabsTrigger>
           <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
           <TabsTrigger value="health" className="flex-1">Health</TabsTrigger>
         </TabsList>
@@ -732,6 +753,79 @@ const Profile = () => {
           Log Out
         </Button>
       </div>
+      </TabsContent>
+
+      {/* Tasks History Tab */}
+      <TabsContent value="tasks" className="m-0">
+        <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
+          <Card className="p-6 bg-card/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-accent/10 p-2 rounded-lg">
+                <Trophy className="w-5 h-5 text-accent" />
+              </div>
+              <h3 className="text-lg font-bold">Completed Tasks</h3>
+            </div>
+            {completedTasks && completedTasks.length > 0 ? (
+              <div className="space-y-3">
+                {completedTasks.map((userTask) => {
+                  const task = userTask.tasks;
+                  if (!task) return null;
+                  return (
+                    <div
+                      key={userTask.id}
+                      className="flex items-center justify-between p-4 bg-background/50 rounded-lg hover:bg-background/70 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                          <Trophy className="w-5 h-5 text-success" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{task.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {userTask.end_ts ? new Date(userTask.end_ts).toLocaleDateString() : 'Completed'}
+                            {task.location_name && ` • ${task.location_name}`}
+                          </div>
+                          {task.challenge_type && (
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {task.challenge_type}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-accent">+{userTask.xp_awarded || task.xp_reward} XP</div>
+                        {task.task_type && (
+                          <div className="text-xs text-muted-foreground capitalize">
+                            {task.task_type.replace('_', ' ')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Trophy className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No completed tasks yet</p>
+                <p className="text-xs mt-1">Start completing tasks to earn XP!</p>
+              </div>
+            )}
+          </Card>
+
+          {/* XP Summary */}
+          <Card className="p-6 bg-gradient-to-br from-accent/5 to-primary/5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold">Total Task XP</h3>
+                <p className="text-sm text-muted-foreground">From all completed tasks</p>
+              </div>
+              <div className="text-3xl font-bold text-accent">
+                {completedTasks?.reduce((sum, t) => sum + (t.xp_awarded || t.tasks?.xp_reward || 0), 0) || 0}
+              </div>
+            </div>
+          </Card>
+        </div>
       </TabsContent>
 
       {/* Stats Tab */}

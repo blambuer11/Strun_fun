@@ -21,6 +21,7 @@ const Tasks = () => {
   const [solPool, setSolPool] = useState("");
   const [maxParticipants, setMaxParticipants] = useState("");
   const [sponsorDescription, setSponsorDescription] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "rejected">("all");
 
   const loadMyTasks = async () => {
     if (!user) return;
@@ -72,6 +73,18 @@ const Tasks = () => {
     } finally { setLoading(false); }
   };
 
+  const handleAcceptTask = async (task: any) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from("user_tasks").insert({ user_id: user.id, task_id: task.id, status: "pending" });
+      if (error) throw error;
+      toast({ title: "Task Accepted!", description: `Go complete "${task.name}"` });
+      loadMyTasks();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
   const handleShareTask = async (task: any) => {
     const text = `I completed "${task.name}" +${task.xp_reward} XP on Strun! 🏃‍♂️`;
     if (navigator.share) {
@@ -81,6 +94,8 @@ const Tasks = () => {
       toast({ title: "Copied!", description: "Share link copied" });
     }
   };
+
+  const filteredTasks = statusFilter === "all" ? myTasks : myTasks.filter(t => t.status === statusFilter);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -102,7 +117,7 @@ const Tasks = () => {
                 <MapPin className="w-4 h-4 mr-2" />Generate 3 Location Tasks
               </Button>
             </Card>
-            <TasksMap />
+            <TasksMap onTaskSelect={handleAcceptTask} />
           </TabsContent>
 
           <TabsContent value="sponsor" className="space-y-4">
@@ -118,12 +133,20 @@ const Tasks = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="my-tasks">
-            {myTasks.length === 0 ? (
-              <Card className="p-8 text-center"><Clock className="w-12 h-12 mx-auto mb-3 opacity-50" /><p className="text-muted-foreground">No tasks yet</p></Card>
+          <TabsContent value="my-tasks" className="space-y-4">
+            <Card className="p-4 glass">
+              <div className="flex gap-2 flex-wrap">
+                <Button variant={statusFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("all")}>All</Button>
+                <Button variant={statusFilter === "pending" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("pending")}>Pending</Button>
+                <Button variant={statusFilter === "completed" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("completed")}>Completed</Button>
+                <Button variant={statusFilter === "rejected" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("rejected")}>Rejected</Button>
+              </div>
+            </Card>
+            {filteredTasks.length === 0 ? (
+              <Card className="p-8 text-center"><Clock className="w-12 h-12 mx-auto mb-3 opacity-50" /><p className="text-muted-foreground">No tasks found</p></Card>
             ) : (
               <div className="space-y-3">
-                {myTasks.map((ut) => {
+                {filteredTasks.map((ut) => {
                   const t = ut.tasks;
                   if (!t) return null;
                   return (
