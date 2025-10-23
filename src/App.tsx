@@ -16,6 +16,7 @@ import Group from "./pages/Group";
 import Community from "./pages/Community";
 import Wallet from "./pages/Wallet";
 import Tasks from "./pages/Tasks";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/community" element={<Community />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/admin" element={<Admin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

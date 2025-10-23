@@ -1,9 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Map, User, Wallet, Users, Activity, MessageSquare, MapPin } from "lucide-react";
+import { Map, User, Wallet, Users, Activity, MessageSquare, MapPin, Settings } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useIsAdmin();
 
   const navItems = [
     { icon: Map, label: "Run", path: "/run" },
@@ -11,6 +13,7 @@ const BottomNav = () => {
     { icon: MessageSquare, label: "Community", path: "/community" },
     { icon: Users, label: "Group", path: "/group" },
     { icon: User, label: "Profile", path: "/profile" },
+    ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
   ];
 
   return (
