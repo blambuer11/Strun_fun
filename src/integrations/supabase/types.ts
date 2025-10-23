@@ -416,8 +416,10 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          daily_task_count: number | null
           email: string
           id: string
+          last_task_date: string | null
           level: number
           referral_code: string
           solana_encrypted_key: string | null
@@ -429,8 +431,10 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          daily_task_count?: number | null
           email: string
           id: string
+          last_task_date?: string | null
           level?: number
           referral_code: string
           solana_encrypted_key?: string | null
@@ -442,8 +446,10 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          daily_task_count?: number | null
           email?: string
           id?: string
+          last_task_date?: string | null
           level?: number
           referral_code?: string
           solana_encrypted_key?: string | null
@@ -642,16 +648,23 @@ export type Database = {
         Row: {
           active_from: string | null
           active_to: string | null
+          challenge_type: string | null
           created_at: string | null
           created_by: string | null
+          current_participants: number | null
           description: string | null
           id: string
           lat: number | null
+          location_name: string | null
           lon: number | null
+          max_participants: number | null
           name: string
           nft_metadata: Json | null
           partner_location_id: string | null
           rules: Json | null
+          sol_per_completion: number | null
+          sol_pool: number | null
+          sponsor_user_id: string | null
           task_type: string
           title: string | null
           updated_at: string | null
@@ -661,16 +674,23 @@ export type Database = {
         Insert: {
           active_from?: string | null
           active_to?: string | null
+          challenge_type?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_participants?: number | null
           description?: string | null
           id?: string
           lat?: number | null
+          location_name?: string | null
           lon?: number | null
+          max_participants?: number | null
           name: string
           nft_metadata?: Json | null
           partner_location_id?: string | null
           rules?: Json | null
+          sol_per_completion?: number | null
+          sol_pool?: number | null
+          sponsor_user_id?: string | null
           task_type: string
           title?: string | null
           updated_at?: string | null
@@ -680,16 +700,23 @@ export type Database = {
         Update: {
           active_from?: string | null
           active_to?: string | null
+          challenge_type?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_participants?: number | null
           description?: string | null
           id?: string
           lat?: number | null
+          location_name?: string | null
           lon?: number | null
+          max_participants?: number | null
           name?: string
           nft_metadata?: Json | null
           partner_location_id?: string | null
           rules?: Json | null
+          sol_per_completion?: number | null
+          sol_pool?: number | null
+          sponsor_user_id?: string | null
           task_type?: string
           title?: string | null
           updated_at?: string | null
@@ -702,6 +729,13 @@ export type Database = {
             columns: ["partner_location_id"]
             isOneToOne: false
             referencedRelation: "partner_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_sponsor_user_id_fkey"
+            columns: ["sponsor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -918,6 +952,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_daily_task_limit: { Args: { p_user_id: string }; Returns: boolean }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -925,6 +960,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_daily_task_count: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       increment_xp: {
         Args: { user_id: string; xp_amount: number }

@@ -1,429 +1,159 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, QrCode, Camera, MapPin, Zap, Target, Sparkles, Share2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import BottomNav from "@/components/BottomNav";
 import TasksMap from "@/components/TasksMap";
-import QRScanner from "@/components/QRScanner";
-import SelfieCamera from "@/components/SelfieCamera";
-import PhotoTaskCamera from "@/components/PhotoTaskCamera";
-import { supabase } from "@/integrations/supabase/client";
-import strunLogo from "@/assets/strun-logo.jpg";
+import { MapPin, Camera, Sparkles, Share2, CheckCircle2, Clock, Zap, Coins, Users } from "lucide-react";
 
 const Tasks = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [showQRScanner, setShowQRScanner] = useState(false);
-  const [showSelfieCamera, setShowSelfieCamera] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [generatingTask, setGeneratingTask] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [myTasks, setMyTasks] = useState<any[]>([]);
-
-  const handleTaskSelect = async (task: any) => {
-    setSelectedTask(task);
-    
-    if (!user?.id) return;
-    
-    // Create user_task entry
-    const { data: userTask, error } = await supabase
-      .from('user_tasks')
-      .insert({
-        user_id: user.id,
-        task_id: task.id,
-        status: 'pending',
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creating user task:', error);
-      toast({
-        title: "Error",
-        description: "Failed to join task",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (task.task_type === 'qr_scan') {
-      setShowQRScanner(true);
-    } else if (task.task_type === 'selfie_group') {
-      setShowSelfieCamera(true);
-    } else if (task.task_type === 'photo') {
-      setSelectedTask({ ...task, userTaskId: userTask.id });
-      setShowSelfieCamera(true); // Reuse for photo
-    }
-  };
-
-  const handleGenerateAITask = async () => {
-    if (!user?.id) return;
-    
-    setGeneratingTask(true);
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
-      });
-
-      const { data, error } = await supabase.functions.invoke('generate-location-task', {
-        body: {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-          userId: user.id,
-          mode: 'single', // AI mode for single task
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "New Task Generated! ✨",
-        description: "Check nearby tasks to see your AI-generated photo challenge",
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
-    } catch (error: any) {
-      console.error('Error generating task:', error);
-      toast({
-        title: "Failed to Generate Task",
-        description: error.message || "Could not create AI task",
-        variant: "destructive",
-      });
-    } finally {
-      setGeneratingTask(false);
-    }
-  };
-
-  const handleGenerateLocationTasks = async (count: number = 5) => {
-    if (!user?.id) return;
-    
-    setGeneratingTask(true);
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
-      });
-
-      const { data, error } = await supabase.functions.invoke('generate-location-task', {
-        body: {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-          userId: user.id,
-          mode: 'city',
-          count,
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: `${count} Tasks Generated! 🌆`,
-        description: `Created ${count} new tasks for your location`,
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
-    } catch (error: any) {
-      console.error('Error generating location tasks:', error);
-      toast({
-        title: "Failed to Generate Tasks",
-        description: error.message || "Could not create location tasks",
-        variant: "destructive",
-      });
-    } finally {
-      setGeneratingTask(false);
-    }
-  };
+  const [dailyTasksRemaining, setDailyTasksRemaining] = useState(3);
+  const [solPool, setSolPool] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState("");
+  const [sponsorDescription, setSponsorDescription] = useState("");
 
   const loadMyTasks = async () => {
-    if (!user?.id) return;
-    
-    const { data, error } = await supabase
-      .from('user_tasks')
-      .select(`
-        *,
-        tasks (*)
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    if (!user) return;
+    const { data } = await supabase.from("user_tasks").select("*, tasks(*)").eq("user_id", user.id).order("created_at", { ascending: false });
+    setMyTasks(data || []);
+  };
 
-    if (!error && data) {
-      setMyTasks(data);
+  const loadDailyLimit = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("profiles").select("daily_task_count, last_task_date").eq("id", user.id).single();
+    const today = new Date().toISOString().split("T")[0];
+    setDailyTasksRemaining(data?.last_task_date === today ? 3 - (data?.daily_task_count || 0) : 3);
+  };
+
+  useEffect(() => { loadMyTasks(); loadDailyLimit(); }, [user]);
+
+  const handleGenerateLocationTasks = async () => {
+    if (!user || dailyTasksRemaining <= 0) {
+      toast({ title: dailyTasksRemaining <= 0 ? "Daily Limit" : "Login Required", description: dailyTasksRemaining <= 0 ? "3 tasks/day limit" : "Please log in", variant: "destructive" });
+      return;
     }
+    setLoading(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject));
+      const { data, error } = await supabase.functions.invoke("generate-location-task", { body: { userId: user.id, lat: pos.coords.latitude, lon: pos.coords.longitude, count: 3 } });
+      if (error) throw error;
+      if (data.limit_reached) { toast({ title: "Limit Reached", variant: "destructive" }); return; }
+      setDailyTasksRemaining(data.daily_remaining || 0);
+      toast({ title: "Tasks Generated!", description: `${data.tasks?.length || 0} in ${data.city}! ${data.daily_remaining || 0} left` });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  const handleCreateSponsoredTask = async () => {
+    if (!user || !solPool || !maxParticipants || !sponsorDescription) {
+      toast({ title: "Missing Info", description: "Fill all fields", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject));
+      const { error } = await supabase.functions.invoke("generate-location-task", { body: { userId: user.id, lat: pos.coords.latitude, lon: pos.coords.longitude, solPool: parseFloat(solPool), maxParticipants: parseInt(maxParticipants), taskDescription: sponsorDescription } });
+      if (error) throw error;
+      toast({ title: "Sponsored Task Created!", description: `${solPool} SOL for ${maxParticipants} people` });
+      setSolPool(""); setMaxParticipants(""); setSponsorDescription("");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally { setLoading(false); }
   };
 
   const handleShareTask = async (task: any) => {
-    const shareText = `I just completed "${task.title || task.name}" and earned ${task.xp_reward} XP on Strun! 🏃‍♂️💨`;
-    const shareUrl = window.location.origin;
-
-    // Try Web Share API first (works on mobile)
+    const text = `I completed "${task.name}" +${task.xp_reward} XP on Strun! 🏃‍♂️`;
     if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Strun Task Completed',
-          text: shareText,
-          url: shareUrl,
-        });
-        toast({
-          title: "Shared! 🎉",
-          description: "Thanks for sharing your achievement!",
-        });
-      } catch (error) {
-        console.log('Share cancelled');
-      }
+      try { await navigator.share({ title: 'Strun', text, url: window.location.origin }); } catch {}
     } else {
-      // Fallback: Open share menu with social media options
-      const encodedText = encodeURIComponent(shareText);
-      const encodedUrl = encodeURIComponent(shareUrl);
-      
-      // Show custom share dialog with social media links
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
-      const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`;
-      
-      // Copy to clipboard as fallback
-      navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      toast({
-        title: "Text Copied! 📋",
-        description: "Share link copied to clipboard. You can paste it anywhere!",
-      });
+      navigator.clipboard.writeText(text);
+      toast({ title: "Copied!", description: "Share link copied" });
     }
   };
 
-  // Load my tasks on mount
-  useEffect(() => {
-    loadMyTasks();
-  }, [user?.id]);
-
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="border-b border-border/50 glass sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="hover:bg-primary/10">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <img src={strunLogo} alt="Strun Logo" className="h-8 w-auto object-contain" />
-          <div className="w-10" />
-        </div>
-      </header>
+      <div className="container mx-auto px-4 py-6">
+        <Tabs defaultValue="generate">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="generate">Generate</TabsTrigger>
+            <TabsTrigger value="sponsor">Sponsor</TabsTrigger>
+            <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
+          </TabsList>
 
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        <Card className="relative overflow-hidden glass border-primary/20 animate-slide-up">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
-          <div className="relative p-6">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="p-3 rounded-full bg-primary/20 glow-primary">
-                <Target className="w-8 h-8 text-primary" />
+          <TabsContent value="generate" className="space-y-4">
+            <Card className="p-4 glass border-primary/30">
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-semibold flex items-center gap-2"><Zap className="w-5 h-5 text-accent" />Daily Limit</span>
+                <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"}>{dailyTasksRemaining}/3</Badge>
               </div>
-              <div className="flex-1">
-                <h1 className="text-2xl font-display font-bold mb-2 text-gradient">Geo Tasks</h1>
-                <p className="text-muted-foreground text-sm">Complete location-based challenges to earn XP and rewards</p>
+              <Button onClick={handleGenerateLocationTasks} disabled={loading || dailyTasksRemaining <= 0} className="w-full" size="lg">
+                <MapPin className="w-4 h-4 mr-2" />Generate 3 Location Tasks
+              </Button>
+            </Card>
+            <TasksMap />
+          </TabsContent>
+
+          <TabsContent value="sponsor" className="space-y-4">
+            <Card className="p-6 glass">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Coins className="w-5 h-5" />Sponsored Challenge</h3>
+              <div className="space-y-4">
+                <div><Label>SOL Pool</Label><Input type="number" step="0.01" placeholder="0.5" value={solPool} onChange={(e) => setSolPool(e.target.value)} /></div>
+                <div><Label>Max Participants</Label><Input type="number" placeholder="10" value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} />
+                {solPool && maxParticipants && <p className="text-xs text-muted-foreground mt-1">Each: {(parseFloat(solPool)/parseInt(maxParticipants)).toFixed(4)} SOL</p>}</div>
+                <div><Label>Description</Label><Textarea placeholder="Describe challenge" value={sponsorDescription} onChange={(e) => setSponsorDescription(e.target.value)} rows={3} /></div>
+                <Button onClick={handleCreateSponsoredTask} disabled={loading} className="w-full" size="lg"><Coins className="w-4 h-4 mr-2" />Create Sponsored Task</Button>
               </div>
-            </div>
+            </Card>
+          </TabsContent>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button onClick={() => setShowQRScanner(true)} className="h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-medium group relative overflow-hidden">
-                <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary-glow opacity-0 group-hover:opacity-100 transition-opacity" />
-                <QrCode className="w-5 h-5 mr-2 relative z-10" />
-                <span className="relative z-10">Scan QR</span>
-              </Button>
-              
-              <Button variant="outline" className="h-14 border-accent/50 hover:bg-accent/10 hover:border-accent text-foreground font-medium">
-                <Camera className="w-5 h-5 mr-2" />
-                Selfie Task
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <Tabs defaultValue="nearby" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 glass border border-border/50">
-              <TabsTrigger value="nearby" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <MapPin className="w-4 h-4 mr-2" />
-                Nearby
-              </TabsTrigger>
-              <TabsTrigger value="my-tasks" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-                <Target className="w-4 h-4 mr-2" />
-                My Tasks
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-                <Zap className="w-4 h-4 mr-2" />
-                Completed
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="nearby" className="space-y-4 mt-4">
-              {/* AI Single Task Card */}
-              <Card className="p-6 glass border-accent/30 bg-gradient-to-br from-accent/5 to-transparent">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-accent/20 p-2 rounded-lg">
-                    <Sparkles className="w-5 h-5 text-accent" />
-                  </div>
-                  <h3 className="text-lg font-bold">AI Photo Challenge</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">Let AI create a unique photo task based on your location</p>
-                <Button onClick={handleGenerateAITask} disabled={generatingTask} className="w-full h-12 bg-accent hover:bg-accent/90">
-                  {generatingTask ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate AI Task
-                    </>
-                  )}
-                </Button>
-              </Card>
-
-              {/* Location Tasks Card */}
-              <Card className="p-6 glass border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-primary/20 p-2 rounded-lg">
-                    <MapPin className="w-5 h-5 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-bold">Generate Tasks</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">Generate multiple tasks for your current location</p>
-                
-                <Button 
-                  onClick={() => handleGenerateLocationTasks(5)}
-                  disabled={generatingTask} 
-                  className="w-full h-12 bg-primary hover:bg-primary/90"
-                >
-                  {generatingTask ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Target className="w-4 h-4 mr-2" />
-                      Generate 5 Tasks
-                    </>
-                  )}
-                </Button>
-              </Card>
-              <TasksMap onTaskSelect={handleTaskSelect} />
-            </TabsContent>
-
-            <TabsContent value="my-tasks" className="mt-4">
-              {myTasks.length === 0 ? (
-                <Card className="p-12 text-center glass border-border/50">
-                  <div className="inline-flex p-4 rounded-full bg-primary/10 mb-4">
-                    <Target className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-bold mb-2">No Tasks Yet</h3>
-                  <p className="text-muted-foreground text-sm">Generate or join tasks to see them here</p>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {myTasks.map((userTask) => {
-                    const task = userTask.tasks;
-                    if (!task) return null;
-                    
-                    return (
-                      <Card key={userTask.id} className="p-4 glass border-border/50 hover:border-primary/50 transition-all">
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${userTask.status === 'completed' ? 'bg-accent/20' : 'bg-primary/20'}`}>
-                            {userTask.status === 'completed' ? (
-                              <Zap className="w-5 h-5 text-accent" />
-                            ) : (
-                              <Target className="w-5 h-5 text-primary" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-bold mb-1">{task.title || task.name}</h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <div className="flex items-center gap-4">
-                                <span className="text-xs text-primary font-medium">+{task.xp_reward} XP</span>
-                                <span className={`text-xs px-2 py-1 rounded-full ${
-                                  userTask.status === 'completed' ? 'bg-accent/20 text-accent' : 
-                                  userTask.status === 'pending' ? 'bg-primary/20 text-primary' : 
-                                  'bg-destructive/20 text-destructive'
-                                }`}>
-                                  {userTask.status}
-                                </span>
-                              </div>
-                              {userTask.status === 'completed' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 gap-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShareTask(task);
-                                  }}
-                                >
-                                  <Share2 className="w-4 h-4" />
-                                  Share
-                                </Button>
-                              )}
-                            </div>
-                          </div>
+          <TabsContent value="my-tasks">
+            {myTasks.length === 0 ? (
+              <Card className="p-8 text-center"><Clock className="w-12 h-12 mx-auto mb-3 opacity-50" /><p className="text-muted-foreground">No tasks yet</p></Card>
+            ) : (
+              <div className="space-y-3">
+                {myTasks.map((ut) => {
+                  const t = ut.tasks;
+                  if (!t) return null;
+                  return (
+                    <Card key={ut.id} className="p-4 glass">
+                      <div className="flex gap-3">
+                        <div className={`p-2 rounded-lg ${ut.status === 'completed' ? 'bg-success/20' : 'bg-primary/20'}`}>
+                          {ut.status === 'completed' ? <CheckCircle2 className="w-5 h-5 text-success" /> : <Clock className="w-5 h-5" />}
                         </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="completed" className="mt-4">
-              <Card className="p-12 text-center glass border-border/50">
-                <div className="inline-flex p-4 rounded-full bg-accent/10 mb-4">
-                  <Zap className="w-8 h-8 text-accent" />
-                </div>
-                <h3 className="text-lg font-bold mb-2">No Completed Tasks Yet</h3>
-                <p className="text-muted-foreground text-sm">Complete tasks to see them here and track your progress</p>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold">{t.name}</h4>
+                          {t.location_name && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{t.location_name}</p>}
+                          <p className="text-sm text-muted-foreground mt-1">{t.description}</p>
+                          <div className="flex gap-2 mt-2">
+                            <Badge variant="outline">{ut.status}</Badge>
+                            {t.challenge_type && <Badge variant="outline">{t.challenge_type}</Badge>}
+                            <Badge className="bg-accent/20 text-accent">+{ut.xp_awarded || t.xp_reward} XP</Badge>
+                          </div>
+                          {ut.status === 'completed' && (
+                            <Button onClick={() => handleShareTask(t)} variant="outline" size="sm" className="w-full mt-3"><Share2 className="w-4 h-4 mr-2" />Share</Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <BottomNav />
-
-      <QRScanner open={showQRScanner} onClose={() => setShowQRScanner(false)} onSuccess={(xp) => console.log('Earned XP:', xp)} />
-
-      {selectedTask?.task_type === 'selfie_group' && (
-        <SelfieCamera 
-          open={showSelfieCamera} 
-          onClose={() => setShowSelfieCamera(false)} 
-          taskId={selectedTask.id} 
-          userTaskId={selectedTask.userTaskId || ""} 
-          nonce={`STRUN-${Date.now().toString(36).toUpperCase()}`} 
-          onSuccess={() => {
-            setShowSelfieCamera(false);
-            queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
-          }} 
-        />
-      )}
-      
-      {selectedTask?.task_type === 'photo' && (
-        <PhotoTaskCamera 
-          open={showSelfieCamera} 
-          onClose={() => {
-            setShowSelfieCamera(false);
-            setSelectedTask(null);
-          }} 
-          taskId={selectedTask.id} 
-          userTaskId={selectedTask.userTaskId || ""}
-          taskTitle={selectedTask.title || selectedTask.name || "Photo Task"}
-          taskDescription={selectedTask.description || "Take a photo"}
-          onSuccess={() => {
-            setShowSelfieCamera(false);
-            setSelectedTask(null);
-            queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
-          }} 
-        />
-      )}
     </div>
   );
 };
