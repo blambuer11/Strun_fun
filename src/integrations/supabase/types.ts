@@ -766,6 +766,7 @@ export type Database = {
           id: string
           location_name: string | null
           max_participants: number | null
+          meta: Json | null
           name: string | null
           pool_id: string | null
           radius_m: number | null
@@ -787,6 +788,7 @@ export type Database = {
           id?: string
           location_name?: string | null
           max_participants?: number | null
+          meta?: Json | null
           name?: string | null
           pool_id?: string | null
           radius_m?: number | null
@@ -808,6 +810,7 @@ export type Database = {
           id?: string
           location_name?: string | null
           max_participants?: number | null
+          meta?: Json | null
           name?: string | null
           pool_id?: string | null
           radius_m?: number | null
