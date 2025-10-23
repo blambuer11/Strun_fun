@@ -11,7 +11,7 @@ import TasksMap from "@/components/TasksMap";
 import BottomNav from "@/components/BottomNav";
 import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { CreateSponsoredTaskDialog } from "@/components/CreateSponsoredTaskDialog";
-import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles } from "lucide-react";
+import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award } from "lucide-react";
 
 const Tasks = () => {
   const navigate = useNavigate();
@@ -19,6 +19,7 @@ const Tasks = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [myTasks, setMyTasks] = useState<any[]>([]);
+  const [availableTasks, setAvailableTasks] = useState<any[]>([]);
   const [dailyTasksRemaining, setDailyTasksRemaining] = useState(3);
   const [dailyTasksCompleted, setDailyTasksCompleted] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
@@ -46,6 +47,24 @@ const Tasks = () => {
       (t: any) => t.status === "completed" && t.completed_at?.startsWith(today)
     ).length;
     setDailyTasksCompleted(completedToday);
+  };
+
+  const loadAvailableTasks = async () => {
+    if (!user) return;
+    
+    // Get sponsored tasks that user hasn't joined yet
+    const { data: allTasks } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("status", "published")
+      .not("type", "eq", "qr_checkin")
+      .order("created_at", { ascending: false });
+    
+    // Filter out tasks user has already joined
+    const userTaskIds = myTasks.map(ut => ut.task_id);
+    const available = (allTasks || []).filter(t => !userTaskIds.includes(t.id));
+    
+    setAvailableTasks(available);
   };
 
   const loadDailyLimit = async () => {
@@ -87,6 +106,12 @@ const Tasks = () => {
     loadDailyLimit();
     loadStats();
   }, [user]);
+
+  useEffect(() => {
+    if (myTasks.length > 0) {
+      loadAvailableTasks();
+    }
+  }, [myTasks]);
 
   const handleTaskSelect = async (task: any) => {
     setSelectedTask(task);
@@ -534,6 +559,52 @@ const Tasks = () => {
             </div>
           )}
         </Card>
+
+        {/* Available Tasks Section */}
+        {availableTasks.length > 0 && (
+          <Card className="p-4 glass mt-6">
+            <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-accent" />
+              Available Sponsored Tasks
+            </h3>
+            <div className="space-y-3">
+              {availableTasks.map((task) => (
+                <Card key={task.id} className="p-4 glass border-accent/30 hover:border-accent/60 transition-colors cursor-pointer" onClick={() => handleTaskSelect(task)}>
+                  <div className="flex gap-3">
+                    <div className="p-2 rounded-lg bg-accent/20">
+                      <Award className="w-5 h-5 text-accent" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold">{task.name || task.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">{task.description?.substring(0, 100)}...</p>
+                      {task.city && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3" />
+                          {task.city}
+                        </p>
+                      )}
+                      <div className="flex gap-2 mt-2">
+                        <Badge className="bg-accent/20 text-accent">
+                          +{task.xp_reward} XP
+                        </Badge>
+                        {task.sol_reward > 0 && (
+                          <Badge className="bg-success/20 text-success">
+                            {task.sol_reward} SOL
+                          </Badge>
+                        )}
+                        {task.max_participants && (
+                          <Badge variant="outline">
+                            Max {task.max_participants} winners
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Task Detail Modal */}

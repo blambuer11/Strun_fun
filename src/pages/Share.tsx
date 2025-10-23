@@ -14,7 +14,8 @@ import {
   ArrowLeft,
   Instagram,
   Twitter,
-  Video
+  Video,
+  Users
 } from "lucide-react";
 import QRCode from "react-qr-code";
 
@@ -26,6 +27,7 @@ const Share = () => {
   const [userTask, setUserTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [shareData, setShareData] = useState<any>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     loadTaskAndShareData();
@@ -108,6 +110,48 @@ const Share = () => {
       description: "Create your video and add this link in description!",
     });
     handleCopyLink();
+  };
+
+  const handleShareToCommunity = async () => {
+    try {
+      setIsSharing(true);
+      
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast({
+          title: "Login Required",
+          description: "Please login to share to community",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const postContent = `I just completed "${task.title}" and earned ${userTask?.xp_awarded || task.xp_reward} XP! 🏃‍♂️💪\n\n${task.description}\n\n#StrunRun #TaskCompleted`;
+
+      const { error } = await supabase.from("posts").insert({
+        user_id: userData.user.id,
+        content: postContent,
+        location: task.city || task.location_name,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Shared to Community! 🎉",
+        description: "Your task completion has been shared with the community",
+      });
+
+      setTimeout(() => navigate("/community"), 1500);
+    } catch (error: any) {
+      console.error("Error sharing to community:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to share to community",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   if (loading) {
@@ -214,6 +258,18 @@ const Share = () => {
           </h3>
           
           <div className="space-y-3">
+            {/* Share to Strun Community */}
+            {userTask?.status === "completed" && (
+              <Button
+                onClick={handleShareToCommunity}
+                disabled={isSharing}
+                className="w-full justify-start h-12 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30"
+              >
+                <Users className="w-5 h-5 mr-3" />
+                {isSharing ? "Sharing..." : "Share to Strun Community"}
+              </Button>
+            )}
+
             {/* X/Twitter */}
             <Button
               onClick={handleShareX}

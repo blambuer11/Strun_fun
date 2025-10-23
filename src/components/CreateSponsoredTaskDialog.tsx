@@ -28,15 +28,15 @@ import { Button } from "@/components/ui/button";
 import { Award, Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  country: z.string().min(2, "Ülke adı en az 2 karakter olmalı"),
-  city: z.string().min(2, "Şehir adı en az 2 karakter olmalı"),
-  taskTitle: z.string().min(5, "Görev başlığı en az 5 karakter olmalı"),
-  taskDescription: z.string().min(10, "Görev açıklaması en az 10 karakter olmalı"),
+  country: z.string().min(2, "Country name must be at least 2 characters"),
+  city: z.string().min(2, "City name must be at least 2 characters"),
+  taskTitle: z.string().min(5, "Task title must be at least 5 characters"),
+  taskDescription: z.string().min(10, "Task description must be at least 10 characters"),
   solAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-    message: "Geçerli bir SOL miktarı giriniz",
+    message: "Please enter a valid SOL amount",
   }),
   maxWinners: z.string().refine((val) => !isNaN(parseInt(val)) && parseInt(val) > 0, {
-    message: "Kazanan sayısı en az 1 olmalı",
+    message: "Number of winners must be at least 1",
   }),
 });
 
@@ -63,8 +63,8 @@ export const CreateSponsoredTaskDialog = () => {
   const onSubmit = async (values: FormValues) => {
     if (!user) {
       toast({
-        title: "Hata",
-        description: "Görev oluşturmak için giriş yapmalısınız",
+        title: "Error",
+        description: "You must be logged in to create tasks",
         variant: "destructive",
       });
       return;
@@ -81,8 +81,8 @@ export const CreateSponsoredTaskDialog = () => {
 
       if (!geocodeData || geocodeData.length === 0) {
         toast({
-          title: "Hata",
-          description: "Şehir konumu bulunamadı. Lütfen geçerli bir şehir giriniz.",
+          title: "Error",
+          description: "City location not found. Please enter a valid city.",
           variant: "destructive",
         });
         setIsSubmitting(false);
@@ -109,8 +109,8 @@ export const CreateSponsoredTaskDialog = () => {
       if (error) throw error;
 
       toast({
-        title: "Başarılı!",
-        description: `Ödüllü görev oluşturuldu! ${values.solAmount} SOL havuza yatırıldı.`,
+        title: "Success!",
+        description: `Sponsored task created! ${values.solAmount} SOL deposited to pool.`,
       });
 
       form.reset();
@@ -119,8 +119,8 @@ export const CreateSponsoredTaskDialog = () => {
     } catch (error) {
       console.error("Error creating sponsored task:", error);
       toast({
-        title: "Hata",
-        description: "Görev oluşturulurken bir hata oluştu",
+        title: "Error",
+        description: "An error occurred while creating the task",
         variant: "destructive",
       });
     } finally {
@@ -133,15 +133,14 @@ export const CreateSponsoredTaskDialog = () => {
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2">
           <Award className="w-4 h-4" />
-          Ödüllü Task Oluştur
+          Create Sponsored Task
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Ödüllü Görev Oluştur</DialogTitle>
+          <DialogTitle>Create Sponsored Task</DialogTitle>
           <DialogDescription>
-            Topluluk için ödüllü bir görev oluşturun. Görev tamamlandığında SOL ödülleri
-            havuzdan dağıtılacak.
+            Create a rewarded task for the community. SOL rewards will be distributed from the pool when the task is completed.
           </DialogDescription>
         </DialogHeader>
 
@@ -153,9 +152,9 @@ export const CreateSponsoredTaskDialog = () => {
                 name="country"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ülke</FormLabel>
+                    <FormLabel>Country</FormLabel>
                     <FormControl>
-                      <Input placeholder="Türkiye" {...field} />
+                      <Input placeholder="Turkey" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -167,9 +166,9 @@ export const CreateSponsoredTaskDialog = () => {
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Şehir</FormLabel>
+                    <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder="İstanbul" {...field} />
+                      <Input placeholder="Istanbul" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -182,9 +181,9 @@ export const CreateSponsoredTaskDialog = () => {
               name="taskTitle"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Görev Başlığı</FormLabel>
+                  <FormLabel>Task Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Tarihi Yerleri Keşfet" {...field} />
+                    <Input placeholder="Explore Historic Places" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,10 +195,10 @@ export const CreateSponsoredTaskDialog = () => {
               name="taskDescription"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Görev Açıklaması</FormLabel>
+                  <FormLabel>Task Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Şehirdeki tarihi mekanları ziyaret et ve fotoğraflarını paylaş..."
+                      placeholder="Visit historic places in the city and share your photos..."
                       rows={4}
                       {...field}
                     />
@@ -215,11 +214,11 @@ export const CreateSponsoredTaskDialog = () => {
                 name="solAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>SOL Ödül Miktarı</FormLabel>
+                    <FormLabel>SOL Reward Amount</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="0.5" {...field} />
                     </FormControl>
-                    <FormDescription>Havuza yatırılacak toplam SOL</FormDescription>
+                    <FormDescription>Total SOL to be deposited to pool</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -230,11 +229,11 @@ export const CreateSponsoredTaskDialog = () => {
                 name="maxWinners"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kazanan Sayısı</FormLabel>
+                    <FormLabel>Number of Winners</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="1" {...field} />
                     </FormControl>
-                    <FormDescription>Ödülü alacak kişi sayısı</FormDescription>
+                    <FormDescription>Number of people who will receive rewards</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -249,16 +248,16 @@ export const CreateSponsoredTaskDialog = () => {
                 disabled={isSubmitting}
                 className="flex-1"
               >
-                İptal
+                Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} className="flex-1">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Oluşturuluyor...
+                    Creating...
                   </>
                 ) : (
-                  "Görev Oluştur ve SOL Yatır"
+                  "Create Task & Deposit SOL"
                 )}
               </Button>
             </div>
