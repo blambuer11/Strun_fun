@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, QrCode, Camera, MapPin, Zap, Target, Sparkles } from "lucide-react";
+import { ArrowLeft, QrCode, Camera, MapPin, Zap, Target, Sparkles, Share2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -156,6 +156,43 @@ const Tasks = () => {
     }
   };
 
+  const handleShareTask = async (task: any) => {
+    const shareText = `I just completed "${task.title || task.name}" and earned ${task.xp_reward} XP on Strun! 🏃‍♂️💨`;
+    const shareUrl = window.location.origin;
+
+    // Try Web Share API first (works on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Strun Task Completed',
+          text: shareText,
+          url: shareUrl,
+        });
+        toast({
+          title: "Shared! 🎉",
+          description: "Thanks for sharing your achievement!",
+        });
+      } catch (error) {
+        console.log('Share cancelled');
+      }
+    } else {
+      // Fallback: Open share menu with social media options
+      const encodedText = encodeURIComponent(shareText);
+      const encodedUrl = encodeURIComponent(shareUrl);
+      
+      // Show custom share dialog with social media links
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+      const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`;
+      
+      // Copy to clipboard as fallback
+      navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+      toast({
+        title: "Text Copied! 📋",
+        description: "Share link copied to clipboard. You can paste it anywhere!",
+      });
+    }
+  };
+
   // Load my tasks on mount
   useEffect(() => {
     loadMyTasks();
@@ -291,7 +328,7 @@ const Tasks = () => {
                     if (!task) return null;
                     
                     return (
-                      <Card key={userTask.id} className="p-4 glass border-border/50 hover:border-primary/50 transition-all cursor-pointer" onClick={() => handleTaskSelect(task)}>
+                      <Card key={userTask.id} className="p-4 glass border-border/50 hover:border-primary/50 transition-all">
                         <div className="flex items-start gap-3">
                           <div className={`p-2 rounded-lg ${userTask.status === 'completed' ? 'bg-accent/20' : 'bg-primary/20'}`}>
                             {userTask.status === 'completed' ? (
@@ -303,15 +340,31 @@ const Tasks = () => {
                           <div className="flex-1">
                             <h3 className="font-bold mb-1">{task.title || task.name}</h3>
                             <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
-                            <div className="flex items-center gap-4 mt-2">
-                              <span className="text-xs text-primary font-medium">+{task.xp_reward} XP</span>
-                              <span className={`text-xs px-2 py-1 rounded-full ${
-                                userTask.status === 'completed' ? 'bg-accent/20 text-accent' : 
-                                userTask.status === 'pending' ? 'bg-primary/20 text-primary' : 
-                                'bg-destructive/20 text-destructive'
-                              }`}>
-                                {userTask.status}
-                              </span>
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center gap-4">
+                                <span className="text-xs text-primary font-medium">+{task.xp_reward} XP</span>
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  userTask.status === 'completed' ? 'bg-accent/20 text-accent' : 
+                                  userTask.status === 'pending' ? 'bg-primary/20 text-primary' : 
+                                  'bg-destructive/20 text-destructive'
+                                }`}>
+                                  {userTask.status}
+                                </span>
+                              </div>
+                              {userTask.status === 'completed' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShareTask(task);
+                                  }}
+                                >
+                                  <Share2 className="w-4 h-4" />
+                                  Share
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
