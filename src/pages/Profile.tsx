@@ -778,21 +778,21 @@ const Profile = () => {
                         <div>
                           <div className="font-medium">{task.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {userTask.end_ts ? new Date(userTask.end_ts).toLocaleDateString() : 'Completed'}
+                            {userTask.completed_at ? new Date(userTask.completed_at).toLocaleDateString() : 'Completed'}
                             {task.location_name && ` • ${task.location_name}`}
                           </div>
-                          {task.challenge_type && (
+                          {task.type && (
                             <Badge variant="outline" className="mt-1 text-xs">
-                              {task.challenge_type}
+                              {task.type.replace(/_/g, ' ')}
                             </Badge>
                           )}
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-bold text-accent">+{userTask.xp_awarded || task.xp_reward} XP</div>
-                        {task.task_type && (
+                        {task.type && (
                           <div className="text-xs text-muted-foreground capitalize">
-                            {task.task_type.replace('_', ' ')}
+                            {task.type.replace(/_/g, ' ')}
                           </div>
                         )}
                       </div>
