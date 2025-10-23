@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import TasksMap from "@/components/TasksMap";
 import BottomNav from "@/components/BottomNav";
 import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
+import { CreateSponsoredTaskDialog } from "@/components/CreateSponsoredTaskDialog";
 import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles } from "lucide-react";
 
 const Tasks = () => {
@@ -361,23 +362,26 @@ const Tasks = () => {
               {dailyTasksRemaining} left
             </Badge>
           </div>
-          <Button
-            onClick={handleGenerateTasks}
-            disabled={generatingTasks || dailyTasksRemaining <= 0}
-            className="w-full h-12"
-          >
-            {generatingTasks ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating Tasks...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Location Tasks
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleGenerateTasks}
+              disabled={generatingTasks || dailyTasksRemaining <= 0}
+              className="flex-1 h-12"
+            >
+              {generatingTasks ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating Tasks...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Location Tasks
+                </>
+              )}
+            </Button>
+            <CreateSponsoredTaskDialog />
+          </div>
         </Card>
 
         {/* Top Info Panel */}

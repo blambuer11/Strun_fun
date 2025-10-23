@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, city, lat, lon, count = 3, solPool, maxParticipants, taskDescription } = await req.json();
+    const { userId, city, lat, lon, count = 3, solPool, maxParticipants, taskDescription, taskTitle } = await req.json();
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -68,8 +68,8 @@ serve(async (req) => {
         .from('tasks')
         .insert({
           creator_id: userId,
-          title: taskDescription.substring(0, 50),
-          name: taskDescription.substring(0, 50),
+          title: taskTitle || taskDescription.substring(0, 50),
+          name: taskTitle || taskDescription.substring(0, 50),
           description: taskDescription,
           city: cityName,
           type: 'content_photo',
