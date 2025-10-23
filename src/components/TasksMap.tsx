@@ -2,24 +2,33 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Zap, Navigation, QrCode, Camera, Clock } from "lucide-react";
+import { MapPin, Zap, Navigation, QrCode, Camera, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import GoogleMap from "./GoogleMap";
 
 interface Task {
   id: string;
-  name?: string;
-  title?: string;
-  description?: string;
-  task_type: string;
+  title: string;
+  name: string;
+  description: string;
+  type: string;
+  city: string;
+  coordinates: { lat: number; lon: number };
+  radius_m: number;
   xp_reward: number;
-  rules?: any;
+  sol_reward: number;
+  max_participants?: number;
+  current_participants: number;
   distance_meters: number;
   lat: number;
   lon: number;
-  created_by?: string;
-  partner_location_id?: string;
+  location_name?: string;
+  pool_id?: string;
+  pools?: {
+    total_funded_sol: number;
+    status: string;
+  };
 }
 
 interface TasksMapProps {
@@ -42,14 +51,13 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
 
       if (tasksError) throw tasksError;
 
-      // Get user's declined and completed tasks
+      // Get user's tasks to filter out already joined/declined
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user) {
         const { data: userTasks } = await supabase
           .from("user_tasks")
           .select("task_id, status")
-          .eq("user_id", userData.user.id)
-          .in("status", ["declined", "completed", "pending"]);
+          .eq("user_id", userData.user.id);
 
         const excludedTaskIds = new Set(userTasks?.map(ut => ut.task_id) || []);
         const filteredTasks = (tasksData.tasks || []).filter((task: Task) => !excludedTaskIds.has(task.id));
@@ -94,9 +102,13 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
 
   const getTaskIcon = (type: string) => {
     switch (type) {
-      case 'qr_scan':
+      case 'qr_checkin':
         return QrCode;
-      case 'selfie_group':
+      case 'video_reaction':
+        return Video;
+      case 'content_video':
+        return Video;
+      case 'content_photo':
         return Camera;
       default:
         return MapPin;
@@ -105,9 +117,11 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
 
   const getTaskColor = (type: string) => {
     switch (type) {
-      case 'qr_scan':
+      case 'qr_checkin':
         return 'primary';
-      case 'selfie_group':
+      case 'video_reaction':
+        return 'secondary';
+      case 'content_video':
         return 'secondary';
       default:
         return 'accent';
@@ -152,7 +166,7 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
               markers={tasks.map(task => ({
                 lat: task.lat,
                 lng: task.lon,
-                label: task.title || task.name || 'Task',
+                label: task.title || task.name,
               }))}
               center={userLocation}
             />
@@ -181,8 +195,8 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
           </Card>
         ) : (
           tasks.map((task, index) => {
-            const TaskIcon = getTaskIcon(task.task_type);
-            const taskColor = getTaskColor(task.task_type);
+            const TaskIcon = getTaskIcon(task.type);
+            const taskColor = getTaskColor(task.type);
             
             return (
               <Card
@@ -205,7 +219,7 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex-1">
                         <h4 className="font-display font-bold text-base group-hover:text-primary transition-colors">
-                          {task.title || task.name || 'Task'}
+                          {task.title || task.name}
                         </h4>
                         {task.description && (
                           <p className="text-sm text-muted-foreground mt-1">
@@ -227,7 +241,7 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
                         variant="outline" 
                         className="text-xs border-primary/30 bg-primary/10"
                       >
-                        {task.task_type.replace('_', ' ')}
+                        {task.type.replace(/_/g, ' ')}
                       </Badge>
                       <Badge 
                         variant="outline"
@@ -236,21 +250,32 @@ const TasksMap = ({ onTaskSelect, onTaskDecline }: TasksMapProps) => {
                         <Navigation className="w-3 h-3 mr-1" />
                         {(task.distance_meters / 1000).toFixed(1)} km
                       </Badge>
-                      <Badge
-                        variant="outline"
-                        className="text-xs border-border/50 bg-background/50"
-                      >
-                        <Clock className="w-3 h-3 mr-1" />
-                        Active now
-                      </Badge>
+                      {task.location_name && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-border/50 bg-background/50"
+                        >
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {task.location_name}
+                        </Badge>
+                      )}
+                      {task.sol_reward > 0 && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-success/50 bg-success/10 text-success"
+                        >
+                          💎 {task.sol_reward} SOL
+                        </Badge>
+                      )}
                     </div>
 
-                    {/* Creator Info */}
-                    {task.created_by && task.created_by !== 'admin' && (
-                      <div className="mt-3 pt-3 border-t border-border/30">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <span className="text-accent">★</span>
-                          {task.created_by === 'system' ? 'AI Generated Task' : `Created by ${task.created_by}`}
+                    {/* Pool info if sponsored */}
+                    {task.pools && (
+                      <div className="mt-2 p-2 bg-success/10 rounded border border-success/30">
+                        <p className="text-xs text-success flex items-center gap-1">
+                          <span className="text-base">💰</span>
+                          Sponsored Task - {task.pools.total_funded_sol} SOL Pool
+                          {task.max_participants && ` · ${task.current_participants}/${task.max_participants} joined`}
                         </p>
                       </div>
                     )}

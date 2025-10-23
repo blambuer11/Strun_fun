@@ -147,19 +147,15 @@ const Profile = () => {
   const { data: completedTasks } = useQuery({
     queryKey: ["completed-tasks", user?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("user_tasks")
         .select("*, tasks(*)")
-        .eq("user_id", user.id)
-        .eq("status", "completed")
-        .order("end_ts", { ascending: false })
-        .limit(20);
-      
-      if (error) throw error;
-      return data;
+        .eq("user_id", user?.id)
+        .in("status", ["completed", "verified"])
+        .order("completed_at", { ascending: false });
+      return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!user,
   });
 
   const xp = profile?.xp || 0;

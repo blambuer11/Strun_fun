@@ -80,9 +80,25 @@ const Tasks = () => {
   const handleAcceptTask = async (task: any) => {
     if (!user) return;
     try {
-      const { error } = await supabase.from("user_tasks").insert({ user_id: user.id, task_id: task.id, status: "pending" });
+      const { data, error } = await supabase.functions.invoke("join-task", {
+        body: { userId: user.id, taskId: task.id },
+      });
+
       if (error) throw error;
-      toast({ title: "Task Accepted!", description: `Go complete "${task.name}"` });
+
+      if (data.limit_reached) {
+        toast({ 
+          title: "Daily Limit Reached", 
+          description: "You can only accept 3 tasks per day",
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      toast({ 
+        title: "Task Accepted!", 
+        description: `${data.remaining_today} tasks remaining today` 
+      });
       loadMyTasks();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });

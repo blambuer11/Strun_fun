@@ -1,9 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Camera, MapPin, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 interface TaskVerificationDialogProps {
   open: boolean;
@@ -20,90 +22,155 @@ export function TaskVerificationDialog({
   userTaskId,
   onVerified,
 }: TaskVerificationDialogProps) {
-  const [uploading, setUploading] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [result, setResult] = useState<any>(null);
+  const [nonce, setNonce] = useState<string | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    if (open) {
+      requestNonce();
+      getCurrentLocation();
+    }
+  }, [open]);
 
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+  const requestNonce = async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { data, error } = await supabase.functions.invoke("request-nonce", {
+        body: { userId: userData.user.id, taskId: task.id },
+      });
+
+      if (error) throw error;
+      setNonce(data.nonce);
+    } catch (error: any) {
+      console.error("Error requesting nonce:", error);
+    }
+  };
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Location error:", error);
+          toast({
+            title: "Location Required",
+            description: "Please enable location access to verify task",
+            variant: "destructive",
+          });
+        }
+      );
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (error) {
+      console.error("Camera error:", error);
       toast({
-        title: "Invalid File",
-        description: "Please upload an image or video",
+        title: "Camera Error",
+        description: "Could not access camera",
         variant: "destructive",
       });
-      return;
     }
+  };
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: "Maximum file size is 10MB",
-        variant: "destructive",
-      });
-      return;
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL("image/jpeg", 0.8);
+        setPhoto(imageData);
+        
+        // Stop camera
+        const stream = video.srcObject as MediaStream;
+        stream?.getTracks().forEach(track => track.stop());
+      }
     }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleVerify = async () => {
-    if (!imagePreview) {
+    if (!photo || !location || !nonce) {
       toast({
-        title: "No Image",
-        description: "Please upload an image first",
+        title: "Missing Information",
+        description: "Photo, location, and security token required",
         variant: "destructive",
       });
       return;
     }
 
     setVerifying(true);
-    try {
-      // Get current location
-      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject)
-      );
+    setResult(null);
 
-      // Call verification function
+    try {
+      const deviceInfo = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        timestamp: new Date().toISOString(),
+      };
+
       const { data, error } = await supabase.functions.invoke("verify-photo-task", {
         body: {
           taskId: task.id,
-          userTaskId: userTaskId,
-          imageBase64: imagePreview.split(",")[1],
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
+          userTaskId,
+          imageBase64: photo,
+          lat: location.lat,
+          lon: location.lon,
+          nonce,
+          clientTimestamp: new Date().toISOString(),
+          deviceInfo,
         },
       });
 
       if (error) throw error;
 
+      setResult(data);
+
       if (data.verified) {
         toast({
-          title: "Task Verified! 🎉",
-          description: `You earned ${data.xp_earned} XP! ${data.reason}`,
+          title: "✅ Task Verified!",
+          description: `You earned ${data.xp_earned} XP${data.sol_earned > 0 ? ` and ${data.sol_earned} SOL` : ''}!`,
         });
-        onVerified();
-        onOpenChange(false);
+        setTimeout(() => {
+          onVerified();
+          onOpenChange(false);
+        }, 2000);
       } else {
         toast({
-          title: "Verification Failed",
-          description: data.reason || "Task could not be verified",
-          variant: "destructive",
+          title: data.suspicious ? "⚠️ Verification Review" : "❌ Verification Failed",
+          description: data.reason || "Task verification failed",
+          variant: data.suspicious ? "default" : "destructive",
         });
       }
     } catch (error: any) {
       console.error("Verification error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to verify task",
+        description: error.message || "Verification failed",
         variant: "destructive",
       });
     } finally {
@@ -113,88 +180,174 @@ export function TaskVerificationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Verify Task Completion</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Camera className="w-5 h-5" />
+            Verify Task: {task.title || task.name}
+          </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4">
-          <div className="bg-primary/5 p-4 rounded-lg">
-            <h4 className="font-semibold mb-2">{task.name}</h4>
-            <p className="text-sm text-muted-foreground">{task.description}</p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-accent font-bold">+{task.xp_reward} XP</span>
-              {task.challenge_type && (
-                <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded">
-                  {task.challenge_type}
-                </span>
-              )}
+          {/* Task Info */}
+          <div className="p-3 bg-muted rounded-lg">
+            <p className="text-sm font-medium mb-2">{task.description}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <MapPin className="w-3 h-3" />
+              <span>Must be within {task.radius_m || 30}m of location</span>
             </div>
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
+          {/* Security Status */}
+          <div className="flex gap-2">
+            <Badge variant={nonce ? "default" : "secondary"}>
+              {nonce ? "🔐 Secured" : "⏳ Loading..."}
+            </Badge>
+            <Badge variant={location ? "default" : "secondary"}>
+              {location ? "📍 Located" : "⏳ Finding..."}
+            </Badge>
+          </div>
 
-          {imagePreview ? (
-            <div className="relative">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full h-64 object-cover rounded-lg"
+          {/* Camera/Photo */}
+          {!photo ? (
+            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+              <video
+                ref={videoRef}
+                className="w-full h-full object-cover"
+                autoPlay
+                playsInline
+                muted
               />
-              <Button
-                variant="outline"
-                size="sm"
-                className="absolute top-2 right-2"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Change
-              </Button>
+              <canvas ref={canvasRef} className="hidden" />
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                <Button
+                  size="lg"
+                  className="rounded-full"
+                  onClick={photo ? () => setPhoto(null) : capturePhoto}
+                >
+                  <Camera className="w-5 h-5 mr-2" />
+                  Capture Photo
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="relative">
+              <img
+                src={photo}
+                alt="Captured"
+                className="w-full rounded-lg"
+              />
               <Button
-                variant="outline"
-                className="w-full h-32"
-                onClick={() => fileInputRef.current?.click()}
+                size="sm"
+                variant="secondary"
+                className="absolute top-2 right-2"
+                onClick={() => {
+                  setPhoto(null);
+                  startCamera();
+                }}
               >
-                <div className="flex flex-col items-center gap-2">
-                  <Camera className="w-8 h-8" />
-                  <span>Take Photo or Upload</span>
-                </div>
+                Retake
               </Button>
             </div>
           )}
 
-          <div className="bg-muted/30 p-3 rounded-lg">
-            <p className="text-xs text-muted-foreground">
-              📸 <strong>AI Verification:</strong> Our AI will analyze your photo to verify you
-              completed the task correctly. Make sure your photo clearly shows the required
-              activity!
-            </p>
-          </div>
+          {/* Verification Result */}
+          {result && (
+            <div className={`p-4 rounded-lg border-2 ${
+              result.verified 
+                ? 'bg-success/10 border-success' 
+                : result.suspicious
+                ? 'bg-warning/10 border-warning'
+                : 'bg-destructive/10 border-destructive'
+            }`}>
+              <div className="flex items-center gap-2 mb-3">
+                {result.verified ? (
+                  <CheckCircle2 className="w-5 h-5 text-success" />
+                ) : result.suspicious ? (
+                  <AlertTriangle className="w-5 h-5 text-warning" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-destructive" />
+                )}
+                <span className="font-bold">
+                  {result.verified ? 'Verified!' : result.suspicious ? 'Under Review' : 'Not Verified'}
+                </span>
+              </div>
 
-          <Button
-            className="w-full"
-            onClick={handleVerify}
-            disabled={!imagePreview || verifying}
-          >
-            {verifying ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Verifying with AI...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Verify & Complete Task
-              </>
-            )}
-          </Button>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Verification Score:</span>
+                  <span className="font-mono">{(result.verification_score * 100).toFixed(0)}%</span>
+                </div>
+                <Progress value={result.verification_score * 100} className="h-2" />
+
+                <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                  <Badge variant={result.gps_verified ? "default" : "destructive"}>
+                    📍 GPS: {result.gps_verified ? '✓' : '✗'}
+                  </Badge>
+                  <Badge variant={result.ai_verified ? "default" : "destructive"}>
+                    🤖 AI: {result.ai_verified ? '✓' : '✗'}
+                  </Badge>
+                  <Badge variant={result.nonce_verified ? "default" : "destructive"}>
+                    🔐 Auth: {result.nonce_verified ? '✓' : '✗'}
+                  </Badge>
+                </div>
+
+                {result.distance_meters !== undefined && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Distance: {result.distance_meters}m from target
+                  </p>
+                )}
+
+                <p className="text-sm mt-2">{result.reason}</p>
+
+                {result.verified && (
+                  <div className="flex gap-2 mt-3">
+                    <Badge className="bg-accent text-accent-foreground">
+                      +{result.xp_earned} XP
+                    </Badge>
+                    {result.sol_earned > 0 && (
+                      <Badge className="bg-success text-success-foreground">
+                        💎 +{result.sol_earned} SOL
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          {!result && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => onOpenChange(false)}
+                disabled={verifying}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={!photo ? startCamera : handleVerify}
+                disabled={verifying || !nonce || !location}
+              >
+                {verifying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verifying...
+                  </>
+                ) : !photo ? (
+                  <>
+                    <Camera className="w-4 h-4 mr-2" />
+                    Start Camera
+                  </>
+                ) : (
+                  'Submit for Verification'
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
