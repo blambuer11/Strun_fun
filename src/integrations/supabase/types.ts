@@ -382,6 +382,36 @@ export type Database = {
         }
         Relationships: []
       }
+      pois: {
+        Row: {
+          created_at: string | null
+          id: string
+          lat: number | null
+          lon: number | null
+          name: string | null
+          tags: Json | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          lat?: number | null
+          lon?: number | null
+          name?: string | null
+          tags?: Json | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lat?: number | null
+          lon?: number | null
+          name?: string | null
+          tags?: Json | null
+          type?: string | null
+        }
+        Relationships: []
+      }
       pools: {
         Row: {
           created_at: string
@@ -753,6 +783,72 @@ export type Database = {
           },
         ]
       }
+      sponsors: {
+        Row: {
+          allowed_categories: string[] | null
+          budget_sol: number | null
+          created_at: string | null
+          disallowed_terms: string[] | null
+          id: string
+          name: string
+          per_task_budget_sol: number | null
+        }
+        Insert: {
+          allowed_categories?: string[] | null
+          budget_sol?: number | null
+          created_at?: string | null
+          disallowed_terms?: string[] | null
+          id?: string
+          name: string
+          per_task_budget_sol?: number | null
+        }
+        Update: {
+          allowed_categories?: string[] | null
+          budget_sol?: number | null
+          created_at?: string | null
+          disallowed_terms?: string[] | null
+          id?: string
+          name?: string
+          per_task_budget_sol?: number | null
+        }
+        Relationships: []
+      }
+      task_generation_jobs: {
+        Row: {
+          city: string
+          count: number | null
+          created_at: string | null
+          id: string
+          mode: string | null
+          sponsor_id: string | null
+          status: string | null
+          tasks_generated: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          city: string
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          mode?: string | null
+          sponsor_id?: string | null
+          status?: string | null
+          tasks_generated?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          mode?: string | null
+          sponsor_id?: string | null
+          status?: string | null
+          tasks_generated?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           active_from: string | null
@@ -764,13 +860,16 @@ export type Database = {
           current_participants: number | null
           description: string | null
           id: string
+          lat: number | null
           location_name: string | null
+          lon: number | null
           max_participants: number | null
           meta: Json | null
           name: string | null
           pool_id: string | null
           radius_m: number | null
           sol_reward: number | null
+          status: string | null
           title: string
           type: string
           updated_at: string
@@ -786,13 +885,16 @@ export type Database = {
           current_participants?: number | null
           description?: string | null
           id?: string
+          lat?: number | null
           location_name?: string | null
+          lon?: number | null
           max_participants?: number | null
           meta?: Json | null
           name?: string | null
           pool_id?: string | null
           radius_m?: number | null
           sol_reward?: number | null
+          status?: string | null
           title: string
           type: string
           updated_at?: string
@@ -808,13 +910,16 @@ export type Database = {
           current_participants?: number | null
           description?: string | null
           id?: string
+          lat?: number | null
           location_name?: string | null
+          lon?: number | null
           max_participants?: number | null
           meta?: Json | null
           name?: string | null
           pool_id?: string | null
           radius_m?: number | null
           sol_reward?: number | null
+          status?: string | null
           title?: string
           type?: string
           updated_at?: string

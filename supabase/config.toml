@@ -26,3 +26,18 @@ verify_jwt = false
 
 [functions.join-task]
 verify_jwt = false
+
+[functions.admin-generate-tasks]
+verify_jwt = true
+
+[functions.get-tasks]
+verify_jwt = false
+
+[functions.admin-publish-task]
+verify_jwt = true
+
+[functions.get-task-share]
+verify_jwt = false
+
+[functions.task-generation-worker]
+verify_jwt = false
