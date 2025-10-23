@@ -31,7 +31,11 @@ import {
   Moon,
   Footprints,
   TrendingUp,
-  Calendar
+  Calendar,
+  Wallet,
+  Coins,
+  Clock,
+  CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useHealthIntegration } from "@/hooks/useHealthIntegration";
@@ -389,8 +393,8 @@ const Profile = () => {
         <TabsList className="w-full rounded-none border-b border-border/50 bg-card h-12 sticky top-[72px] z-40">
           <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
           <TabsTrigger value="tasks" className="flex-1">Tasks</TabsTrigger>
+          <TabsTrigger value="wallet" className="flex-1">Wallet</TabsTrigger>
           <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
-          <TabsTrigger value="health" className="flex-1">Health</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="m-0">
@@ -824,6 +828,103 @@ const Profile = () => {
         </div>
       </TabsContent>
 
+      {/* Wallet Tab */}
+      <TabsContent value="wallet" className="m-0">
+        <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
+          {/* SOL Balance */}
+          <Card className="p-6 bg-gradient-to-br from-success/10 to-success/5 border-success/30">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-success/20 p-3 rounded-full">
+                  <Wallet className="w-6 h-6 text-success" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">SOL Balance</h3>
+                  <p className="text-xs text-muted-foreground">From task rewards</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-success">0.00</div>
+                <p className="text-xs text-muted-foreground">SOL</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Stake Info */}
+          <Card className="p-6 bg-card/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Coins className="w-5 h-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">Task Pools</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-background/50 rounded-lg">
+                <span className="text-sm text-muted-foreground">Active Pools</span>
+                <span className="font-bold">0</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-background/50 rounded-lg">
+                <span className="text-sm text-muted-foreground">Total Earned</span>
+                <span className="font-bold text-success">0.00 SOL</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-background/50 rounded-lg">
+                <span className="text-sm text-muted-foreground">Pending Claims</span>
+                <span className="font-bold text-accent">0</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Claim Button */}
+          <Button disabled className="w-full h-12 bg-success hover:bg-success/90">
+            <Coins className="w-4 h-4 mr-2" />
+            Claim Rewards (0.00 SOL)
+          </Button>
+
+          {/* Transaction History from Wallet */}
+          <Card className="p-6 bg-card/95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-accent/10 p-2 rounded-lg">
+                <Clock className="w-5 h-5 text-accent" />
+              </div>
+              <h3 className="text-lg font-bold">SOL History</h3>
+            </div>
+            {transactions && transactions.filter(t => t.currency === 'SOL').length > 0 ? (
+              <div className="space-y-3">
+                {transactions.filter(t => t.currency === 'SOL').map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between p-4 bg-background/50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      </div>
+                      <div>
+                        <div className="font-medium capitalize">{tx.type}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(tx.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-success">
+                        +{Number(tx.amount).toFixed(4)} SOL
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Coins className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No SOL transactions yet</p>
+                <p className="text-xs mt-1">Complete sponsored tasks to earn SOL!</p>
+              </div>
+            )}
+          </Card>
+        </div>
+      </TabsContent>
+
       {/* Stats Tab */}
       <TabsContent value="stats" className="m-0">
         <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
@@ -892,64 +993,6 @@ const Profile = () => {
         </div>
       </TabsContent>
 
-      {/* Health Tab */}
-      <TabsContent value="health" className="m-0">
-        <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
-          {/* Health Data Sync */}
-          <Card className="p-6 bg-card/95">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-accent" />
-              Today's Health Data
-            </h3>
-            {(isGoogleFitConnected || isAppleHealthConnected) ? (
-              <>
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Footprints className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold">{healthData.steps.toLocaleString()} steps</div>
-                      <div className="text-sm text-muted-foreground">Daily Steps</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-accent" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold">{healthData.distance.toFixed(2)} km</div>
-                      <div className="text-sm text-muted-foreground">Distance Covered</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 bg-secondary/5 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
-                      <Heart className="w-5 h-5 text-secondary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold">{healthData.activeMinutes} min</div>
-                      <div className="text-sm text-muted-foreground">Active Minutes</div>
-                    </div>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full h-12"
-                  onClick={syncHealthData}
-                >
-                  <Activity className="w-4 h-4 mr-2" />
-                  Sync Now
-                </Button>
-              </>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Connect Google Fit or Apple Health to see your health data</p>
-              </div>
-            )}
-          </Card>
-        </div>
-      </TabsContent>
       </Tabs>
       
       <BottomNav />

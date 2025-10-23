@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { MapPin, Camera, Sparkles, Share2, CheckCircle2, Clock, Zap, Coins, Users } from "lucide-react";
 
 const Tasks = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -116,14 +118,9 @@ const Tasks = () => {
     }
   };
 
-  const handleShareTask = async (task: any) => {
-    const text = `I completed "${task.name}" +${task.xp_reward} XP on Strun! 🏃‍♂️`;
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Strun', text, url: window.location.origin }); } catch {}
-    } else {
-      navigator.clipboard.writeText(text);
-      toast({ title: "Copied!", description: "Share link copied" });
-    }
+  const handleShareTask = async (userTaskData: any) => {
+    const task = userTaskData.tasks;
+    navigate(`/share/${task.id}`);
   };
 
   const filteredTasks = statusFilter === "all" ? myTasks : myTasks.filter(t => t.status === statusFilter);
@@ -208,7 +205,7 @@ const Tasks = () => {
                             </Button>
                           )}
                           {ut.status === 'completed' && (
-                            <Button onClick={() => handleShareTask(t)} variant="outline" size="sm" className="w-full mt-3"><Share2 className="w-4 h-4 mr-2" />Share</Button>
+                            <Button onClick={() => handleShareTask(ut)} variant="outline" size="sm" className="w-full mt-3"><Share2 className="w-4 h-4 mr-2" />Share</Button>
                           )}
                         </div>
                       </div>
