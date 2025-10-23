@@ -67,6 +67,24 @@ async function geocodeCity(cityName: string) {
   };
 }
 
+async function reverseGeocode(lat: number, lon: number) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+  const res = await fetch(url, { 
+    headers: { "User-Agent": "Strun/1.0 (fitness-app)" } 
+  });
+  
+  if (!res.ok) throw new Error(`Reverse geocode error ${res.status}`);
+  
+  const data = await res.json();
+  if (!data || !data.address) throw new Error("Location not found");
+  
+  const address = data.address;
+  const cityName = address.city || address.town || address.village || address.county || address.state || 'Unknown Location';
+  const country = address.country || '';
+  
+  return country ? `${cityName}, ${country}` : cityName;
+}
+
 function generateRuleBasedTask(cityName: string, center: { lat: number; lon: number }, index: number, radius_m: number) {
   const templateKeys = Object.keys(TASK_TEMPLATES);
   const templateKey = templateKeys[index % templateKeys.length];
@@ -121,16 +139,34 @@ serve(async (req) => {
     let tasksToGenerate = count;
     let targetCityName = cityName || 'your location';
 
-    // If city mode, geocode the city
+    // If city mode, geocode or reverse geocode
     if (mode === 'city') {
-      try {
-        const geoResult = await geocodeCity(cityName);
-        center = { lat: geoResult.lat, lon: geoResult.lon };
-        console.log(`Geocoded ${cityName} to:`, center);
-      } catch (error) {
-        console.error('Geocoding error:', error);
+      if (cityName) {
+        // Forward geocode from city name
+        try {
+          const geoResult = await geocodeCity(cityName);
+          center = { lat: geoResult.lat, lon: geoResult.lon };
+          targetCityName = cityName;
+          console.log(`Geocoded ${cityName} to:`, center);
+        } catch (error) {
+          console.error('Geocoding error:', error);
+          return new Response(
+            JSON.stringify({ error: `Could not find city: ${cityName}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else if (lat && lon) {
+        // Reverse geocode from coordinates
+        try {
+          targetCityName = await reverseGeocode(lat, lon);
+          console.log(`Reverse geocoded (${lat}, ${lon}) to: ${targetCityName}`);
+        } catch (error) {
+          console.error('Reverse geocoding error:', error);
+          targetCityName = 'your location';
+        }
+      } else {
         return new Response(
-          JSON.stringify({ error: `Could not find city: ${cityName}` }),
+          JSON.stringify({ error: 'Either cityName or coordinates required for city mode' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

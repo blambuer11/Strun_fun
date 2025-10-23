@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,7 +24,7 @@ const Tasks = () => {
   const [showSelfieCamera, setShowSelfieCamera] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [generatingTask, setGeneratingTask] = useState(false);
-  const [cityName, setCityName] = useState('');
+  const [myTasks, setMyTasks] = useState<any[]>([]);
 
   const handleTaskSelect = async (task: any) => {
     setSelectedTask(task);
@@ -100,14 +100,19 @@ const Tasks = () => {
     }
   };
 
-  const handleGenerateCityTasks = async (cityName: string, count: number = 5) => {
+  const handleGenerateLocationTasks = async (count: number = 5) => {
     if (!user?.id) return;
     
     setGeneratingTask(true);
     try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-location-task', {
         body: {
-          cityName,
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
           userId: user.id,
           mode: 'city',
           count,
@@ -118,21 +123,43 @@ const Tasks = () => {
 
       toast({
         title: `${count} Tasks Generated! 🌆`,
-        description: `Created ${count} new tasks for ${cityName}`,
+        description: `Created ${count} new tasks for your location`,
       });
       
       queryClient.invalidateQueries({ queryKey: ['nearby-tasks'] });
     } catch (error: any) {
-      console.error('Error generating city tasks:', error);
+      console.error('Error generating location tasks:', error);
       toast({
         title: "Failed to Generate Tasks",
-        description: error.message || "Could not create city tasks",
+        description: error.message || "Could not create location tasks",
         variant: "destructive",
       });
     } finally {
       setGeneratingTask(false);
     }
   };
+
+  const loadMyTasks = async () => {
+    if (!user?.id) return;
+    
+    const { data, error } = await supabase
+      .from('user_tasks')
+      .select(`
+        *,
+        tasks (*)
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setMyTasks(data);
+    }
+  };
+
+  // Load my tasks on mount
+  useEffect(() => {
+    loadMyTasks();
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -177,10 +204,14 @@ const Tasks = () => {
 
         <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
           <Tabs defaultValue="nearby" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 glass border border-border/50">
+            <TabsList className="grid w-full grid-cols-3 glass border border-border/50">
               <TabsTrigger value="nearby" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <MapPin className="w-4 h-4 mr-2" />
                 Nearby
+              </TabsTrigger>
+              <TabsTrigger value="my-tasks" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+                <Target className="w-4 h-4 mr-2" />
+                My Tasks
               </TabsTrigger>
               <TabsTrigger value="completed" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
                 <Zap className="w-4 h-4 mr-2" />
@@ -213,46 +244,82 @@ const Tasks = () => {
                 </Button>
               </Card>
 
-              {/* City Tasks Card */}
+              {/* Location Tasks Card */}
               <Card className="p-6 glass border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="bg-primary/20 p-2 rounded-lg">
                     <MapPin className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold">City Tasks</h3>
+                  <h3 className="text-lg font-bold">Generate Tasks</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">Generate multiple tasks for any city in the world</p>
+                <p className="text-sm text-muted-foreground mb-4">Generate multiple tasks for your current location</p>
                 
-                <div className="space-y-3">
-                  <input 
-                    type="text" 
-                    placeholder="Enter city name (e.g., Istanbul, Turkey)" 
-                    value={cityName}
-                    onChange={(e) => setCityName(e.target.value)}
-                    className="w-full h-12 px-4 bg-background/50 border border-border/50 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => cityName.trim() && handleGenerateCityTasks(cityName.trim(), 5)}
-                      disabled={generatingTask || !cityName.trim()} 
-                      className="flex-1 h-12 bg-primary hover:bg-primary/90"
-                    >
-                      {generatingTask ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Target className="w-4 h-4 mr-2" />
-                          Generate 5 Tasks
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                <Button 
+                  onClick={() => handleGenerateLocationTasks(5)}
+                  disabled={generatingTask} 
+                  className="w-full h-12 bg-primary hover:bg-primary/90"
+                >
+                  {generatingTask ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Target className="w-4 h-4 mr-2" />
+                      Generate 5 Tasks
+                    </>
+                  )}
+                </Button>
               </Card>
               <TasksMap onTaskSelect={handleTaskSelect} />
+            </TabsContent>
+
+            <TabsContent value="my-tasks" className="mt-4">
+              {myTasks.length === 0 ? (
+                <Card className="p-12 text-center glass border-border/50">
+                  <div className="inline-flex p-4 rounded-full bg-primary/10 mb-4">
+                    <Target className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">No Tasks Yet</h3>
+                  <p className="text-muted-foreground text-sm">Generate or join tasks to see them here</p>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {myTasks.map((userTask) => {
+                    const task = userTask.tasks;
+                    if (!task) return null;
+                    
+                    return (
+                      <Card key={userTask.id} className="p-4 glass border-border/50 hover:border-primary/50 transition-all cursor-pointer" onClick={() => handleTaskSelect(task)}>
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg ${userTask.status === 'completed' ? 'bg-accent/20' : 'bg-primary/20'}`}>
+                            {userTask.status === 'completed' ? (
+                              <Zap className="w-5 h-5 text-accent" />
+                            ) : (
+                              <Target className="w-5 h-5 text-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold mb-1">{task.title || task.name}</h3>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+                            <div className="flex items-center gap-4 mt-2">
+                              <span className="text-xs text-primary font-medium">+{task.xp_reward} XP</span>
+                              <span className={`text-xs px-2 py-1 rounded-full ${
+                                userTask.status === 'completed' ? 'bg-accent/20 text-accent' : 
+                                userTask.status === 'pending' ? 'bg-primary/20 text-primary' : 
+                                'bg-destructive/20 text-destructive'
+                              }`}>
+                                {userTask.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="completed" className="mt-4">
