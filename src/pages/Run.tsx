@@ -388,7 +388,7 @@ const Run = () => {
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <Button 
-                variant={isPaused ? "accent" : "warning"}
+                variant={isPaused ? "accent" : "secondary"}
                 size="lg"
                 onClick={handlePause}
               >

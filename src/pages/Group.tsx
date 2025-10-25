@@ -624,7 +624,7 @@ const Group = () => {
             ) : (
               <div className="flex gap-2 w-full">
                 <Button
-                  variant={group.is_sponsored ? "warning" : "accent"}
+                  variant={group.is_sponsored ? "gradient" : "accent"}
                   className="flex-1"
                   onClick={() => handleJoinGroup(group.id)}
                 >
