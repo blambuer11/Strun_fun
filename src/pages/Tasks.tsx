@@ -84,10 +84,12 @@ const Tasks = () => {
   };
 
   const loadMarketplaceTasks = async () => {
+    // Only show sponsored tasks (tasks with pool_id) in marketplace
     const { data } = await supabase
       .from("tasks")
       .select("*, pools(*)")
       .eq("status", "published")
+      .not("pool_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(200);
     
@@ -441,43 +443,6 @@ const Tasks = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6">
-        {/* Generate Tasks Button */}
-        <Card className="p-4 glass border-accent/30 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-display font-bold text-sm flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-accent" />
-                AI Task Generator
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Generate 3 location-based tasks near you
-              </p>
-            </div>
-            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"}>
-              {dailyTasksRemaining} left
-            </Badge>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleGenerateTasks}
-              disabled={generatingTasks || dailyTasksRemaining <= 0}
-              className="flex-1 h-12"
-            >
-              {generatingTasks ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating Tasks...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Location Tasks
-                </>
-              )}
-            </Button>
-            <CreateSponsoredTaskDialog />
-          </div>
-        </Card>
 
         {/* Top Info Panel */}
         <div className="grid grid-cols-3 gap-3 mb-4">
@@ -525,7 +490,10 @@ const Tasks = () => {
               <Award className="w-5 h-5 text-accent" />
               Task Marketplace
             </h3>
-            <Badge variant="outline">{filteredTasks.length} tasks</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{filteredTasks.length} tasks</Badge>
+              <CreateSponsoredTaskDialog />
+            </div>
           </div>
 
           {/* Filters */}
@@ -649,10 +617,30 @@ const Tasks = () => {
 
         {/* My Tasks Section */}
         <Card className="p-4 glass mt-6">
-          <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-primary" />
-            My Tasks
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-bold text-lg flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-primary" />
+              My Tasks
+            </h3>
+            <Button
+              onClick={handleGenerateTasks}
+              disabled={generatingTasks || dailyTasksRemaining <= 0}
+              size="sm"
+              variant="outline"
+            >
+              {generatingTasks ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Tasks ({dailyTasksRemaining} left)
+                </>
+              )}
+            </Button>
+          </div>
           
           {myTasks.length === 0 ? (
             <div className="text-center py-8">
