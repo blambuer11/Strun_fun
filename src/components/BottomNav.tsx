@@ -11,7 +11,7 @@ const BottomNav = () => {
     { icon: Map, label: "Run", path: "/run" },
     { icon: MapPin, label: "Tasks", path: "/tasks" },
     { icon: MessageSquare, label: "Community", path: "/community" },
-    { icon: Activity, label: "Stats", path: "/stats" },
+    { icon: Activity, label: "Dashboard", path: "/dashboard" },
     { icon: User, label: "Profile", path: "/profile" },
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
   ];

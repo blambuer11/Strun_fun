@@ -13,7 +13,7 @@ import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { CreateSponsoredTaskDialog } from "@/components/CreateSponsoredTaskDialog";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
 import { TaskProofsList } from "@/components/TaskProofsList";
-import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search, Upload } from "lucide-react";
+import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search, Upload, Twitter, Facebook, Linkedin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -431,6 +431,32 @@ const Tasks = () => {
     navigate(`/share/${task.id}`);
   };
 
+  const handleShareToSocial = (platform: string, task: any, userTask?: any) => {
+    const appUrl = window.location.origin;
+    const taskUrl = `${appUrl}/share/${task.id}`;
+    const text = userTask 
+      ? `I just completed "${task.name || task.title}" and earned ${userTask.xp_awarded || task.xp_reward} XP! 🎯` 
+      : `Check out this task: "${task.name || task.title}" - Earn ${task.xp_reward} XP! 🎯`;
+    
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(taskUrl)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(taskUrl)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(taskUrl)}`;
+        break;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+  };
+
   // Find user task for selected task
   const userTask = selectedTask 
     ? myTasks.find(ut => ut.task_id === selectedTask.id)
@@ -688,10 +714,14 @@ const Tasks = () => {
                 const isCompleted = ut.status === 'completed';
                 
                 return (
-                  <Card key={ut.id} className={`p-4 glass border-2 transition-all ${
-                    isPending ? 'border-warning/50 hover:border-warning' : 
-                    isCompleted ? 'border-success/50' : 'border-border/50'
-                  }`}>
+                  <Card 
+                    key={ut.id} 
+                    className={`p-4 glass border-2 transition-all cursor-pointer ${
+                      isPending ? 'border-warning/50 hover:border-warning' : 
+                      isCompleted ? 'border-success/50' : 'border-border/50'
+                    }`}
+                    onClick={() => isPending && handleTaskSelect(t)}
+                  >
                     <div className="flex gap-3">
                       <div className={`p-3 rounded-lg ${
                         isCompleted ? 'bg-success/20' : 
@@ -757,7 +787,8 @@ const Tasks = () => {
                           {isPending && t.type !== 'qr_checkin' && (
                             <>
                               <Button 
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedProofTask(t);
                                   setSelectedProofUserTaskId(ut.id);
                                   setShowProofDialog(true);
@@ -768,7 +799,10 @@ const Tasks = () => {
                                 Submit Proof
                               </Button>
                               <Button
-                                onClick={() => handleCancelTask(ut.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelTask(ut.id);
+                                }}
                                 variant="outline"
                                 size="icon"
                                 className="h-11 w-11"
@@ -780,26 +814,54 @@ const Tasks = () => {
                           
                           {isCompleted && (
                             <>
-                              <Button 
-                                onClick={() => handleShareTask(ut)} 
-                                variant="outline" 
-                                className="flex-1 h-11"
-                              >
-                                <Share2 className="w-4 h-4 mr-2" />
-                                Share Achievement
-                              </Button>
-                              <Button 
-                                onClick={() => {
-                                  setSelectedProofTask(t);
-                                  setSelectedProofUserTaskId(ut.id);
-                                  setShowProofDialog(true);
-                                }} 
-                                variant="secondary"
-                                className="flex-1 h-11"
-                              >
-                                <Upload className="w-4 h-4 mr-2" />
-                                Add Proof
-                              </Button>
+                              <div className="flex gap-2 w-full">
+                                <Button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShareToSocial('twitter', t, ut);
+                                  }}
+                                  variant="outline" 
+                                  size="icon"
+                                  className="h-11 w-11"
+                                >
+                                  <Twitter className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShareToSocial('facebook', t, ut);
+                                  }}
+                                  variant="outline" 
+                                  size="icon"
+                                  className="h-11 w-11"
+                                >
+                                  <Facebook className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShareToSocial('linkedin', t, ut);
+                                  }}
+                                  variant="outline" 
+                                  size="icon"
+                                  className="h-11 w-11"
+                                >
+                                  <Linkedin className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedProofTask(t);
+                                    setSelectedProofUserTaskId(ut.id);
+                                    setShowProofDialog(true);
+                                  }} 
+                                  variant="secondary"
+                                  className="flex-1 h-11"
+                                >
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Add Proof
+                                </Button>
+                              </div>
                             </>
                           )}
                         </div>
@@ -968,15 +1030,71 @@ const Tasks = () => {
                     </Button>
                   </>
                 ) : isTaskCompleted ? (
-                  <Button
-                    onClick={() => handleShareTask(userTask)}
-                    className="w-full h-12"
-                  >
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share Task
-                  </Button>
+                  <div className="space-y-2 w-full">
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleShareToSocial('twitter', selectedTask, userTask)}
+                        variant="outline"
+                        size="icon"
+                        className="h-12 w-12"
+                      >
+                        <Twitter className="w-5 h-5" />
+                      </Button>
+                      <Button
+                        onClick={() => handleShareToSocial('facebook', selectedTask, userTask)}
+                        variant="outline"
+                        size="icon"
+                        className="h-12 w-12"
+                      >
+                        <Facebook className="w-5 h-5" />
+                      </Button>
+                      <Button
+                        onClick={() => handleShareToSocial('linkedin', selectedTask, userTask)}
+                        variant="outline"
+                        size="icon"
+                        className="h-12 w-12"
+                      >
+                        <Linkedin className="w-5 h-5" />
+                      </Button>
+                      <Button
+                        onClick={() => handleShareTask(userTask)}
+                        className="flex-1 h-12"
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share Details
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <>
+                    {!isTaskAccepted && (
+                      <div className="flex gap-2 mb-2">
+                        <Button
+                          onClick={() => handleShareToSocial('twitter', selectedTask)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Twitter className="w-4 h-4 mr-2" />
+                          Share
+                        </Button>
+                        <Button
+                          onClick={() => handleShareToSocial('facebook', selectedTask)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Facebook className="w-4 h-4 mr-2" />
+                          Share
+                        </Button>
+                        <Button
+                          onClick={() => handleShareToSocial('linkedin', selectedTask)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Linkedin className="w-4 h-4 mr-2" />
+                          Share
+                        </Button>
+                      </div>
+                    )}
                     {selectedTask.type === 'qr_checkin' ? (
                       <Button
                         onClick={() => handleCheckIn(selectedTask, userTask.id)}

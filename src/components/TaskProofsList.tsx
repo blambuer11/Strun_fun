@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import { ThumbsUp, ThumbsDown, User } from "lucide-react";
+import { ThumbsUp, ThumbsDown, User, Twitter, Facebook, Linkedin, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,30 @@ export const TaskProofsList = ({ taskId }: TaskProofsListProps) => {
   const { toast } = useToast();
   const [proofs, setProofs] = useState<TaskProof[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleShareProof = (platform: string, proof: TaskProof) => {
+    const appUrl = window.location.origin;
+    const text = `Check out this proof from ${proof.username}: "${proof.content}" 🎯`;
+    const proofUrl = `${appUrl}/tasks`;
+    
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(proofUrl)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(proofUrl)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(proofUrl)}`;
+        break;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+  };
 
   const loadProofs = async () => {
     try {
@@ -167,13 +191,39 @@ export const TaskProofsList = ({ taskId }: TaskProofsListProps) => {
               </div>
             </Avatar>
             
-            <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-2">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{proof.username}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(proof.created_at), { addSuffix: true })}
                   </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleShareProof('twitter', proof)}
+                  >
+                    <Twitter className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleShareProof('facebook', proof)}
+                  >
+                    <Facebook className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleShareProof('linkedin', proof)}
+                  >
+                    <Linkedin className="w-3 h-3" />
+                  </Button>
                 </div>
               </div>
               
