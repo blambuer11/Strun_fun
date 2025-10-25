@@ -726,7 +726,7 @@ const Tasks = () => {
                                 size="sm"
                               >
                                 <Upload className="w-4 h-4 mr-2" />
-                                Submit Proof
+                                Kanıt Gönder
                               </Button>
                             </>
                           )}
@@ -753,7 +753,7 @@ const Tasks = () => {
                                 className="flex-1"
                               >
                                 <Upload className="w-4 h-4 mr-2" />
-                                Submit Proof
+                                Kanıt Gönder
                               </Button>
                             </>
                           )}
@@ -1027,6 +1027,11 @@ const Tasks = () => {
         onOpenChange={setShowProofDialog}
         taskId={selectedProofTask?.id || ""}
         userTaskId={selectedProofUserTaskId || ""}
+        taskLocation={selectedProofTask ? {
+          lat: selectedProofTask.lat || 0,
+          lon: selectedProofTask.lon || 0,
+          radius_m: selectedProofTask.radius_m || 100
+        } : undefined}
         onProofSubmitted={() => {
           loadMyTasks();
           setShowProofDialog(false);
