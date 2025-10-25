@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,24 +7,127 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Share2 } from "lucide-react";
+import { Upload, Share2, MapPin, CheckCircle2, XCircle, Loader2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface TaskProofDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   taskId: string;
   userTaskId: string;
+  taskLocation?: { lat: number; lon: number; radius_m?: number };
   onProofSubmitted: () => void;
 }
 
-export const TaskProofDialog = ({ open, onOpenChange, taskId, userTaskId, onProofSubmitted }: TaskProofDialogProps) => {
+export const TaskProofDialog = ({ 
+  open, 
+  onOpenChange, 
+  taskId, 
+  userTaskId, 
+  taskLocation,
+  onProofSubmitted 
+}: TaskProofDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [content, setContent] = useState("");
-  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
-  const [shareToSocial, setShareToSocial] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<"checking" | "verified" | "failed" | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+
+  // Get GPS location when dialog opens
+  useEffect(() => {
+    if (open && taskLocation) {
+      setGpsStatus("checking");
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLat = position.coords.latitude;
+          const userLon = position.coords.longitude;
+          setUserLocation({ lat: userLat, lon: userLon });
+
+          // Calculate distance
+          const distance = calculateDistance(
+            userLat,
+            userLon,
+            taskLocation.lat,
+            taskLocation.lon
+          );
+
+          const radiusM = taskLocation.radius_m || 50;
+          if (distance <= radiusM) {
+            setGpsStatus("verified");
+          } else {
+            setGpsStatus("failed");
+            toast({
+              title: "GPS Verification Failed",
+              description: `You're ${Math.round(distance)}m away. You need to be within ${radiusM}m.`,
+              variant: "destructive",
+            });
+          }
+        },
+        (error) => {
+          console.error("GPS error:", error);
+          setGpsStatus("failed");
+          toast({
+            title: "Location Error",
+            description: "Unable to get your location. Please enable GPS.",
+            variant: "destructive",
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    }
+  }, [open, taskLocation]);
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please select a file smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image or video file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMediaFile(file);
+    setMediaPreview(URL.createObjectURL(file));
+  };
 
   const handleSubmitProof = async (shareToCommunity: boolean = false) => {
     if (!user || !content.trim()) {
@@ -36,61 +139,88 @@ export const TaskProofDialog = ({ open, onOpenChange, taskId, userTaskId, onProo
       return;
     }
 
+    if (taskLocation && gpsStatus !== "verified") {
+      toast({
+        title: "GPS Verification Required",
+        description: "You must be at the task location to submit proof",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
+    let mediaUrl: string | null = null;
 
     try {
-      const { error } = await supabase
-        .from("task_proofs")
-        .insert({
-          task_id: taskId,
-          user_id: user.id,
-          user_task_id: userTaskId,
-          content: content.trim(),
-          media_url: mediaUrl || null,
-          is_shared_to_community: shareToCommunity,
-        });
+      // Upload media if provided
+      if (mediaFile) {
+        setUploading(true);
+        const fileExt = mediaFile.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("task-proofs")
+          .upload(fileName, mediaFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("task-proofs")
+          .getPublicUrl(fileName);
+
+        mediaUrl = urlData.publicUrl;
+        setUploading(false);
+      }
+
+      const { error } = await supabase.from("task_proofs").insert({
+        task_id: taskId,
+        user_id: user.id,
+        user_task_id: userTaskId,
+        content: content.trim(),
+        media_url: mediaUrl,
+        is_shared_to_community: shareToCommunity,
+      });
 
       if (error) throw error;
 
       // If sharing to community, also create a post
       if (shareToCommunity) {
-        await supabase
-          .from("posts")
-          .insert({
-            user_id: user.id,
-            content: content.trim(),
-            image_url: mediaUrl || null,
-          });
+        await supabase.from("posts").insert({
+          user_id: user.id,
+          content: content.trim(),
+          image_url: mediaUrl,
+        });
       }
 
       toast({
-        title: "Success!",
-        description: shareToCommunity 
-          ? "Proof submitted and shared to community" 
-          : "Proof submitted successfully",
+        title: "Kanıt Gönderildi!",
+        description: shareToCommunity
+          ? "Kanıt gönderildi ve toplulukla paylaşıldı"
+          : "Kanıt başarıyla gönderildi",
       });
 
       setContent("");
-      setMediaUrl("");
+      setMediaFile(null);
+      setMediaPreview("");
       onProofSubmitted();
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error submitting proof:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to submit proof",
+        title: "Hata",
+        description: error.message || "Kanıt gönderilemedi",
         variant: "destructive",
       });
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
   const handleSocialShare = (platform: string) => {
-    setShareToSocial(platform);
     const text = encodeURIComponent(content);
     const url = encodeURIComponent(window.location.href);
-    
+
     const shareUrls: Record<string, string> = {
       tiktok: `https://www.tiktok.com/upload?caption=${text}`,
       twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
@@ -100,10 +230,10 @@ export const TaskProofDialog = ({ open, onOpenChange, taskId, userTaskId, onProo
 
     if (shareUrls[platform]) {
       window.open(shareUrls[platform], "_blank");
-      
+
       toast({
-        title: "Opening share dialog",
-        description: `Opening ${platform} to share your proof`,
+        title: "Paylaşım açılıyor",
+        description: `${platform} üzerinden paylaşmak için açılıyor`,
       });
     }
   };
@@ -112,15 +242,43 @@ export const TaskProofDialog = ({ open, onOpenChange, taskId, userTaskId, onProo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Submit Task Proof</DialogTitle>
+          <DialogTitle>Görev Kanıtı Gönder</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* GPS Status */}
+          {taskLocation && (
+            <Card className="p-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm font-medium">GPS Konumu:</span>
+                {gpsStatus === "checking" && (
+                  <Badge variant="secondary">
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    Kontrol Ediliyor...
+                  </Badge>
+                )}
+                {gpsStatus === "verified" && (
+                  <Badge className="bg-green-500">
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Doğrulandı
+                  </Badge>
+                )}
+                {gpsStatus === "failed" && (
+                  <Badge variant="destructive">
+                    <XCircle className="w-3 h-3 mr-1" />
+                    Başarısız
+                  </Badge>
+                )}
+              </div>
+            </Card>
+          )}
+
           <div>
-            <Label htmlFor="content">Proof Content</Label>
+            <Label htmlFor="content">Kanıt Açıklaması</Label>
             <Textarea
               id="content"
-              placeholder="Describe your completion or share your experience..."
+              placeholder="Görevinizi nasıl tamamladınızı açıklayın..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={4}
@@ -129,40 +287,91 @@ export const TaskProofDialog = ({ open, onOpenChange, taskId, userTaskId, onProo
           </div>
 
           <div>
-            <Label htmlFor="media">Media URL (optional)</Label>
+            <Label htmlFor="media">Fotoğraf/Video Yükle</Label>
             <Input
               id="media"
-              type="url"
-              placeholder="https://..."
-              value={mediaUrl}
-              onChange={(e) => setMediaUrl(e.target.value)}
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleFileChange}
               className="mt-1"
             />
+            {mediaPreview && (
+              <div className="mt-2 relative">
+                {mediaFile?.type.startsWith("image/") ? (
+                  <img
+                    src={mediaPreview}
+                    alt="Preview"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={mediaPreview}
+                    className="w-full h-48 object-cover rounded-lg"
+                    controls
+                  />
+                )}
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    setMediaFile(null);
+                    setMediaPreview("");
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             <Button
               onClick={() => handleSubmitProof(false)}
-              disabled={submitting || !content.trim()}
+              disabled={
+                submitting ||
+                uploading ||
+                !content.trim() ||
+                (taskLocation && gpsStatus !== "verified")
+              }
               className="w-full"
             >
-              <Upload className="w-4 h-4 mr-2" />
-              {submitting ? "Submitting..." : "Submit Proof"}
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Yükleniyor...
+                </>
+              ) : submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Gönderiliyor...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Kanıt Gönder
+                </>
+              )}
             </Button>
 
             <Button
               onClick={() => handleSubmitProof(true)}
-              disabled={submitting || !content.trim()}
+              disabled={
+                submitting ||
+                uploading ||
+                !content.trim() ||
+                (taskLocation && gpsStatus !== "verified")
+              }
               variant="secondary"
               className="w-full"
             >
               <Share2 className="w-4 h-4 mr-2" />
-              Submit & Share to Community
+              Gönder & Toplulukla Paylaş
             </Button>
           </div>
 
           <Card className="p-4 bg-muted/50">
-            <p className="text-sm font-medium mb-3">Share to Social Media</p>
+            <p className="text-sm font-medium mb-3">Sosyal Medyada Paylaş</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
