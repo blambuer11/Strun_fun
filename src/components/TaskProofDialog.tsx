@@ -193,10 +193,10 @@ export const TaskProofDialog = ({
       }
 
       toast({
-        title: "Kanıt Gönderildi!",
+        title: "Proof Submitted!",
         description: shareToCommunity
-          ? "Kanıt gönderildi ve toplulukla paylaşıldı"
-          : "Kanıt başarıyla gönderildi",
+          ? "Proof submitted and shared with community"
+          : "Proof submitted successfully",
       });
 
       setContent("");
@@ -207,8 +207,8 @@ export const TaskProofDialog = ({
     } catch (error: any) {
       console.error("Error submitting proof:", error);
       toast({
-        title: "Hata",
-        description: error.message || "Kanıt gönderilemedi",
+        title: "Error",
+        description: error.message || "Failed to submit proof",
         variant: "destructive",
       });
     } finally {
@@ -232,8 +232,8 @@ export const TaskProofDialog = ({
       window.open(shareUrls[platform], "_blank");
 
       toast({
-        title: "Paylaşım açılıyor",
-        description: `${platform} üzerinden paylaşmak için açılıyor`,
+        title: "Opening share",
+        description: `Opening to share on ${platform}`,
       });
     }
   };
@@ -242,7 +242,7 @@ export const TaskProofDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Görev Kanıtı Gönder</DialogTitle>
+          <DialogTitle>Submit Task Proof</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -251,23 +251,23 @@ export const TaskProofDialog = ({
             <Card className="p-3">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                <span className="text-sm font-medium">GPS Konumu:</span>
+                <span className="text-sm font-medium">GPS Location:</span>
                 {gpsStatus === "checking" && (
                   <Badge variant="secondary">
                     <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    Kontrol Ediliyor...
+                    Checking...
                   </Badge>
                 )}
                 {gpsStatus === "verified" && (
                   <Badge className="bg-green-500">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Doğrulandı
+                    Verified
                   </Badge>
                 )}
                 {gpsStatus === "failed" && (
                   <Badge variant="destructive">
                     <XCircle className="w-3 h-3 mr-1" />
-                    Başarısız
+                    Failed
                   </Badge>
                 )}
               </div>
@@ -275,10 +275,10 @@ export const TaskProofDialog = ({
           )}
 
           <div>
-            <Label htmlFor="content">Kanıt Açıklaması</Label>
+            <Label htmlFor="content">Proof Description</Label>
             <Textarea
               id="content"
-              placeholder="Görevinizi nasıl tamamladınızı açıklayın..."
+              placeholder="Describe how you completed the task..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={4}
@@ -287,7 +287,7 @@ export const TaskProofDialog = ({
           </div>
 
           <div>
-            <Label htmlFor="media">Fotoğraf/Video Yükle</Label>
+            <Label htmlFor="media">Upload Photo/Video</Label>
             <Input
               id="media"
               type="file"
@@ -339,17 +339,17 @@ export const TaskProofDialog = ({
               {uploading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Yükleniyor...
+                  Uploading...
                 </>
               ) : submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Gönderiliyor...
+                  Submitting...
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Kanıt Gönder
+                  Submit Proof
                 </>
               )}
             </Button>
@@ -366,12 +366,12 @@ export const TaskProofDialog = ({
               className="w-full"
             >
               <Share2 className="w-4 h-4 mr-2" />
-              Gönder & Toplulukla Paylaş
+              Submit & Share with Community
             </Button>
           </div>
 
           <Card className="p-4 bg-muted/50">
-            <p className="text-sm font-medium mb-3">Sosyal Medyada Paylaş</p>
+            <p className="text-sm font-medium mb-3">Share on Social Media</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
