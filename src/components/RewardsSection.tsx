@@ -1,233 +1,131 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, Lock, Sparkles, Trophy, Zap, Crown, Star } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { Award, Lock, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 
-interface RewardBox {
-  level: number;
-  isUnlocked: boolean;
-  isClaimed: boolean;
-  xpAmount?: number;
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  level_required: number;
+  earned: boolean;
 }
 
-const REWARD_LEVELS = [1, 2, 5, 10, 15, 20, 25, 30];
+export const RewardsSection = ({ userLevel }: { userLevel: number }) => {
+  const { user } = useAuth();
 
-export const RewardsSection = ({ userLevel, userId }: { userLevel: number; userId: string }) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [claimingLevel, setClaimingLevel] = useState<number | null>(null);
-
-  // Fetch claimed rewards
-  const { data: claimedRewards } = useQuery({
-    queryKey: ["user-rewards", userId],
+  // Query all badges
+  const { data: allBadges } = useQuery({
+    queryKey: ["badges"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("user_rewards")
+        .from("badges")
         .select("*")
-        .eq("user_id", userId)
-        .eq("is_claimed", true);
+        .order("level_required", { ascending: true });
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!userId,
   });
 
-  const claimReward = useMutation({
-    mutationFn: async (level: number) => {
-      // Generate random XP between 50-500
-      const randomXP = Math.floor(Math.random() * 451) + 50;
-
-      // Insert reward claim
-      const { error: rewardError } = await supabase
-        .from("user_rewards")
-        .insert({
-          user_id: userId,
-          reward_level: level,
-          is_claimed: true,
-          xp_amount: randomXP,
-          claimed_at: new Date().toISOString(),
-        });
-
-      if (rewardError) throw rewardError;
-
-      // Update user XP
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("xp")
-        .eq("id", userId)
-        .single();
-
-      if (profileError) throw profileError;
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ xp: (profile?.xp || 0) + randomXP })
-        .eq("id", userId);
-
-      if (updateError) throw updateError;
-
-      return randomXP;
-    },
-    onSuccess: (xpAmount) => {
-      queryClient.invalidateQueries({ queryKey: ["user-rewards"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+  // Query user's earned badges
+  const { data: earnedBadges } = useQuery({
+    queryKey: ["user-badges", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("user_badges")
+        .select("badge_id")
+        .eq("user_id", user.id);
       
-      toast({
-        title: "🎉 Reward Unlocked!",
-        description: `You earned +${xpAmount} XP from the box!`,
-      });
-      
-      setClaimingLevel(null);
+      if (error) throw error;
+      return data?.map(b => b.badge_id) || [];
     },
-    onError: (error) => {
-      console.error("Error claiming reward:", error);
-      toast({
-        title: "Error",
-        description: "Failed to claim reward",
-        variant: "destructive",
-      });
-      setClaimingLevel(null);
-    },
+    enabled: !!user?.id,
   });
 
-  const handleClaimReward = async (level: number) => {
-    setClaimingLevel(level);
-    // Add delay for animation effect
-    setTimeout(() => {
-      claimReward.mutate(level);
-    }, 500);
-  };
-
-  const rewardBoxes: RewardBox[] = REWARD_LEVELS.map(level => {
-    const isClaimed = claimedRewards?.some(r => r.reward_level === level);
-    return {
-      level,
-      isUnlocked: userLevel >= level,
-      isClaimed: !!isClaimed,
-      xpAmount: claimedRewards?.find(r => r.reward_level === level)?.xp_amount,
-    };
-  });
-
-  const getBoxIcon = (level: number) => {
-    const icons = [
-      { icon: Gift, color: "text-blue-500" },
-      { icon: Trophy, color: "text-yellow-500" },
-      { icon: Zap, color: "text-orange-500" },
-      { icon: Star, color: "text-purple-500" },
-      { icon: Crown, color: "text-amber-500" },
-      { icon: Sparkles, color: "text-pink-500" },
-      { icon: Trophy, color: "text-emerald-500" },
-      { icon: Crown, color: "text-red-500" },
-    ];
-    const index = REWARD_LEVELS.indexOf(level);
-    return icons[index] || icons[0];
-  };
+  // Combine badges with earned status
+  const badges: Badge[] = (allBadges || []).map(badge => ({
+    ...badge,
+    earned: earnedBadges?.includes(badge.id) || false,
+  }));
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-4 pb-24">
-      <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold mb-2 flex items-center justify-center gap-2">
-          <Trophy className="w-8 h-8" />
-          Reward Boxes
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Level up to unlock boxes and earn random XP rewards!
-        </p>
-      </div>
+    <div className="space-y-4">
+      <h3 className="text-xl font-bold flex items-center gap-2">
+        <Trophy className="w-6 h-6 text-accent" />
+        Badge Collection
+      </h3>
+      
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {badges.map((badge) => {
+          const isLocked = userLevel < badge.level_required;
+          const isEarned = badge.earned;
 
-      <div className="grid grid-cols-2 gap-4">
-        {rewardBoxes.map((box) => {
-          const BoxIcon = getBoxIcon(box.level);
           return (
             <Card
-              key={box.level}
-              className={`p-6 relative overflow-hidden transition-all duration-300 ${
-                box.isClaimed
-                  ? "bg-card/50 opacity-70"
-                  : box.isUnlocked
-                  ? "bg-gradient-to-br from-primary/10 via-card to-accent/20 border-2 border-primary/30 hover:scale-105 hover:border-primary/50 shadow-lg hover:shadow-primary/20"
-                  : "bg-card/80 opacity-80 border border-border"
-              }`}
+              key={badge.id}
+              className={`
+                p-4 text-center transition-all duration-300 
+                ${isLocked ? "opacity-50 bg-card/50" : ""}
+                ${isEarned ? "bg-accent/10 border-accent/50" : ""}
+              `}
             >
-              {/* Claiming animation */}
-              {claimingLevel === box.level && (
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 animate-pulse z-10 flex items-center justify-center backdrop-blur-sm">
-                  <Sparkles className="w-16 h-16 text-primary animate-spin" />
-                </div>
-              )}
-
-              {/* Background decoration */}
-              {box.isUnlocked && !box.isClaimed && (
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-2 right-2">
-                    <Sparkles className="w-8 h-8 text-primary" />
-                  </div>
-                  <div className="absolute bottom-2 left-2">
-                    <Star className="w-6 h-6 text-accent" />
-                  </div>
-                </div>
-              )}
-
-              <div className="text-center space-y-3 relative z-10">
-                {/* Box icon */}
-                <div className="mx-auto w-20 h-20 flex items-center justify-center">
-                  {box.isUnlocked && !box.isClaimed ? (
-                    <BoxIcon.icon 
-                      className={`w-16 h-16 ${BoxIcon.color} animate-bounce-slow drop-shadow-lg`}
-                    />
+              <div className="relative">
+                <div className={`
+                  inline-flex p-3 rounded-full mb-2 text-4xl
+                  ${isLocked ? "grayscale opacity-50" : ""}
+                `}>
+                  {isLocked ? (
+                    <Lock className="w-12 h-12 text-muted-foreground" />
                   ) : (
-                    <Gift className={`w-16 h-16 ${box.isClaimed ? "text-muted-foreground" : "text-muted"}`} />
+                    <span>{badge.icon}</span>
                   )}
                 </div>
-
-                {/* Lock icon for locked boxes */}
-                {!box.isUnlocked && (
-                  <div className="absolute top-2 right-2">
-                    <Lock className="w-5 h-5 text-muted-foreground" />
+                
+                {isLocked && (
+                  <div className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs px-2 py-0.5 rounded-full">
+                    Lv {badge.level_required}
                   </div>
                 )}
-
-                {/* Level badge */}
-                <div className={`text-sm font-bold ${box.isUnlocked && !box.isClaimed ? 'text-primary' : ''}`}>
-                  Level {box.level}
-                </div>
-
-                {/* Status/Action */}
-                {box.isClaimed ? (
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Claimed ✓</div>
-                    {box.xpAmount && (
-                      <div className="text-primary font-bold text-sm">
-                        +{box.xpAmount} XP
-                      </div>
-                    )}
+                
+                {isEarned && (
+                  <div className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs px-2 py-0.5 rounded-full">
+                    ✓
                   </div>
-                ) : box.isUnlocked ? (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleClaimReward(box.level)}
-                    disabled={claimingLevel !== null}
-                    className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
-                  >
-                    <Gift className="w-4 h-4 mr-2" />
-                    Open
-                  </Button>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    Reach Level {box.level}
-                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm font-bold">
+                  {badge.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {badge.description}
+                </p>
+                
+                {isEarned && (
+                  <p className="text-xs text-accent font-bold mt-2">Earned!</p>
+                )}
+                
+                {isLocked && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Unlock at Level {badge.level_required}
+                  </p>
                 )}
               </div>
             </Card>
           );
         })}
       </div>
+      
+      <p className="text-sm text-muted-foreground text-center mt-4">
+        Complete activities to earn badges and show off your achievements!
+      </p>
     </div>
   );
 };

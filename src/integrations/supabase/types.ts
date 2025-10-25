@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      badges: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          level_required: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          level_required: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          level_required?: number
+          name?: string
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -849,6 +876,57 @@ export type Database = {
         }
         Relationships: []
       }
+      task_proofs: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_shared_to_community: boolean
+          likes_count: number
+          media_url: string | null
+          task_id: string
+          user_id: string
+          user_task_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_shared_to_community?: boolean
+          likes_count?: number
+          media_url?: string | null
+          task_id: string
+          user_id: string
+          user_task_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_shared_to_community?: boolean
+          likes_count?: number
+          media_url?: string | null
+          task_id?: string
+          user_id?: string
+          user_task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_proofs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_proofs_user_task_id_fkey"
+            columns: ["user_task_id"]
+            isOneToOne: false
+            referencedRelation: "user_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           active_from: string | null
@@ -1028,6 +1106,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
             referencedColumns: ["id"]
           },
         ]

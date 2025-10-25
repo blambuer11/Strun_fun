@@ -186,6 +186,26 @@ const Community = () => {
         </div>
       </div>
 
+      {/* Tabs for Feed and Groups */}
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant="ghost"
+            className="flex-1"
+            onClick={() => {}}
+          >
+            Feed
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex-1"
+            onClick={() => navigate("/group")}
+          >
+            Groups
+          </Button>
+        </div>
+      </div>
+
       {/* Feed */}
       <div className="container mx-auto px-4 space-y-4 pb-24">
         {posts.map((post) => (

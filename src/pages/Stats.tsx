@@ -363,7 +363,7 @@ const Stats = () => {
 
         {/* Rewards Tab */}
         <TabsContent value="rewards" className="m-0">
-          {user?.id && <RewardsSection userLevel={level} userId={user.id} />}
+          {user?.id && <RewardsSection userLevel={level} />}
         </TabsContent>
 
         {/* My Stats Tab */}

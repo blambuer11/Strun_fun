@@ -11,7 +11,9 @@ import TasksMap from "@/components/TasksMap";
 import BottomNav from "@/components/BottomNav";
 import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { CreateSponsoredTaskDialog } from "@/components/CreateSponsoredTaskDialog";
-import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search } from "lucide-react";
+import { TaskProofDialog } from "@/components/TaskProofDialog";
+import { TaskProofsList } from "@/components/TaskProofsList";
+import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -32,6 +34,9 @@ const Tasks = () => {
   const [verifyingUserTaskId, setVerifyingUserTaskId] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState(false);
   const [generatingTasks, setGeneratingTasks] = useState(false);
+  const [showProofDialog, setShowProofDialog] = useState(false);
+  const [selectedProofTask, setSelectedProofTask] = useState<any>(null);
+  const [selectedProofUserTaskId, setSelectedProofUserTaskId] = useState<string | null>(null);
   
   // Marketplace state
   const [marketplaceTasks, setMarketplaceTasks] = useState<any[]>([]);
@@ -977,6 +982,17 @@ const Tasks = () => {
           }}
         />
       )}
+
+      <TaskProofDialog
+        open={showProofDialog}
+        onOpenChange={setShowProofDialog}
+        taskId={selectedProofTask?.id || ""}
+        userTaskId={selectedProofUserTaskId || ""}
+        onProofSubmitted={() => {
+          loadMyTasks();
+          setShowProofDialog(false);
+        }}
+      />
 
       <BottomNav />
     </div>
