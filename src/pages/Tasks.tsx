@@ -53,8 +53,9 @@ const Tasks = () => {
       .from("user_tasks")
       .select("*, tasks(*)")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .order("joined_at", { ascending: false });
     
+    console.log("My Tasks loaded:", data);
     setMyTasks(data || []);
     
     // Calculate completed today

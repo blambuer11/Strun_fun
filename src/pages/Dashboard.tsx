@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import BottomNav from "@/components/BottomNav";
+import { TaskProofDialog } from "@/components/TaskProofDialog";
 import { 
   Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins,
   CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target
@@ -19,6 +20,9 @@ import strunLogo from "@/assets/strun-logo.jpg";
 const Dashboard = () => {
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [showProofDialog, setShowProofDialog] = useState(false);
+  const [selectedProofTask, setSelectedProofTask] = useState<any>(null);
+  const [selectedProofUserTaskId, setSelectedProofUserTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/");
@@ -200,7 +204,19 @@ const Dashboard = () => {
               <div className="space-y-3">
                 {myTasks && myTasks.length > 0 ? (
                   myTasks.map((ut) => (
-                    <div key={ut.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                    <div 
+                      key={ut.id} 
+                      className={`flex items-center justify-between p-3 bg-background/50 rounded-lg ${
+                        ut.status === "pending" ? "cursor-pointer hover:bg-background/80 transition-colors" : ""
+                      }`}
+                      onClick={() => {
+                        if (ut.status === "pending" && ut.tasks) {
+                          setSelectedProofTask(ut.tasks);
+                          setSelectedProofUserTaskId(ut.id);
+                          setShowProofDialog(true);
+                        }
+                      }}
+                    >
                       <div className="flex-1">
                         <div className="font-medium">{ut.tasks?.title || ut.tasks?.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -274,6 +290,25 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Proof Dialog */}
+      {selectedProofTask && selectedProofUserTaskId && (
+        <TaskProofDialog
+          open={showProofDialog}
+          onOpenChange={setShowProofDialog}
+          taskId={selectedProofTask.id}
+          userTaskId={selectedProofUserTaskId}
+          taskLocation={{
+            lat: selectedProofTask.lat,
+            lon: selectedProofTask.lon,
+            radius_m: selectedProofTask.radius_m || 50
+          }}
+          onProofSubmitted={() => {
+            setShowProofDialog(false);
+            window.location.reload();
+          }}
+        />
+      )}
 
       <BottomNav />
     </div>
