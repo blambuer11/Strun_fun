@@ -48,15 +48,15 @@ export const CreatePostDialog = ({ onPostCreated }: CreatePostDialogProps) => {
       // Upload image if exists
       if (imageFile) {
         const fileExt = imageFile.name.split(".").pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError, data } = await supabase.storage
-          .from("avatars")
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("community-posts")
           .upload(fileName, imageFile);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from("avatars")
+          .from("community-posts")
           .getPublicUrl(fileName);
 
         imageUrl = publicUrl;

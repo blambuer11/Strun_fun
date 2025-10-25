@@ -649,46 +649,84 @@ const Tasks = () => {
         </Card>
 
         {/* My Tasks Section */}
-        <Card className="p-4 glass mt-6">
-          <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-primary" />
-            My Tasks
-          </h3>
+        <Card className="p-4 glass mt-6 border-primary/50">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-bold text-lg flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-primary" />
+              My Tasks ({myTasks.length})
+            </h3>
+          </div>
+
+          {/* Instructions Card */}
+          <Card className="p-4 bg-accent/10 border-accent/30 mb-4">
+            <div className="flex items-start gap-3">
+              <Upload className="w-5 h-5 text-accent mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm mb-1">How to Submit Proof</h4>
+                <p className="text-xs text-muted-foreground">
+                  1. Click "Submit Proof" button on any task below<br />
+                  2. Upload photo/video proof of completion<br />
+                  3. Your GPS location will be verified automatically<br />
+                  4. Wait for verification to earn rewards!
+                </p>
+              </div>
+            </div>
+          </Card>
           
           {myTasks.length === 0 ? (
             <div className="text-center py-8">
               <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p className="text-muted-foreground">No tasks yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Accept tasks from the map above</p>
+              <p className="text-xs text-muted-foreground mt-1">Accept tasks from the map or marketplace above</p>
             </div>
           ) : (
             <div className="space-y-3">
               {myTasks.map((ut) => {
                 const t = ut.tasks;
                 if (!t) return null;
+                const isPending = ut.status === 'pending';
+                const isCompleted = ut.status === 'completed';
+                
                 return (
-                  <Card key={ut.id} className="p-4 glass border-border/50">
+                  <Card key={ut.id} className={`p-4 glass border-2 transition-all ${
+                    isPending ? 'border-warning/50 hover:border-warning' : 
+                    isCompleted ? 'border-success/50' : 'border-border/50'
+                  }`}>
                     <div className="flex gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        ut.status === 'completed' ? 'bg-success/20' : 
-                        ut.status === 'pending' ? 'bg-primary/20' : 'bg-muted'
+                      <div className={`p-3 rounded-lg ${
+                        isCompleted ? 'bg-success/20' : 
+                        isPending ? 'bg-warning/20 animate-pulse' : 'bg-muted'
                       }`}>
-                        {ut.status === 'completed' ? (
-                          <CheckCircle2 className="w-5 h-5 text-success" />
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-6 h-6 text-success" />
+                        ) : isPending ? (
+                          <Clock className="w-6 h-6 text-warning" />
                         ) : (
-                          <Clock className="w-5 h-5" />
+                          <Clock className="w-6 h-6" />
                         )}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-bold">{t.name || t.title}</h4>
-                        {(t.location_name || t.meta?.location_name) && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {t.location_name || t.meta?.location_name}
-                          </p>
-                        )}
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-bold text-base">{t.name || t.title}</h4>
+                            {(t.location_name || t.meta?.location_name) && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                <MapPin className="w-3 h-3" />
+                                {t.location_name || t.meta?.location_name}
+                              </p>
+                            )}
+                          </div>
+                          {isPending && (
+                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 animate-pulse">
+                              ⚡ Action Required
+                            </Badge>
+                          )}
+                        </div>
+                        
                         <div className="flex gap-2 mt-2">
-                          <Badge variant="outline">{ut.status}</Badge>
+                          <Badge variant={isCompleted ? "default" : "outline"} className={isCompleted ? "bg-success" : ""}>
+                            {ut.status}
+                          </Badge>
                           <Badge className="bg-accent/20 text-accent">
                             +{ut.xp_awarded || t.xp_reward} XP
                           </Badge>
@@ -699,61 +737,56 @@ const Tasks = () => {
                           )}
                         </div>
                         
-                        <div className="flex gap-2 mt-3">
-                          {ut.status === 'pending' && t.type === 'qr_checkin' && (
+                        {/* Action Buttons - More Prominent */}
+                        <div className="flex gap-2 mt-4">
+                          {isPending && t.type === 'qr_checkin' && (
                             <Button 
                               onClick={() => handleCheckIn(t, ut.id)}
                               disabled={checkingIn}
-                              className="flex-1"
-                              size="sm"
+                              className="flex-1 h-11"
+                              variant="default"
                             >
                               {checkingIn ? (
                                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Checking...</>
                               ) : (
-                                <><Navigation className="w-4 h-4 mr-2" />Check-in</>
+                                <><Navigation className="w-4 h-4 mr-2" />Check-in Now</>
                               )}
                             </Button>
                           )}
                           
-                          {ut.status === 'pending' && t.type !== 'qr_checkin' && (
+                          {isPending && t.type !== 'qr_checkin' && (
                             <>
-                              <Button 
-                                onClick={() => {
-                                  setVerifyingTask(t);
-                                  setVerifyingUserTaskId(ut.id);
-                                }} 
-                                className="flex-1"
-                                size="sm"
-                              >
-                                <Camera className="w-4 h-4 mr-2" />
-                                Upload Content
-                              </Button>
                               <Button 
                                 onClick={() => {
                                   setSelectedProofTask(t);
                                   setSelectedProofUserTaskId(ut.id);
                                   setShowProofDialog(true);
                                 }} 
-                                variant="secondary"
-                                className="flex-1"
-                                size="sm"
+                                className="flex-1 h-11 bg-accent hover:bg-accent/90"
                               >
-                                <Upload className="w-4 h-4 mr-2" />
+                                <Upload className="w-5 h-5 mr-2" />
                                 Submit Proof
+                              </Button>
+                              <Button
+                                onClick={() => handleCancelTask(ut.id)}
+                                variant="outline"
+                                size="icon"
+                                className="h-11 w-11"
+                              >
+                                <XIcon className="w-4 h-4" />
                               </Button>
                             </>
                           )}
                           
-                          {ut.status === 'completed' && (
+                          {isCompleted && (
                             <>
                               <Button 
                                 onClick={() => handleShareTask(ut)} 
                                 variant="outline" 
-                                size="sm" 
-                                className="flex-1"
+                                className="flex-1 h-11"
                               >
                                 <Share2 className="w-4 h-4 mr-2" />
-                                Share
+                                Share Achievement
                               </Button>
                               <Button 
                                 onClick={() => {
@@ -762,23 +795,12 @@ const Tasks = () => {
                                   setShowProofDialog(true);
                                 }} 
                                 variant="secondary"
-                                size="sm"
-                                className="flex-1"
+                                className="flex-1 h-11"
                               >
                                 <Upload className="w-4 h-4 mr-2" />
-                                Submit Proof
+                                Add Proof
                               </Button>
                             </>
-                          )}
-                          
-                          {ut.status === 'pending' && (
-                            <Button
-                              onClick={() => handleCancelTask(ut.id)}
-                              variant="destructive"
-                              size="sm"
-                            >
-                              <XIcon className="w-4 h-4" />
-                            </Button>
                           )}
                         </div>
                       </div>
