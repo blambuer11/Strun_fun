@@ -135,18 +135,39 @@ const Stats = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch leaderboard
+  // Fetch leaderboard with real data
   const { data: leaderboardData } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get all profiles
+      const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, username, email, xp, avatar_url")
+        .select("id, username, email, xp, avatar_url, level")
         .order("xp", { ascending: false })
         .limit(10);
       
       if (error) throw error;
-      return data || [];
+
+      // For each profile, get their run stats
+      const enrichedProfiles = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: runs } = await supabase
+            .from("runs")
+            .select("distance, xp_earned")
+            .eq("user_id", profile.id);
+
+          const totalDistance = runs?.reduce((sum, run) => sum + parseFloat(String(run.distance || 0)), 0) || 0;
+          const totalRuns = runs?.length || 0;
+
+          return {
+            ...profile,
+            totalDistance,
+            totalRuns,
+          };
+        })
+      );
+      
+      return enrichedProfiles;
     },
   });
 
@@ -197,6 +218,9 @@ const Stats = () => {
       rank: index + 1,
       name: isCurrentUser ? "You" : (player.username || player.email?.split('@')[0] || "Anonymous"),
       xp: player.xp,
+      level: player.level || 1,
+      totalDistance: player.totalDistance || 0,
+      totalRuns: player.totalRuns || 0,
       avatar: isCurrentUser ? "👤" : ["🏃", "👑", "🗺️", "🌙", "⚡", "🔥", "💪", "🎯", "🌟", "🏆"][index % 10],
       isUser: isCurrentUser,
     };
@@ -354,7 +378,12 @@ const Stats = () => {
                 <div className="text-3xl">{player.avatar}</div>
                 <div className="flex-1">
                   <div className="font-bold">{player.name}</div>
-                  <div className="text-sm text-muted-foreground">{player.xp.toLocaleString()} XP</div>
+                  <div className="text-sm text-muted-foreground">
+                    Level {player.level} • {player.xp.toLocaleString()} XP
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {player.totalRuns} runs • {player.totalDistance.toFixed(1)} km
+                  </div>
                 </div>
               </div>
             ))}

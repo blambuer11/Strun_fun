@@ -442,6 +442,43 @@ const Tasks = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6">
+        {/* AI Generate & Create Task Buttons */}
+        <Card className="p-4 glass border-accent/30 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-display font-bold text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                Task Actions
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Generate AI tasks or create sponsored tasks
+              </p>
+            </div>
+            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"}>
+              {dailyTasksRemaining} left
+            </Badge>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleGenerateTasks}
+              disabled={generatingTasks || dailyTasksRemaining <= 0}
+              className="flex-1 h-12"
+            >
+              {generatingTasks ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Location Tasks
+                </>
+              )}
+            </Button>
+            <CreateSponsoredTaskDialog />
+          </div>
+        </Card>
 
         {/* Top Info Panel */}
         <div className="grid grid-cols-3 gap-3 mb-4">
@@ -994,6 +1031,8 @@ const Tasks = () => {
           onVerified={() => {
             loadMyTasks();
             loadStats();
+            setVerifyingTask(null);
+            setVerifyingUserTaskId(null);
           }}
         />
       )}
@@ -1003,8 +1042,14 @@ const Tasks = () => {
         onOpenChange={setShowProofDialog}
         taskId={selectedProofTask?.id || ""}
         userTaskId={selectedProofUserTaskId || ""}
+        taskLocation={selectedProofTask ? {
+          lat: selectedProofTask.lat,
+          lon: selectedProofTask.lon,
+          radius_m: selectedProofTask.radius_m || 50
+        } : undefined}
         onProofSubmitted={() => {
           loadMyTasks();
+          loadStats();
           setShowProofDialog(false);
         }}
       />
