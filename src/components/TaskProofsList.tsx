@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import { Heart, User } from "lucide-react";
+import { ThumbsUp, ThumbsDown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -13,9 +13,11 @@ interface TaskProof {
   content: string;
   media_url: string | null;
   created_at: string;
-  likes_count: number;
+  upvotes: number;
+  downvotes: number;
   user_id: string;
   username: string;
+  userVote?: 'up' | 'down' | null;
 }
 
 interface TaskProofsListProps {
@@ -38,23 +40,36 @@ export const TaskProofsList = ({ taskId }: TaskProofsListProps) => {
 
       if (error) throw error;
 
-      // Load user profiles
+      // Load user profiles and votes
       if (proofsData && proofsData.length > 0) {
         const userIds = [...new Set(proofsData.map(p => p.user_id))];
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, username, email")
-          .in("id", userIds);
+        const proofIds = proofsData.map(p => p.id);
 
-        const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+        const [profilesResult, votesResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, username, email")
+            .in("id", userIds),
+          user ? supabase
+            .from("task_proof_votes")
+            .select("proof_id, vote_type")
+            .in("proof_id", proofIds)
+            .eq("user_id", user.id) : { data: [] }
+        ]);
 
-        const formattedProofs = proofsData.map((proof) => {
+        const profilesMap = new Map(profilesResult.data?.map(p => [p.id, p]) || []);
+        const votesMap = new Map<string, 'up' | 'down'>(
+          (votesResult.data || []).map(v => [v.proof_id, v.vote_type as 'up' | 'down'])
+        );
+
+        const formattedProofs: TaskProof[] = proofsData.map((proof) => {
           const profile = profilesMap.get(proof.user_id);
           const displayName = profile?.username || profile?.email?.split("@")[0] || "Anonymous";
 
           return {
             ...proof,
             username: displayName,
+            userVote: votesMap.get(proof.id) || null,
           };
         });
 
@@ -64,6 +79,59 @@ export const TaskProofsList = ({ taskId }: TaskProofsListProps) => {
       console.error("Error loading proofs:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVote = async (proofId: string, voteType: 'up' | 'down') => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to vote",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const proof = proofs.find(p => p.id === proofId);
+      if (!proof) return;
+
+      // If user already voted the same way, remove the vote
+      if (proof.userVote === voteType) {
+        await supabase
+          .from("task_proof_votes")
+          .delete()
+          .eq("proof_id", proofId)
+          .eq("user_id", user.id);
+      } else {
+        // If user voted differently, update the vote
+        if (proof.userVote) {
+          await supabase
+            .from("task_proof_votes")
+            .delete()
+            .eq("proof_id", proofId)
+            .eq("user_id", user.id);
+        }
+        
+        // Insert new vote
+        await supabase
+          .from("task_proof_votes")
+          .insert({
+            proof_id: proofId,
+            user_id: user.id,
+            vote_type: voteType,
+          });
+      }
+
+      // Reload proofs to get updated counts
+      loadProofs();
+    } catch (error: any) {
+      console.error("Error voting:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to vote",
+        variant: "destructive",
+      });
     }
   };
 
@@ -121,12 +189,22 @@ export const TaskProofsList = ({ taskId }: TaskProofsListProps) => {
               
               <div className="flex items-center gap-2 pt-2">
                 <Button
-                  variant="ghost"
+                  variant={proof.userVote === 'up' ? "default" : "ghost"}
                   size="sm"
+                  onClick={() => handleVote(proof.id, 'up')}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <Heart className="w-4 h-4 mr-1" />
-                  {proof.likes_count}
+                  <ThumbsUp className="w-4 h-4 mr-1" />
+                  {proof.upvotes}
+                </Button>
+                <Button
+                  variant={proof.userVote === 'down' ? "destructive" : "ghost"}
+                  size="sm"
+                  onClick={() => handleVote(proof.id, 'down')}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ThumbsDown className="w-4 h-4 mr-1" />
+                  {proof.downvotes}
                 </Button>
               </div>
             </div>

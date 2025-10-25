@@ -876,37 +876,75 @@ export type Database = {
         }
         Relationships: []
       }
+      task_proof_votes: {
+        Row: {
+          created_at: string
+          id: string
+          proof_id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proof_id: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proof_id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_proof_votes_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "task_proofs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_proofs: {
         Row: {
           content: string
           created_at: string
+          downvotes: number | null
           id: string
           is_shared_to_community: boolean
           likes_count: number
           media_url: string | null
           task_id: string
+          upvotes: number | null
           user_id: string
           user_task_id: string | null
         }
         Insert: {
           content: string
           created_at?: string
+          downvotes?: number | null
           id?: string
           is_shared_to_community?: boolean
           likes_count?: number
           media_url?: string | null
           task_id: string
+          upvotes?: number | null
           user_id: string
           user_task_id?: string | null
         }
         Update: {
           content?: string
           created_at?: string
+          downvotes?: number | null
           id?: string
           is_shared_to_community?: boolean
           likes_count?: number
           media_url?: string | null
           task_id?: string
+          upvotes?: number | null
           user_id?: string
           user_task_id?: string | null
         }

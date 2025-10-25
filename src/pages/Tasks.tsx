@@ -715,29 +715,59 @@ const Tasks = () => {
                           )}
                           
                           {ut.status === 'pending' && t.type !== 'qr_checkin' && (
-                            <Button 
-                              onClick={() => {
-                                setVerifyingTask(t);
-                                setVerifyingUserTaskId(ut.id);
-                              }} 
-                              className="flex-1"
-                              size="sm"
-                            >
-                              <Camera className="w-4 h-4 mr-2" />
-                              Upload Content
-                            </Button>
+                            <>
+                              <Button 
+                                onClick={() => {
+                                  setVerifyingTask(t);
+                                  setVerifyingUserTaskId(ut.id);
+                                }} 
+                                className="flex-1"
+                                size="sm"
+                              >
+                                <Camera className="w-4 h-4 mr-2" />
+                                Upload Content
+                              </Button>
+                              <Button 
+                                onClick={() => {
+                                  setSelectedProofTask(t);
+                                  setSelectedProofUserTaskId(ut.id);
+                                  setShowProofDialog(true);
+                                }} 
+                                variant="secondary"
+                                className="flex-1"
+                                size="sm"
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                Submit Proof
+                              </Button>
+                            </>
                           )}
                           
                           {ut.status === 'completed' && (
-                            <Button 
-                              onClick={() => handleShareTask(ut)} 
-                              variant="outline" 
-                              size="sm" 
-                              className="flex-1"
-                            >
-                              <Share2 className="w-4 h-4 mr-2" />
-                              Share
-                            </Button>
+                            <>
+                              <Button 
+                                onClick={() => handleShareTask(ut)} 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1"
+                              >
+                                <Share2 className="w-4 h-4 mr-2" />
+                                Share
+                              </Button>
+                              <Button 
+                                onClick={() => {
+                                  setSelectedProofTask(t);
+                                  setSelectedProofUserTaskId(ut.id);
+                                  setShowProofDialog(true);
+                                }} 
+                                variant="secondary"
+                                size="sm"
+                                className="flex-1"
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                Submit Proof
+                              </Button>
+                            </>
                           )}
                           
                           {ut.status === 'pending' && (
@@ -959,6 +989,13 @@ const Tasks = () => {
                   </>
                 )}
               </div>
+
+              {/* Task Proofs Section */}
+              {selectedTask && (
+                <div className="mt-6 pt-6 border-t">
+                  <TaskProofsList taskId={selectedTask.id} />
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
