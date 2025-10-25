@@ -967,17 +967,31 @@ const Tasks = () => {
                         )}
                       </Button>
                     ) : (
-                      <Button
-                        onClick={() => {
-                          setVerifyingTask(selectedTask);
-                          setVerifyingUserTaskId(userTask.id);
-                          handleCloseTaskModal();
-                        }}
-                        className="flex-1 h-12"
-                      >
-                        <Camera className="w-4 h-4 mr-2" />
-                        Upload Content
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => {
+                            setVerifyingTask(selectedTask);
+                            setVerifyingUserTaskId(userTask.id);
+                            handleCloseTaskModal();
+                          }}
+                          className="flex-1 h-12"
+                        >
+                          <Camera className="w-4 h-4 mr-2" />
+                          Upload Content
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setSelectedProofTask(selectedTask);
+                            setSelectedProofUserTaskId(userTask.id);
+                            setShowProofDialog(true);
+                          }}
+                          variant="secondary"
+                          className="flex-1 h-12"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Submit Proof
+                        </Button>
+                      </>
                     )}
                     <Button
                       onClick={() => handleCancelTask(userTask.id)}

@@ -74,6 +74,21 @@ const Dashboard = () => {
     enabled: !!user?.id,
   });
 
+  const { data: myTasks } = useQuery({
+    queryKey: ["my-tasks", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("user_tasks")
+        .select("*, tasks(*)")
+        .eq("user_id", user.id)
+        .order("joined_at", { ascending: false })
+        .limit(10);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   const xp = profile?.xp || 0;
   const level = Math.floor(xp / 1000) + 1;
   const xpInLevel = xp % 1000;
@@ -168,27 +183,70 @@ const Dashboard = () => {
               <Card className="p-4 bg-success/10">
                 <CheckCircle2 className="w-4 h-4 mb-2" />
                 <div className="text-2xl font-bold">{taskStats?.completed || 0}</div>
+                <div className="text-xs text-muted-foreground">Completed</div>
               </Card>
               <Card className="p-4 bg-primary/10">
                 <Clock className="w-4 h-4 mb-2" />
                 <div className="text-2xl font-bold">{taskStats?.pending || 0}</div>
+                <div className="text-xs text-muted-foreground">Pending</div>
               </Card>
             </div>
+
+            <Card className="p-6">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                My Tasks
+              </h3>
+              <div className="space-y-3">
+                {myTasks && myTasks.length > 0 ? (
+                  myTasks.map((ut) => (
+                    <div key={ut.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{ut.tasks?.title || ut.tasks?.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {ut.status === "completed" ? "✓ Completed" : "⏱ In Progress"} • +{ut.xp_awarded || ut.tasks?.xp_reward || 0} XP
+                        </div>
+                      </div>
+                      <Badge variant={ut.status === "completed" ? "secondary" : "default"}>
+                        {ut.status}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No tasks accepted yet</p>
+                )}
+              </div>
+              {myTasks && myTasks.length > 0 && (
+                <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/tasks")}>
+                  View All Tasks →
+                </Button>
+              )}
+            </Card>
+
             <Card className="p-6">
               <h3 className="font-bold mb-4 flex items-center gap-2">
                 <Upload className="w-5 h-5" />
                 My Proofs
               </h3>
               <div className="space-y-3">
-                {myProofs?.slice(0, 5).map((proof) => (
-                  <div key={proof.id} className="flex justify-between p-3 bg-background/50 rounded-lg">
-                    <div className="font-medium line-clamp-1">{proof.content}</div>
-                    <div className="flex gap-2">
-                      <ThumbsUp className="w-4 h-4" />
-                      <span>{proof.upvotes}</span>
+                {myProofs && myProofs.length > 0 ? (
+                  myProofs.slice(0, 5).map((proof) => (
+                    <div key={proof.id} className="flex justify-between p-3 bg-background/50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium line-clamp-1">{proof.content}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(proof.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <ThumbsUp className="w-4 h-4 text-success" />
+                        <span className="font-medium">{proof.upvotes}</span>
+                      </div>
                     </div>
-                  </div>
-                )) || <p className="text-center text-muted-foreground py-8">No proofs yet</p>}
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No proofs submitted yet</p>
+                )}
               </div>
             </Card>
           </TabsContent>
