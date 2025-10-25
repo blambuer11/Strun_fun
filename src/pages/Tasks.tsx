@@ -11,7 +11,9 @@ import TasksMap from "@/components/TasksMap";
 import BottomNav from "@/components/BottomNav";
 import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { CreateSponsoredTaskDialog } from "@/components/CreateSponsoredTaskDialog";
-import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award } from "lucide-react";
+import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Tasks = () => {
   const navigate = useNavigate();
@@ -30,6 +32,15 @@ const Tasks = () => {
   const [verifyingUserTaskId, setVerifyingUserTaskId] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState(false);
   const [generatingTasks, setGeneratingTasks] = useState(false);
+  
+  // Marketplace state
+  const [marketplaceTasks, setMarketplaceTasks] = useState<any[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<any[]>([]);
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [rewardFilter, setRewardFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
 
   const loadMyTasks = async () => {
     if (!user) return;
@@ -66,6 +77,59 @@ const Tasks = () => {
     
     setAvailableTasks(available);
   };
+
+  const loadMarketplaceTasks = async () => {
+    const { data } = await supabase
+      .from("tasks")
+      .select("*, pools(*)")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    
+    const tasks = data || [];
+    setMarketplaceTasks(tasks);
+    setFilteredTasks(tasks);
+    
+    // Extract unique cities
+    const cities = [...new Set(tasks.map((t: any) => t.city).filter(Boolean))];
+    setAvailableCities(cities as string[]);
+  };
+
+  // Filter tasks based on selected filters
+  useEffect(() => {
+    let filtered = [...marketplaceTasks];
+    
+    // City filter
+    if (cityFilter !== "all") {
+      filtered = filtered.filter(t => t.city === cityFilter);
+    }
+    
+    // Type filter
+    if (typeFilter !== "all") {
+      filtered = filtered.filter(t => t.type === typeFilter);
+    }
+    
+    // Reward filter
+    if (rewardFilter === "sol") {
+      filtered = filtered.filter(t => (t.sol_reward || 0) > 0);
+    } else if (rewardFilter === "xp") {
+      filtered = filtered.filter(t => (t.xp_reward || 0) > 0);
+    } else if (rewardFilter === "high") {
+      filtered = filtered.filter(t => (t.sol_reward || 0) > 0.1 || (t.xp_reward || 0) > 100);
+    }
+    
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(t => 
+        t.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.city?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    setFilteredTasks(filtered);
+  }, [cityFilter, typeFilter, rewardFilter, searchQuery, marketplaceTasks]);
 
   const loadDailyLimit = async () => {
     if (!user) return;
@@ -105,6 +169,7 @@ const Tasks = () => {
     loadMyTasks(); 
     loadDailyLimit();
     loadStats();
+    loadMarketplaceTasks();
   }, [user]);
 
   useEffect(() => {
@@ -447,6 +512,135 @@ const Tasks = () => {
 
         {/* Map and Task List */}
         <TasksMap onTaskSelect={handleTaskSelect} />
+
+        {/* Task Marketplace Section */}
+        <Card className="p-4 glass mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-bold text-lg flex items-center gap-2">
+              <Award className="w-5 h-5 text-accent" />
+              Task Marketplace
+            </h3>
+            <Badge variant="outline">{filteredTasks.length} tasks</Badge>
+          </div>
+
+          {/* Filters */}
+          <div className="space-y-3 mb-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button variant="outline" size="icon">
+                <Filter className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <Select value={cityFilter} onValueChange={setCityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="City" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cities</SelectItem>
+                  {availableCities.map((city) => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="photo_task">Photo</SelectItem>
+                  <SelectItem value="selfie">Selfie</SelectItem>
+                  <SelectItem value="qr_checkin">QR Check-in</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={rewardFilter} onValueChange={setRewardFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Reward" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Rewards</SelectItem>
+                  <SelectItem value="sol">SOL Only</SelectItem>
+                  <SelectItem value="xp">XP Only</SelectItem>
+                  <SelectItem value="high">High Value</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Task Grid */}
+          {filteredTasks.length === 0 ? (
+            <div className="text-center py-8">
+              <Award className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">No tasks found</p>
+              <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 max-h-[600px] overflow-y-auto">
+              {filteredTasks.map((task) => (
+                <Card 
+                  key={task.id} 
+                  className="p-4 glass border-border/50 hover:border-accent/60 transition-colors cursor-pointer"
+                  onClick={() => handleTaskSelect(task)}
+                >
+                  <div className="flex gap-3">
+                    <div className="p-2 rounded-lg bg-primary/20">
+                      {task.type === 'photo_task' && <Camera className="w-5 h-5" />}
+                      {task.type === 'selfie' && <Camera className="w-5 h-5" />}
+                      {task.type === 'qr_checkin' && <MapPin className="w-5 h-5" />}
+                      {!['photo_task', 'selfie', 'qr_checkin'].includes(task.type) && <Award className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold">{task.name || task.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {task.description}
+                      </p>
+                      {task.city && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3" />
+                          {task.city}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          {task.type.replace(/_/g, ' ')}
+                        </Badge>
+                        {task.xp_reward > 0 && (
+                          <Badge className="bg-accent/20 text-accent text-xs">
+                            <Zap className="w-3 h-3 mr-1" />
+                            {task.xp_reward} XP
+                          </Badge>
+                        )}
+                        {task.sol_reward > 0 && (
+                          <Badge className="bg-success/20 text-success text-xs">
+                            <Coins className="w-3 h-3 mr-1" />
+                            {task.sol_reward} SOL
+                          </Badge>
+                        )}
+                        {task.max_participants && (
+                          <Badge variant="secondary" className="text-xs">
+                            {task.current_participants || 0}/{task.max_participants}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </Card>
 
         {/* My Tasks Section */}
         <Card className="p-4 glass mt-6">
