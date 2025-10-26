@@ -157,7 +157,7 @@ const Dashboard = () => {
       if (updateError) throw updateError;
 
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-      toast({ title: "Avatar Updated", description: "Your profile photo has been updated successfully" });
+      toast({ title: "Success! Avatar Updated", description: "Your profile photo has been updated successfully" });
     } catch (error) {
       toast({ title: "Upload Failed", description: "Failed to upload avatar. Please try again.", variant: "destructive" });
     } finally {
@@ -178,7 +178,7 @@ const Dashboard = () => {
 
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
       setIsEditingUsername(false);
-      toast({ title: "Username Updated", description: "Your username has been updated successfully" });
+      toast({ title: "Success! Username Updated", description: "Your username has been updated successfully" });
     } catch (error) {
       toast({ title: "Update Failed", description: "Failed to update username. Please try again.", variant: "destructive" });
     } finally {

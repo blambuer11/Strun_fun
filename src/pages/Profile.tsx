@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import BottomNav from "@/components/BottomNav";
 import { 
   User, 
@@ -17,7 +18,10 @@ import {
   Camera,
   CheckCircle2,
   Calendar,
-  Award
+  Award,
+  Edit2,
+  Check,
+  X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import strunLogo from "@/assets/strun-logo.jpg";
@@ -27,7 +31,13 @@ const Profile = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const { userId } = useParams(); // For viewing other users' profiles
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<"posts" | "tasks">("posts");
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   
   // If no userId param, show current user's profile
   const profileUserId = userId || user?.id;
@@ -116,6 +126,87 @@ const Profile = () => {
   const avatarUrl = profile?.avatar_url || null;
   const isOwnProfile = user?.id === profileUserId;
 
+  useEffect(() => {
+    if (profile?.username) {
+      setNewUsername(profile.username);
+    }
+  }, [profile?.username]);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        toast({ title: "Invalid File", description: "Please upload an image file", variant: "destructive" });
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "File Too Large", description: "Please upload an image smaller than 5MB", variant: "destructive" });
+        return;
+      }
+
+      setUploading(true);
+
+      if (avatarUrl) {
+        const oldPath = avatarUrl.split('/').pop();
+        if (oldPath) {
+          await supabase.storage.from('avatars').remove([`${user?.id}/${oldPath}`]);
+        }
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user?.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user?.id);
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      toast({ title: "Success! Avatar Updated", description: "Your profile photo has been updated" });
+    } catch (error) {
+      toast({ title: "Upload Failed", description: "Failed to upload avatar. Please try again.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveUsername = async () => {
+    if (!newUsername.trim()) {
+      toast({ title: "Invalid Username", description: "Username cannot be empty", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      const { error } = await supabase.from('profiles').update({ username: newUsername.trim() }).eq('id', user?.id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      setIsEditingUsername(false);
+      toast({ title: "Success! Username Updated", description: "Your username has been updated" });
+    } catch (error) {
+      toast({ title: "Update Failed", description: "Failed to update username. Please try again.", variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setNewUsername(profile?.username || "");
+    setIsEditingUsername(false);
+  };
+
   if (authLoading || !profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -148,22 +239,74 @@ const Profile = () => {
         {/* Profile Header */}
         <Card className="p-6 glass">
           <div className="flex flex-col items-center text-center">
+            {isOwnProfile && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            )}
             <div className="relative mb-4">
               <div className="absolute inset-0 bg-accent/30 blur-xl rounded-full" />
-              <div className="relative w-24 h-24 bg-gradient-to-br from-accent to-accent-glow rounded-full flex items-center justify-center overflow-hidden">
-                {avatarUrl ? (
-                  <img 
-                    src={avatarUrl} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="w-12 h-12 text-accent-foreground" />
-                )}
-              </div>
+              {isOwnProfile ? (
+                <button
+                  onClick={handleAvatarClick}
+                  disabled={uploading}
+                  className="relative w-24 h-24 bg-gradient-to-br from-accent to-accent-glow rounded-full flex items-center justify-center overflow-hidden group cursor-pointer hover:opacity-90 transition-opacity disabled:cursor-not-allowed"
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-12 h-12 text-accent-foreground" />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                </button>
+              ) : (
+                <div className="relative w-24 h-24 bg-gradient-to-br from-accent to-accent-glow rounded-full flex items-center justify-center overflow-hidden">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-12 h-12 text-accent-foreground" />
+                  )}
+                </div>
+              )}
+              {uploading && (
+                <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                </div>
+              )}
             </div>
 
-            <h2 className="text-2xl font-bold mb-1">{userName}</h2>
+            {isOwnProfile && isEditingUsername ? (
+              <div className="flex items-center gap-2 mb-2">
+                <Input
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="h-8 max-w-[200px]"
+                  placeholder="Enter username"
+                  disabled={updating}
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveUsername} disabled={updating}>
+                  <Check className="w-4 h-4 text-accent" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleCancelEdit} disabled={updating}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-2xl font-bold">{userName}</h2>
+                {isOwnProfile && (
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingUsername(true)}>
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            )}
             <p className="text-sm text-muted-foreground mb-3">{profile?.email}</p>
             
             <div className="flex items-center gap-2 mb-4">
@@ -190,13 +333,13 @@ const Profile = () => {
                 <div className="text-xs text-muted-foreground">XP</div>
               </div>
             </div>
-
-            {isOwnProfile && (
-              <div className="flex gap-2">
+            
+            {isOwnProfile && !isEditingUsername && (
+              <div className="flex gap-2 mt-4">
                 <Button 
                   variant="outline" 
                   className="flex-1"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => setIsEditingUsername(true)}
                 >
                   Edit Profile
                 </Button>

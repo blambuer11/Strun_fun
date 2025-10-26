@@ -83,6 +83,20 @@ export default {
             animationTimingFunction: "ease-in-out",
           },
         },
+        "running": {
+          "0%, 100%": {
+            transform: "translateY(0) translateX(0) scale(1)",
+          },
+          "25%": {
+            transform: "translateY(-8px) translateX(2px) scale(1.05)",
+          },
+          "50%": {
+            transform: "translateY(0) translateX(0) scale(1)",
+          },
+          "75%": {
+            transform: "translateY(-8px) translateX(-2px) scale(1.05)",
+          },
+        },
         "pulse-ring": {
           "0%": {
             transform: "scale(1)",
@@ -122,6 +136,7 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "bounce-slow": "bounce-slow 2s infinite",
+        "running": "running 0.6s ease-in-out infinite",
         "pulse-ring": "pulse-ring 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
         "slide-up": "slide-up 0.4s ease-out",
         "fade-in": "fade-in 0.3s ease-out",
