@@ -12,7 +12,7 @@ import BottomNav from "@/components/BottomNav";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
 import {
   Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins,
-  CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet
+  CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet, Copy
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
@@ -171,10 +171,12 @@ const Dashboard = () => {
         </Card>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-card/50 backdrop-blur-lg">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="tasks" className="text-xs sm:text-sm">My Tasks</TabsTrigger>
-            <TabsTrigger value="community" className="text-xs sm:text-sm">Groups</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 bg-card/50 backdrop-blur-lg">
+            <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs">Tasks</TabsTrigger>
+            <TabsTrigger value="wallet" className="text-xs">Wallet</TabsTrigger>
+            <TabsTrigger value="stats" className="text-xs">Stats</TabsTrigger>
+            <TabsTrigger value="community" className="text-xs">Groups</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -302,6 +304,85 @@ const Dashboard = () => {
                 )}
               </div>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="wallet" className="space-y-4">
+            <Card className="p-6 glass border-primary/30">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <Wallet className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-bold">SOL Wallet</h3>
+              </div>
+              {profile?.solana_public_key ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-primary/5 px-4 py-3 rounded-lg font-mono text-xs break-all">
+                      {profile.solana_public_key}
+                    </code>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(profile.solana_public_key!);
+                      }}
+                      className="shrink-0"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Wallet className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No wallet created yet</p>
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-6 glass bg-gradient-to-br from-success/10 to-success/5 border-success/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-success/20 p-3 rounded-full">
+                    <Coins className="w-6 h-6 text-success" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Balance</h3>
+                    <p className="text-xs text-muted-foreground">Total SOL earned</p>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-success">{taskStats?.totalSOL.toFixed(2) || "0.00"}</div>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="stats" className="space-y-4">
+            <Card className="p-6 glass bg-gradient-to-br from-card via-card to-primary/5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold">Level {level}</h2>
+                  <p className="text-sm text-muted-foreground">{xpInLevel} / 1000 XP</p>
+                </div>
+                <div className="bg-accent/20 p-3 rounded-full">
+                  <Trophy className="w-8 h-8 text-accent" />
+                </div>
+              </div>
+              <Progress value={progressPercent} className="h-3" />
+              <p className="text-xs text-muted-foreground mt-2">{1000 - xpInLevel} XP to next level</p>
+            </Card>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="p-4 glass hover-lift">
+                <Zap className="w-5 h-5 mb-2 text-primary" />
+                <div className="text-2xl font-bold gradient-text">{xp.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Total XP</div>
+              </Card>
+              <Card className="p-4 glass hover-lift">
+                <CheckCircle2 className="w-5 h-5 mb-2 text-success" />
+                <div className="text-2xl font-bold gradient-text">{taskStats?.completed || 0}</div>
+                <div className="text-xs text-muted-foreground">Tasks Done</div>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="community" className="space-y-4">

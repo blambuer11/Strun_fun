@@ -525,7 +525,7 @@ const Tasks = () => {
           <Card className="p-4 glass border-accent/30">
             <div className="flex items-center gap-2 mb-1">
               <Zap className="w-4 h-4 text-accent" />
-              <span className="text-xs text-muted-foreground">Total XP</span>
+              <span className="text-xs text-foreground/80 font-medium">Total XP</span>
             </div>
             <div className="text-2xl font-bold text-accent">
               {totalXP}
@@ -535,7 +535,7 @@ const Tasks = () => {
           <Card className="p-4 glass border-success/30">
             <div className="flex items-center gap-2 mb-1">
               <Coins className="w-4 h-4 text-success" />
-              <span className="text-xs text-muted-foreground">Total SOL</span>
+              <span className="text-xs text-foreground/80 font-medium">Total SOL</span>
             </div>
             <div className="text-2xl font-bold text-success">
               {totalSOL.toFixed(2)}
