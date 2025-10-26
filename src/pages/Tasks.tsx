@@ -470,8 +470,8 @@ const Tasks = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6">
         {/* AI Generate & Create Task Buttons */}
-        <Card className="p-4 glass border-accent/30 mb-4">
-          <div className="flex items-center justify-between mb-3">
+        <Card className="p-3 sm:p-4 glass border-accent/30 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 mb-3">
             <div>
               <h3 className="font-display font-bold text-sm flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-accent" />
@@ -481,25 +481,25 @@ const Tasks = () => {
                 Generate AI tasks or create sponsored tasks
               </p>
             </div>
-            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"}>
+            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"} className="w-fit">
               {dailyTasksRemaining} left
             </Badge>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={handleGenerateTasks}
               disabled={generatingTasks || dailyTasksRemaining <= 0}
-              className="flex-1 h-12"
+              className="w-full sm:flex-1 h-10 sm:h-12 text-sm"
             >
               {generatingTasks ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
+                  <span className="truncate">Generating...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Location Tasks
+                  <span className="truncate">Generate Location Tasks</span>
                 </>
               )}
             </Button>
@@ -508,13 +508,13 @@ const Tasks = () => {
         </Card>
 
         {/* Top Info Panel */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <Card className="p-4 glass border-primary/30">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
+          <Card className="p-3 sm:p-4 glass border-primary/30">
             <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Daily Tasks</span>
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Daily</span>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {dailyTasksCompleted}/3
             </div>
             <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"} className="mt-1 text-xs">
@@ -692,7 +692,7 @@ const Tasks = () => {
                 <h4 className="font-semibold text-sm mb-1">How to Submit Proof</h4>
                 <p className="text-xs text-muted-foreground">
                   1. Click "Submit Proof" button on any task below<br />
-                  2. Upload photo/video proof of completion<br />
+                  2. Upload photo or video proof of completion<br />
                   3. Your GPS location will be verified automatically<br />
                   4. Wait for verification to earn rewards!
                 </p>
@@ -1069,30 +1069,33 @@ const Tasks = () => {
                 ) : (
                   <>
                     {!isTaskAccepted && (
-                      <div className="flex gap-2 mb-2">
+                      <div className="flex flex-col xs:flex-row gap-2 mb-2">
                         <Button
                           onClick={() => handleShareToSocial('twitter', selectedTask)}
                           variant="outline"
                           size="sm"
+                          className="w-full xs:w-auto text-xs"
                         >
-                          <Twitter className="w-4 h-4 mr-2" />
-                          Share
+                          <Twitter className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                          Twitter
                         </Button>
                         <Button
                           onClick={() => handleShareToSocial('facebook', selectedTask)}
                           variant="outline"
                           size="sm"
+                          className="w-full xs:w-auto text-xs"
                         >
-                          <Facebook className="w-4 h-4 mr-2" />
-                          Share
+                          <Facebook className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                          Facebook
                         </Button>
                         <Button
                           onClick={() => handleShareToSocial('linkedin', selectedTask)}
                           variant="outline"
                           size="sm"
+                          className="w-full xs:w-auto text-xs"
                         >
-                          <Linkedin className="w-4 h-4 mr-2" />
-                          Share
+                          <Linkedin className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                          LinkedIn
                         </Button>
                       </div>
                     )}

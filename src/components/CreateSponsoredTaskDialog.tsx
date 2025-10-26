@@ -131,9 +131,9 @@ export const CreateSponsoredTaskDialog = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="w-full sm:w-auto h-10 sm:h-12 text-sm gap-2">
           <Award className="w-4 h-4" />
-          Create Sponsored Task
+          <span className="truncate">Create Sponsored Task</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

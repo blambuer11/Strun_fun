@@ -17,6 +17,7 @@ export const useWallet = () => {
 
   const checkOrCreateWallet = async () => {
     try {
+      setLoading(true);
       // Check if wallet exists
       const { data: profile } = await supabase
         .from("profiles")
@@ -24,14 +25,23 @@ export const useWallet = () => {
         .eq("id", user?.id)
         .single();
 
+      console.log("Checking wallet for user:", user?.id, "profile:", profile);
+
       if (profile?.solana_public_key) {
         setPublicKey(profile.solana_public_key);
+        console.log("Wallet found:", profile.solana_public_key);
       } else {
         // Create wallet if it doesn't exist
+        console.log("No wallet found, creating new one...");
         await createWallet();
       }
     } catch (error) {
       console.error("Error checking wallet:", error);
+      toast({
+        title: "Wallet Error",
+        description: "Failed to load wallet. Please refresh the page.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
