@@ -4,29 +4,29 @@
 
 @layer base {
   :root {
-    /* Cyber Runner Theme - Neon Dark */
-    --background: 195 25% 8%;
-    --foreground: 180 5% 98%;
-    --card: 195 20% 12%;
-    --card-foreground: 180 5% 98%;
-    --popover: 195 25% 10%;
-    --popover-foreground: 180 5% 98%;
+    /* Teal Cyber Theme - Dark with Cyan/Teal Accents */
+    --background: 180 30% 8%;
+    --foreground: 180 10% 98%;
+    --card: 180 25% 12%;
+    --card-foreground: 180 10% 98%;
+    --popover: 180 30% 10%;
+    --popover-foreground: 180 10% 98%;
     
-    /* Primary - Cyan Accent */
-    --primary: 176 100% 47%;
-    --primary-foreground: 195 25% 8%;
-    --primary-glow: 176 100% 65%;
+    /* Primary - Bright Cyan/Teal */
+    --primary: 180 100% 50%;
+    --primary-foreground: 180 30% 8%;
+    --primary-glow: 180 100% 65%;
     
-    /* Secondary - Purple/Pink Accent */
-    --secondary: 291 100% 62%;
+    /* Secondary - Vibrant Purple/Magenta */
+    --secondary: 300 100% 60%;
     --secondary-foreground: 0 0% 100%;
-    --secondary-glow: 291 100% 75%;
+    --secondary-glow: 300 100% 75%;
     
     /* Muted & Accent */
-    --muted: 195 15% 20%;
-    --muted-foreground: 180 5% 65%;
-    --accent: 195 20% 18%;
-    --accent-foreground: 180 5% 98%;
+    --muted: 180 20% 20%;
+    --muted-foreground: 180 10% 65%;
+    --accent: 180 25% 18%;
+    --accent-foreground: 180 10% 98%;
     
     /* Destructive */
     --destructive: 0 84% 60%;
@@ -36,25 +36,25 @@
     --success: 152 69% 45%;
     
     /* Borders & Inputs */
-    --border: 195 15% 20%;
-    --input: 195 20% 15%;
-    --ring: 176 100% 47%;
+    --border: 180 20% 20%;
+    --input: 180 25% 15%;
+    --ring: 180 100% 50%;
     
-    --radius: 1rem;
+    --radius: 1.25rem;
 
-    /* Cyber Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(176, 100%, 47%) 0%, hsl(291, 100%, 62%) 100%);
-    --gradient-cyan: linear-gradient(135deg, hsl(176, 100%, 47%) 0%, hsl(176, 100%, 65%) 100%);
-    --gradient-purple: linear-gradient(135deg, hsl(291, 100%, 62%) 0%, hsl(280, 100%, 70%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(195, 25%, 8%) 0%, hsl(195, 20%, 12%) 100%);
-    --gradient-card: linear-gradient(135deg, hsl(195, 20%, 14%) 0%, hsl(195, 20%, 10%) 100%);
-    --gradient-glass: linear-gradient(135deg, rgba(0, 229, 204, 0.1) 0%, rgba(224, 64, 251, 0.1) 100%);
+    /* Teal Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(180, 100%, 50%) 0%, hsl(300, 100%, 60%) 100%);
+    --gradient-cyan: linear-gradient(135deg, hsl(180, 100%, 50%) 0%, hsl(180, 100%, 65%) 100%);
+    --gradient-purple: linear-gradient(135deg, hsl(300, 100%, 60%) 0%, hsl(280, 100%, 70%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(180, 30%, 8%) 0%, hsl(180, 25%, 12%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(180, 25%, 14%) 0%, hsl(180, 25%, 10%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 0, 255, 0.1) 100%);
     
-    /* Cyber Shadows */
-    --shadow-cyan: 0 0 30px hsl(176, 100%, 47%, 0.5);
-    --shadow-purple: 0 0 30px hsl(291, 100%, 62%, 0.5);
-    --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 5px 25px hsl(176, 100%, 47%, 0.4);
+    /* Teal Shadows */
+    --shadow-cyan: 0 0 40px hsl(180, 100%, 50%, 0.6);
+    --shadow-purple: 0 0 40px hsl(300, 100%, 60%, 0.6);
+    --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.7);
+    --shadow-glow: 0 8px 32px hsl(180, 100%, 50%, 0.5);
     
     /* Effects */
     --glass-blur: blur(20px);

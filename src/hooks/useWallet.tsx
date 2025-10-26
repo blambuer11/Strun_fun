@@ -12,20 +12,29 @@ export const useWallet = () => {
   useEffect(() => {
     if (user) {
       checkOrCreateWallet();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
   const checkOrCreateWallet = async () => {
     try {
       setLoading(true);
+      console.log("Checking wallet for user:", user?.id);
+      
       // Check if wallet exists
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("solana_public_key")
         .eq("id", user?.id)
         .single();
 
-      console.log("Checking wallet for user:", user?.id, "profile:", profile);
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        throw profileError;
+      }
+
+      console.log("Profile data:", profile);
 
       if (profile?.solana_public_key) {
         setPublicKey(profile.solana_public_key);
@@ -49,28 +58,39 @@ export const useWallet = () => {
 
   const createWallet = async () => {
     try {
+      console.log("Calling create-solana-wallet function for user:", user?.id);
+      
       const { data, error } = await supabase.functions.invoke("create-solana-wallet", {
         body: { userId: user?.id },
       });
 
-      if (error) throw error;
+      console.log("Create wallet response:", { data, error });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
 
       if (data?.publicKey) {
         setPublicKey(data.publicKey);
+        console.log("Wallet created successfully:", data.publicKey);
         toast({
           title: "Wallet Created",
           description: "Your Solana wallet has been created successfully!",
         });
+      } else {
+        console.error("No publicKey in response:", data);
+        throw new Error("Failed to create wallet - no public key returned");
       }
     } catch (error) {
       console.error("Error creating wallet:", error);
       toast({
         title: "Error",
-        description: "Failed to create wallet",
+        description: "Failed to create wallet. Please try again or contact support.",
         variant: "destructive",
       });
     }
   };
 
-  return { publicKey, loading, createWallet };
+  return { publicKey, loading, createWallet, checkOrCreateWallet };
 };
