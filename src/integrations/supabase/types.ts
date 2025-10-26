@@ -590,51 +590,63 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           daily_task_accept_count: number | null
           daily_task_count: number | null
           email: string
           id: string
+          instagram_url: string | null
           last_accept_date: string | null
           last_task_date: string | null
           level: number
           referral_code: string
           solana_encrypted_key: string | null
           solana_public_key: string | null
+          tiktok_url: string | null
+          twitter_url: string | null
           updated_at: string
           username: string | null
           xp: number
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           daily_task_accept_count?: number | null
           daily_task_count?: number | null
           email: string
           id: string
+          instagram_url?: string | null
           last_accept_date?: string | null
           last_task_date?: string | null
           level?: number
           referral_code: string
           solana_encrypted_key?: string | null
           solana_public_key?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
           updated_at?: string
           username?: string | null
           xp?: number
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           daily_task_accept_count?: number | null
           daily_task_count?: number | null
           email?: string
           id?: string
+          instagram_url?: string | null
           last_accept_date?: string | null
           last_task_date?: string | null
           level?: number
           referral_code?: string
           solana_encrypted_key?: string | null
           solana_public_key?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
           updated_at?: string
           username?: string | null
           xp?: number

@@ -22,8 +22,12 @@ import {
   Award,
   Edit2,
   Check,
-  X
+  X,
+  Instagram,
+  Twitter,
+  Music
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import strunLogo from "@/assets/strun-logo.jpg";
 
@@ -35,8 +39,12 @@ const Profile = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<"posts" | "tasks">("posts");
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [newUsername, setNewUsername] = useState("");
+  const [newBio, setNewBio] = useState("");
+  const [newInstagram, setNewInstagram] = useState("");
+  const [newTwitter, setNewTwitter] = useState("");
+  const [newTiktok, setNewTiktok] = useState("");
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
   
@@ -128,10 +136,14 @@ const Profile = () => {
   const avatarUrl = profile?.avatar_url || null;
 
   useEffect(() => {
-    if (profile?.username) {
-      setNewUsername(profile.username);
+    if (profile) {
+      setNewUsername(profile.username || "");
+      setNewBio(profile.bio || "");
+      setNewInstagram(profile.instagram_url || "");
+      setNewTwitter(profile.twitter_url || "");
+      setNewTiktok(profile.tiktok_url || "");
     }
-  }, [profile?.username]);
+  }, [profile]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -182,7 +194,7 @@ const Profile = () => {
     }
   };
 
-  const handleSaveUsername = async () => {
+  const handleSaveProfile = async () => {
     if (!newUsername.trim()) {
       toast({ title: "Invalid Username", description: "Username cannot be empty", variant: "destructive" });
       return;
@@ -190,22 +202,35 @@ const Profile = () => {
 
     try {
       setUpdating(true);
-      const { error } = await supabase.from('profiles').update({ username: newUsername.trim() }).eq('id', user?.id);
+      const { error } = await supabase.from('profiles').update({ 
+        username: newUsername.trim(),
+        bio: newBio.trim() || null,
+        instagram_url: newInstagram.trim() || null,
+        twitter_url: newTwitter.trim() || null,
+        tiktok_url: newTiktok.trim() || null,
+      }).eq('id', user?.id);
+      
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-      setIsEditingUsername(false);
-      toast({ title: "Success! Username Updated", description: "Your username has been updated" });
+      setIsEditingProfile(false);
+      toast({ title: "Success! Profile Updated", description: "Your profile has been updated" });
     } catch (error) {
-      toast({ title: "Update Failed", description: "Failed to update username. Please try again.", variant: "destructive" });
+      toast({ title: "Update Failed", description: "Failed to update profile. Please try again.", variant: "destructive" });
     } finally {
       setUpdating(false);
     }
   };
 
   const handleCancelEdit = () => {
-    setNewUsername(profile?.username || "");
-    setIsEditingUsername(false);
+    if (profile) {
+      setNewUsername(profile.username || "");
+      setNewBio(profile.bio || "");
+      setNewInstagram(profile.instagram_url || "");
+      setNewTwitter(profile.twitter_url || "");
+      setNewTiktok(profile.tiktok_url || "");
+    }
+    setIsEditingProfile(false);
   };
 
   if (authLoading || !profile) {
@@ -285,33 +310,96 @@ const Profile = () => {
               )}
             </div>
 
-            {isOwnProfile && isEditingUsername ? (
-              <div className="flex items-center gap-2 mb-2">
-                <Input
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  className="h-8 max-w-[200px]"
-                  placeholder="Enter username"
-                  disabled={updating}
-                />
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveUsername} disabled={updating}>
-                  <Check className="w-4 h-4 text-accent" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleCancelEdit} disabled={updating}>
-                  <X className="w-4 h-4" />
-                </Button>
+            {isOwnProfile && isEditingProfile ? (
+              <div className="w-full space-y-3 mb-4">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Username</label>
+                  <Input
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder="Enter username"
+                    disabled={updating}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Bio</label>
+                  <Textarea
+                    value={newBio}
+                    onChange={(e) => setNewBio(e.target.value)}
+                    placeholder="Tell us about yourself..."
+                    className="resize-none"
+                    rows={3}
+                    disabled={updating}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Instagram</label>
+                  <Input
+                    value={newInstagram}
+                    onChange={(e) => setNewInstagram(e.target.value)}
+                    placeholder="https://instagram.com/username"
+                    disabled={updating}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Twitter/X</label>
+                  <Input
+                    value={newTwitter}
+                    onChange={(e) => setNewTwitter(e.target.value)}
+                    placeholder="https://twitter.com/username"
+                    disabled={updating}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">TikTok</label>
+                  <Input
+                    value={newTiktok}
+                    onChange={(e) => setNewTiktok(e.target.value)}
+                    placeholder="https://tiktok.com/@username"
+                    disabled={updating}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveProfile} disabled={updating} className="flex-1">
+                    <Check className="w-4 h-4 mr-2" />
+                    Save
+                  </Button>
+                  <Button variant="outline" onClick={handleCancelEdit} disabled={updating} className="flex-1">
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-2xl font-bold">{userName}</h2>
-                {isOwnProfile && (
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingUsername(true)}>
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
+              <>
+                <h2 className="text-2xl font-bold mb-1">{userName}</h2>
+                <p className="text-sm text-muted-foreground mb-3">{profile?.email}</p>
+                
+                {profile?.bio && (
+                  <p className="text-sm text-foreground mb-3">{profile.bio}</p>
                 )}
-              </div>
+                
+                {(profile?.instagram_url || profile?.twitter_url || profile?.tiktok_url) && (
+                  <div className="flex items-center gap-3 mb-3">
+                    {profile.instagram_url && (
+                      <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-accent transition-colors">
+                        <Instagram className="w-5 h-5" />
+                      </a>
+                    )}
+                    {profile.twitter_url && (
+                      <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-accent transition-colors">
+                        <Twitter className="w-5 h-5" />
+                      </a>
+                    )}
+                    {profile.tiktok_url && (
+                      <a href={profile.tiktok_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-accent transition-colors">
+                        <Music className="w-5 h-5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </>
             )}
-            <p className="text-sm text-muted-foreground mb-3">{profile?.email}</p>
             
             <div className="flex items-center gap-2 mb-4">
               <Badge variant="default" className="text-xs">
@@ -338,12 +426,12 @@ const Profile = () => {
               </div>
             </div>
             
-            {isOwnProfile && !isEditingUsername && (
+            {isOwnProfile && !isEditingProfile && (
               <div className="flex gap-2 mt-4">
                 <Button 
                   variant="outline" 
                   className="flex-1"
-                  onClick={() => setIsEditingUsername(true)}
+                  onClick={() => setIsEditingProfile(true)}
                 >
                   Edit Profile
                 </Button>
