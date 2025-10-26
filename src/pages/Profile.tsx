@@ -41,6 +41,7 @@ const Profile = () => {
   
   // If no userId param, show current user's profile
   const profileUserId = userId || user?.id;
+  const isOwnProfile = user?.id === profileUserId;
 
   useEffect(() => {
     if (!authLoading && !user && !userId) {
@@ -65,17 +66,23 @@ const Profile = () => {
     enabled: !!profileUserId,
   });
 
-  // Fetch user's posts (task proofs that are shared to community)
+  // Fetch user's posts (task proofs)
   const { data: posts } = useQuery({
-    queryKey: ["user-posts", profileUserId],
+    queryKey: ["user-posts", profileUserId, isOwnProfile],
     queryFn: async () => {
       if (!profileUserId) return [];
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from("task_proofs")
         .select("*, tasks(name, title, location_name)")
-        .eq("user_id", profileUserId)
-        .eq("is_shared_to_community", true)
-        .order("created_at", { ascending: false });
+        .eq("user_id", profileUserId);
+      
+      // Show all posts for own profile, only community-shared for others
+      if (!isOwnProfile) {
+        query = query.eq("is_shared_to_community", true);
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: false });
       
       if (error) throw error;
       return data || [];
@@ -83,17 +90,17 @@ const Profile = () => {
     enabled: !!profileUserId,
   });
 
-  // Fetch completed tasks
-  const { data: completedTasks } = useQuery({
-    queryKey: ["user-completed-tasks", profileUserId],
+  // Fetch user tasks (both pending and completed)
+  const { data: userTasks } = useQuery({
+    queryKey: ["user-tasks", profileUserId],
     queryFn: async () => {
       if (!profileUserId) return [];
       const { data } = await supabase
         .from("user_tasks")
-        .select("*, tasks(name, title, location_name, xp_reward)")
+        .select("*, tasks(name, title, location_name, xp_reward, type)")
         .eq("user_id", profileUserId)
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false })
+        .in("status", ["pending", "completed"])
+        .order("joined_at", { ascending: false })
         .limit(20);
       return data || [];
     },
@@ -106,15 +113,18 @@ const Profile = () => {
     queryFn: async () => {
       if (!profileUserId) return { tasksCompleted: 0, totalXP: 0, postsCount: 0 };
       
-      const [tasksResult, postsResult] = await Promise.all([
+      const [tasksResult, postsResult, allPostsResult] = await Promise.all([
         supabase.from("user_tasks").select("*", { count: "exact", head: true }).eq("user_id", profileUserId).eq("status", "completed"),
         supabase.from("task_proofs").select("*", { count: "exact", head: true }).eq("user_id", profileUserId).eq("is_shared_to_community", true),
+        supabase.from("task_proofs").select("*", { count: "exact", head: true }).eq("user_id", profileUserId),
       ]);
+
+      const isOwn = profileUserId === user?.id;
 
       return {
         tasksCompleted: tasksResult.count || 0,
         totalXP: profile?.xp || 0,
-        postsCount: postsResult.count || 0,
+        postsCount: isOwn ? (allPostsResult.count || 0) : (postsResult.count || 0),
       };
     },
     enabled: !!profileUserId && !!profile,
@@ -124,7 +134,6 @@ const Profile = () => {
   const level = Math.floor(xp / 1000) + 1;
   const userName = profile?.username || "Runner";
   const avatarUrl = profile?.avatar_url || null;
-  const isOwnProfile = user?.id === profileUserId;
 
   useEffect(() => {
     if (profile?.username) {
@@ -444,37 +453,55 @@ const Profile = () => {
 
         {activeTab === "tasks" && (
           <div className="space-y-3">
-            {completedTasks && completedTasks.length > 0 ? (
-              completedTasks.map((userTask) => {
+            {userTasks && userTasks.length > 0 ? (
+              userTasks.map((userTask) => {
                 const task = userTask.tasks;
                 if (!task) return null;
+                const isCompleted = userTask.status === "completed";
                 return (
                   <Card key={userTask.id} className="p-4 glass">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        isCompleted ? "bg-accent/20" : "bg-primary/20"
+                      }`}>
+                        <CheckCircle2 className={`w-6 h-6 ${
+                          isCompleted ? "text-accent" : "text-primary"
+                        }`} />
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium">{task.title || task.name}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-2">
-                          {userTask.completed_at && (
-                            <>
-                              <Calendar className="w-3 h-3" />
-                              {new Date(userTask.completed_at).toLocaleDateString()}
-                            </>
-                          )}
+                        <div className="font-bold">{task.title || task.name}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                           {task.location_name && (
                             <>
-                              <MapPin className="w-3 h-3" />
+                              <MapPin className="w-4 h-4" />
                               {task.location_name}
                             </>
                           )}
                         </div>
+                        <Badge 
+                          variant={isCompleted ? "default" : "outline"} 
+                          className="mt-2 text-xs"
+                        >
+                          {isCompleted ? "Completed" : "In Progress"}
+                        </Badge>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-bold text-accent">
-                          +{userTask.xp_awarded || task.xp_reward} XP
+                        <div className="flex items-center gap-1 text-accent font-bold">
+                          <Award className="w-4 h-4" />
+                          +{task.xp_reward || 0}
                         </div>
+                        {userTask.completed_at && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {new Date(userTask.completed_at).toLocaleDateString()}
+                          </div>
+                        )}
+                        {!isCompleted && userTask.joined_at && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {new Date(userTask.joined_at).toLocaleDateString()}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -483,7 +510,7 @@ const Profile = () => {
             ) : (
               <Card className="p-8 glass text-center">
                 <Award className="w-12 h-12 mx-auto mb-3 opacity-50 text-muted-foreground" />
-                <p className="text-muted-foreground">No completed tasks yet</p>
+                <p className="text-muted-foreground">No tasks yet</p>
               </Card>
             )}
           </div>
