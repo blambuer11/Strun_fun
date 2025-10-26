@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import BottomNav from "@/components/BottomNav";
+import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { 
   User, 
   ArrowLeft,
@@ -66,23 +67,17 @@ const Profile = () => {
     enabled: !!profileUserId,
   });
 
-  // Fetch user's posts (task proofs)
-  const { data: posts } = useQuery({
-    queryKey: ["user-posts", profileUserId, isOwnProfile],
+  // Fetch user's posts from posts table
+  const { data: posts, refetch: refetchPosts } = useQuery({
+    queryKey: ["user-posts", profileUserId],
     queryFn: async () => {
       if (!profileUserId) return [];
       
-      let query = supabase
-        .from("task_proofs")
-        .select("*, tasks(name, title, location_name)")
-        .eq("user_id", profileUserId);
-      
-      // Show all posts for own profile, only community-shared for others
-      if (!isOwnProfile) {
-        query = query.eq("is_shared_to_community", true);
-      }
-      
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("user_id", profileUserId)
+        .order("created_at", { ascending: false });
       
       if (error) throw error;
       return data || [];
@@ -113,18 +108,15 @@ const Profile = () => {
     queryFn: async () => {
       if (!profileUserId) return { tasksCompleted: 0, totalXP: 0, postsCount: 0 };
       
-      const [tasksResult, postsResult, allPostsResult] = await Promise.all([
+      const [tasksResult, postsResult] = await Promise.all([
         supabase.from("user_tasks").select("*", { count: "exact", head: true }).eq("user_id", profileUserId).eq("status", "completed"),
-        supabase.from("task_proofs").select("*", { count: "exact", head: true }).eq("user_id", profileUserId).eq("is_shared_to_community", true),
-        supabase.from("task_proofs").select("*", { count: "exact", head: true }).eq("user_id", profileUserId),
+        supabase.from("posts").select("*", { count: "exact", head: true }).eq("user_id", profileUserId),
       ]);
-
-      const isOwn = profileUserId === user?.id;
 
       return {
         tasksCompleted: tasksResult.count || 0,
         totalXP: profile?.xp || 0,
-        postsCount: isOwn ? (allPostsResult.count || 0) : (postsResult.count || 0),
+        postsCount: postsResult.count || 0,
       };
     },
     enabled: !!profileUserId && !!profile,
@@ -240,7 +232,10 @@ const Profile = () => {
             alt="Strun Logo" 
             className="h-8 w-auto object-contain"
           />
-          <div className="w-10" />
+          {isOwnProfile && (
+            <CreatePostDialog onPostCreated={refetchPosts} />
+          )}
+          {!isOwnProfile && <div className="w-10" />}
         </div>
       </header>
 
@@ -404,17 +399,18 @@ const Profile = () => {
                           {new Date(post.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      {post.tasks && (
+                      {post.location && (
                         <p className="text-sm text-muted-foreground mb-2">
-                          Completed: {post.tasks.title || post.tasks.name}
+                          <MapPin className="w-3 h-3 inline mr-1" />
+                          {post.location}
                         </p>
                       )}
                     </div>
                   </div>
                   
-                  {post.media_url && (
+                  {post.image_url && (
                     <img 
-                      src={post.media_url} 
+                      src={post.image_url} 
                       alt="Post" 
                       className="w-full rounded-lg mb-3 max-h-96 object-cover"
                     />
@@ -425,11 +421,11 @@ const Profile = () => {
                   <div className="flex items-center gap-4 text-muted-foreground">
                     <button className="flex items-center gap-1 hover:text-accent transition-colors">
                       <Heart className="w-5 h-5" />
-                      <span className="text-sm">{post.upvotes || 0}</span>
+                      <span className="text-sm">{post.likes_count || 0}</span>
                     </button>
                     <button className="flex items-center gap-1 hover:text-accent transition-colors">
                       <MessageSquare className="w-5 h-5" />
-                      <span className="text-sm">0</span>
+                      <span className="text-sm">{post.comments_count || 0}</span>
                     </button>
                     <button className="flex items-center gap-1 hover:text-accent transition-colors ml-auto">
                       <Share2 className="w-5 h-5" />
@@ -443,7 +439,7 @@ const Profile = () => {
                 <p className="text-muted-foreground">No posts yet</p>
                 {isOwnProfile && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Share your task completions to the community!
+                    Create your first post using the + button above!
                   </p>
                 )}
               </Card>
