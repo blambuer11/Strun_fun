@@ -474,14 +474,14 @@ const Tasks = () => {
       <div className="container max-w-7xl mx-auto p-4 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-foreground">
             Tasks
           </h1>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <Card className="glass-strong neon-border p-4">
+          <Card className="bg-card border border-border p-4">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-4 h-4 text-primary" />
               <span className="text-xs text-muted-foreground">Daily Progress</span>
@@ -492,31 +492,31 @@ const Tasks = () => {
             </Badge>
           </Card>
 
-          <Card className="glass-strong neon-border p-4">
+          <Card className="bg-card border border-border p-4">
             <div className="flex items-center gap-2 mb-1">
-              <Zap className="w-4 h-4 text-accent" />
+              <Zap className="w-4 h-4 text-primary" />
               <span className="text-xs text-muted-foreground">Total XP</span>
             </div>
-            <div className="text-2xl font-bold text-accent">{totalXP}</div>
+            <div className="text-2xl font-bold text-primary">{totalXP}</div>
           </Card>
 
-          <Card className="glass-strong neon-border p-4">
+          <Card className="bg-card border border-border p-4">
             <div className="flex items-center gap-2 mb-1">
-              <Coins className="w-4 h-4 text-yellow-400" />
+              <Coins className="w-4 h-4 text-yellow-500" />
               <span className="text-xs text-muted-foreground">Total SOL</span>
             </div>
-            <div className="text-2xl font-bold text-yellow-400">{totalSOL.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-yellow-500">{totalSOL.toFixed(2)}</div>
           </Card>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="personal" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 glass-strong">
-            <TabsTrigger value="personal" className="data-[state=active]:neon-border">
+          <TabsList className="grid w-full grid-cols-2 bg-muted">
+            <TabsTrigger value="personal" className="data-[state=active]:bg-background">
               <Sparkles className="mr-2 h-4 w-4" />
               My AI Tasks
             </TabsTrigger>
-            <TabsTrigger value="marketplace" className="data-[state=active]:neon-border">
+            <TabsTrigger value="marketplace" className="data-[state=active]:bg-background">
               <Store className="mr-2 h-4 w-4" />
               Marketplace
             </TabsTrigger>
@@ -525,15 +525,15 @@ const Tasks = () => {
           {/* Personal Tasks Tab */}
           <TabsContent value="personal" className="space-y-4 mt-4">
             {/* Generate AI Tasks */}
-            <Card className="glass-strong neon-border p-6">
+            <Card className="bg-card border border-border p-6">
               <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="w-full gradient-bg h-12" disabled={dailyTasksRemaining === 0}>
+                  <Button className="w-full bg-primary hover:bg-primary/90 h-12" disabled={dailyTasksRemaining === 0}>
                     <Sparkles className="mr-2 h-5 w-5" />
                     Generate AI Tasks ({dailyTasksRemaining}/3)
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="glass-strong">
+                <DialogContent className="bg-background border border-border">
                   <DialogHeader>
                     <DialogTitle>Generate AI Tasks</DialogTitle>
                   </DialogHeader>
@@ -544,7 +544,7 @@ const Tasks = () => {
                     <Button 
                       onClick={handleGenerateTasks} 
                       disabled={generatingTasks}
-                      className="w-full gradient-bg"
+                      className="w-full bg-primary hover:bg-primary/90"
                     >
                       {generatingTasks ? (
                         <>
@@ -564,21 +564,21 @@ const Tasks = () => {
             </Card>
 
             {/* My AI Generated Tasks */}
-            <Card className="glass-strong neon-border p-6">
+            <Card className="bg-card border border-border p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
                 My AI Generated Tasks ({myPersonalTasks.length})
               </h2>
               {myPersonalTasks.length === 0 ? (
                 <div className="text-center py-8">
-                  <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-muted-foreground">No AI tasks yet</p>
                   <p className="text-xs text-muted-foreground mt-1">Generate some tasks to get started!</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {myPersonalTasks.map((task) => (
-                    <Card key={task.id} className="p-4 glass hover:scale-[1.02] transition-transform cursor-pointer" onClick={() => handleTaskSelect(task)}>
+                    <Card key={task.id} className="p-4 bg-background border border-border hover:border-primary transition-colors cursor-pointer" onClick={() => handleTaskSelect(task)}>
                       <h3 className="font-semibold text-lg">{task.title}</h3>
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
                       <div className="flex items-center gap-2 mt-3">
@@ -586,7 +586,7 @@ const Tasks = () => {
                           <MapPin className="h-3 w-3" />
                           {task.location_name || task.city}
                         </Badge>
-                        <Badge className="bg-primary">{task.xp_reward} XP</Badge>
+                        <Badge className="bg-primary text-primary-foreground">{task.xp_reward} XP</Badge>
                       </div>
                     </Card>
                   ))}
@@ -595,14 +595,14 @@ const Tasks = () => {
             </Card>
 
             {/* Accepted Tasks */}
-            <Card className="glass-strong neon-border p-6">
+            <Card className="bg-card border border-border p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                 Accepted Tasks ({myAcceptedTasks.length})
               </h2>
               {myAcceptedTasks.length === 0 ? (
                 <div className="text-center py-8">
-                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-muted-foreground">No accepted tasks yet</p>
                   <p className="text-xs text-muted-foreground mt-1">Check the marketplace to accept tasks!</p>
                 </div>
@@ -617,9 +617,9 @@ const Tasks = () => {
                     return (
                       <Card 
                         key={ut.id} 
-                        className={`p-4 glass transition-all ${
+                        className={`p-4 bg-background transition-all ${
                           isPending ? 'border-2 border-yellow-500' : 
-                          isCompleted ? 'border-2 border-green-500' : ''
+                          isCompleted ? 'border-2 border-green-500' : 'border border-border'
                         }`}
                       >
                         <div className="flex gap-3">
@@ -680,7 +680,7 @@ const Tasks = () => {
                                       setSelectedProofUserTaskId(ut.id);
                                       setShowProofDialog(true);
                                     }} 
-                                    className="flex-1 gradient-bg"
+                                    className="flex-1 bg-primary hover:bg-primary/90"
                                   >
                                     <Upload className="w-4 h-4 mr-2" />
                                     Submit Proof
@@ -732,12 +732,12 @@ const Tasks = () => {
           {/* Marketplace Tab */}
           <TabsContent value="marketplace" className="space-y-4 mt-4">
             {/* Create Sponsored Task */}
-            <Card className="glass-strong neon-border p-6">
+            <Card className="bg-card border border-border p-6">
               <CreateSponsoredTaskDialog />
             </Card>
 
             {/* Filters */}
-            <Card className="glass-strong neon-border p-4">
+            <Card className="bg-card border border-border p-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -745,12 +745,12 @@ const Tasks = () => {
                     placeholder="Search tasks..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 glass"
+                    className="pl-10"
                   />
                 </div>
                 
                 <Select value={cityFilter} onValueChange={setCityFilter}>
-                  <SelectTrigger className="glass">
+                  <SelectTrigger>
                     <SelectValue placeholder="All Cities" />
                   </SelectTrigger>
                   <SelectContent>
@@ -762,7 +762,7 @@ const Tasks = () => {
                 </Select>
 
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="glass">
+                  <SelectTrigger>
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -774,7 +774,7 @@ const Tasks = () => {
                 </Select>
 
                 <Select value={rewardFilter} onValueChange={setRewardFilter}>
-                  <SelectTrigger className="glass">
+                  <SelectTrigger>
                     <SelectValue placeholder="All Rewards" />
                   </SelectTrigger>
                   <SelectContent>
@@ -787,17 +787,16 @@ const Tasks = () => {
             </Card>
 
             {/* Marketplace Tasks */}
-            <Card className="glass-strong neon-border p-6">
+            <Card className="bg-card border border-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  <Store className="h-5 w-5 text-accent" />
+                  <Store className="h-5 w-5 text-primary" />
                   Community Marketplace ({filteredTasks.length})
                 </h2>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={loadMarketplaceTasks}
-                  className="glass"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
@@ -806,14 +805,14 @@ const Tasks = () => {
 
               {filteredTasks.length === 0 ? (
                 <div className="text-center py-8">
-                  <Store className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <Store className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-muted-foreground">No tasks available</p>
                   <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredTasks.map((task) => (
-                    <Card key={task.id} className="p-4 glass hover:scale-[1.02] transition-transform">
+                    <Card key={task.id} className="p-4 bg-background border border-border hover:border-primary transition-colors">
                       <div className="space-y-3">
                         <div>
                           <h3 className="font-semibold text-lg">{task.title || task.name}</h3>
@@ -829,7 +828,7 @@ const Tasks = () => {
                           </Badge>
                           <Badge variant="outline">{task.type.replace(/_/g, ' ')}</Badge>
                           {task.pools && (
-                            <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500">
+                            <Badge className="bg-yellow-500 text-black">
                               Sponsored
                             </Badge>
                           )}
@@ -856,7 +855,6 @@ const Tasks = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => handleTaskSelect(task)}
-                              className="glass"
                             >
                               View
                             </Button>
@@ -864,7 +862,7 @@ const Tasks = () => {
                               <Button
                                 size="sm"
                                 onClick={() => handleAcceptTask(task)}
-                                className="gradient-bg"
+                                className="bg-primary hover:bg-primary/90"
                               >
                                 Accept
                               </Button>
@@ -883,7 +881,7 @@ const Tasks = () => {
         {/* Task Detail Modal */}
         {selectedTaskDetail && (
           <Dialog open={!!selectedTaskDetail} onOpenChange={(open) => !open && handleCloseTaskModal()}>
-            <DialogContent className="glass-strong max-w-2xl">
+            <DialogContent className="bg-background border border-border max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{selectedTaskDetail.title || selectedTaskDetail.name}</DialogTitle>
               </DialogHeader>
@@ -894,12 +892,12 @@ const Tasks = () => {
                     <MapPin className="h-3 w-3 mr-1" />
                     {selectedTaskDetail.location_name || selectedTaskDetail.city}
                   </Badge>
-                  <Badge className="bg-accent">
+                  <Badge className="bg-primary text-primary-foreground">
                     <Zap className="h-3 w-3 mr-1" />
                     {selectedTaskDetail.xp_reward} XP
                   </Badge>
                   {selectedTaskDetail.sol_reward > 0 && (
-                    <Badge className="bg-yellow-400 text-black">
+                    <Badge className="bg-yellow-500 text-black">
                       <Coins className="h-3 w-3 mr-1" />
                       {selectedTaskDetail.sol_reward} SOL
                     </Badge>
@@ -908,7 +906,7 @@ const Tasks = () => {
                 {!isTaskAccepted(selectedTaskDetail.id) && (
                   <Button 
                     onClick={() => handleAcceptTask(selectedTaskDetail)}
-                    className="w-full gradient-bg"
+                    className="w-full bg-primary hover:bg-primary/90"
                   >
                     Accept Task
                   </Button>
