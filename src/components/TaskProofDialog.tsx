@@ -240,32 +240,32 @@ export const TaskProofDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Submit Task Proof</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Submit Task Proof</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* GPS Status */}
           {taskLocation && (
-            <Card className="p-3">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm font-medium">GPS Location:</span>
+            <Card className="p-2 sm:p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm font-medium">GPS Location:</span>
                 {gpsStatus === "checking" && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-xs">
                     <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                     Checking...
                   </Badge>
                 )}
                 {gpsStatus === "verified" && (
-                  <Badge className="bg-green-500">
+                  <Badge className="bg-green-500 text-xs">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     Verified
                   </Badge>
                 )}
                 {gpsStatus === "failed" && (
-                  <Badge variant="destructive">
+                  <Badge variant="destructive" className="text-xs">
                     <XCircle className="w-3 h-3 mr-1" />
                     Failed
                   </Badge>
@@ -275,25 +275,25 @@ export const TaskProofDialog = ({
           )}
 
           <div>
-            <Label htmlFor="content">Proof Description</Label>
+            <Label htmlFor="content" className="text-sm">Proof Description</Label>
             <Textarea
               id="content"
               placeholder="Describe how you completed the task..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              rows={4}
-              className="mt-1"
+              rows={3}
+              className="mt-1 text-sm"
             />
           </div>
 
           <div>
-            <Label htmlFor="media">Upload Photo/Video</Label>
+            <Label htmlFor="media" className="text-sm">Upload Photo/Video</Label>
             <Input
               id="media"
               type="file"
               accept="image/*,video/*"
               onChange={handleFileChange}
-              className="mt-1"
+              className="mt-1 text-sm"
             />
             {mediaPreview && (
               <div className="mt-2 relative">
@@ -301,25 +301,25 @@ export const TaskProofDialog = ({
                   <img
                     src={mediaPreview}
                     alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-full h-32 sm:h-48 object-cover rounded-lg"
                   />
                 ) : (
                   <video
                     src={mediaPreview}
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-full h-32 sm:h-48 object-cover rounded-lg"
                     controls
                   />
                 )}
                 <Button
                   variant="destructive"
                   size="icon"
-                  className="absolute top-2 right-2"
+                  className="absolute top-2 right-2 h-8 w-8 sm:h-10 sm:w-10"
                   onClick={() => {
                     setMediaFile(null);
                     setMediaPreview("");
                   }}
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </div>
             )}
@@ -334,22 +334,22 @@ export const TaskProofDialog = ({
                 !content.trim() ||
                 (taskLocation && gpsStatus !== "verified")
               }
-              className="w-full"
+              className="w-full h-10 sm:h-11 text-sm"
             >
               {uploading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                  <span className="truncate">Uploading...</span>
                 </>
               ) : submitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting...
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                  <span className="truncate">Submitting...</span>
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Submit Proof
+                  <Upload className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                  <span className="truncate">Submit Proof</span>
                 </>
               )}
             </Button>
@@ -363,21 +363,22 @@ export const TaskProofDialog = ({
                 (taskLocation && gpsStatus !== "verified")
               }
               variant="secondary"
-              className="w-full"
+              className="w-full h-10 sm:h-11 text-sm"
             >
-              <Share2 className="w-4 h-4 mr-2" />
-              Submit & Share with Community
+              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+              <span className="truncate">Submit & Share with Community</span>
             </Button>
           </div>
 
-          <Card className="p-4 bg-muted/50">
-            <p className="text-sm font-medium mb-3">Share on Social Media</p>
+          <Card className="p-3 sm:p-4 bg-muted/50">
+            <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Share on Social Media</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleSocialShare("tiktok")}
                 disabled={!content.trim()}
+                className="h-9 text-xs"
               >
                 TikTok
               </Button>
@@ -386,6 +387,7 @@ export const TaskProofDialog = ({
                 size="sm"
                 onClick={() => handleSocialShare("twitter")}
                 disabled={!content.trim()}
+                className="h-9 text-xs"
               >
                 X (Twitter)
               </Button>
@@ -394,6 +396,7 @@ export const TaskProofDialog = ({
                 size="sm"
                 onClick={() => handleSocialShare("instagram")}
                 disabled={!content.trim()}
+                className="h-9 text-xs"
               >
                 Instagram
               </Button>
@@ -402,6 +405,7 @@ export const TaskProofDialog = ({
                 size="sm"
                 onClick={() => handleSocialShare("telegram")}
                 disabled={!content.trim()}
+                className="h-9 text-xs"
               >
                 Telegram
               </Button>

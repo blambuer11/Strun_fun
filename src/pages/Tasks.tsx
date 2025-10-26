@@ -925,51 +925,51 @@ const Tasks = () => {
       {/* Task Detail Modal */}
       {selectedTask && (
         <Dialog open={!!selectedTask} onOpenChange={handleCloseTaskModal}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                {selectedTask.title || selectedTask.name}
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                <span className="line-clamp-2">{selectedTask.title || selectedTask.name}</span>
               </DialogTitle>
             </DialogHeader>
             
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-3">
                   {selectedTask.description}
                 </p>
                 
                 {(selectedTask.location_name || selectedTask.meta?.location_name) && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="w-4 h-4" />
-                    <span>{selectedTask.location_name || selectedTask.meta?.location_name}</span>
+                  <div className="flex items-center gap-2 text-xs sm:text-sm">
+                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="truncate">{selectedTask.location_name || selectedTask.meta?.location_name}</span>
                   </div>
                 )}
               </div>
 
               {/* Rewards */}
-              <div className="flex gap-2">
-                <Badge className="bg-accent/20 text-accent">
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-accent/20 text-accent text-xs">
                   <Zap className="w-3 h-3 mr-1" />
                   +{selectedTask.xp_reward} XP
                 </Badge>
                 {selectedTask.sol_reward > 0 && (
-                  <Badge className="bg-success/20 text-success">
+                  <Badge className="bg-success/20 text-success text-xs">
                     <Coins className="w-3 h-3 mr-1" />
                     {selectedTask.sol_reward} SOL
                   </Badge>
                 )}
-                <Badge variant="outline">
+                <Badge variant="outline" className="text-xs">
                   {selectedTask.type.replace(/_/g, ' ')}
                 </Badge>
               </div>
 
               {/* Task Details */}
-              <Card className="p-3 bg-muted/50">
-                <div className="space-y-2 text-sm">
+              <Card className="p-2 sm:p-3 bg-muted/50">
+                <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Location:</span>
-                    <span className="font-medium">{selectedTask.city}</span>
+                    <span className="font-medium truncate ml-2">{selectedTask.city}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Radius:</span>
@@ -1103,26 +1103,32 @@ const Tasks = () => {
                       <Button
                         onClick={() => handleCheckIn(selectedTask, userTask.id)}
                         disabled={checkingIn}
-                        className="flex-1 h-12"
+                        className="w-full h-10 sm:h-12 text-sm"
                       >
                         {checkingIn ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Checking...</>
+                          <>
+                            <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                            <span className="truncate">Checking...</span>
+                          </>
                         ) : (
-                          <><Navigation className="w-4 h-4 mr-2" />Check-in</>
+                          <>
+                            <Navigation className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                            <span className="truncate">Check-in</span>
+                          </>
                         )}
                       </Button>
                     ) : (
-                      <>
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Button
                           onClick={() => {
                             setVerifyingTask(selectedTask);
                             setVerifyingUserTaskId(userTask.id);
                             handleCloseTaskModal();
                           }}
-                          className="flex-1 h-12"
+                          className="w-full sm:flex-1 h-10 sm:h-12 text-sm"
                         >
-                          <Camera className="w-4 h-4 mr-2" />
-                          Upload Content
+                          <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                          <span className="truncate">Upload Content</span>
                         </Button>
                         <Button
                           onClick={() => {
@@ -1131,17 +1137,18 @@ const Tasks = () => {
                             setShowProofDialog(true);
                           }}
                           variant="secondary"
-                          className="flex-1 h-12"
+                          className="w-full sm:flex-1 h-10 sm:h-12 text-sm"
                         >
-                          <Upload className="w-4 h-4 mr-2" />
-                          Submit Proof
+                          <Upload className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                          <span className="truncate">Submit Proof</span>
                         </Button>
-                      </>
+                      </div>
                     )}
                     <Button
                       onClick={() => handleCancelTask(userTask.id)}
                       variant="destructive"
                       size="sm"
+                      className="w-full sm:w-auto h-9 text-xs"
                     >
                       Cancel
                     </Button>

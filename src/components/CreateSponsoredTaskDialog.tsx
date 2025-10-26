@@ -136,17 +136,17 @@ export const CreateSponsoredTaskDialog = () => {
           <span className="truncate">Create Sponsored Task</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Sponsored Task</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg sm:text-xl">Create Sponsored Task</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Create a rewarded task for the community. SOL rewards will be distributed from the pool when the task is completed.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <FormField
                 control={form.control}
                 name="country"
@@ -208,17 +208,17 @@ export const CreateSponsoredTaskDialog = () => {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <FormField
                 control={form.control}
                 name="solAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>SOL Reward Amount</FormLabel>
+                    <FormLabel className="text-sm">SOL Reward Amount</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.5" {...field} />
+                      <Input type="number" step="0.01" placeholder="0.5" {...field} className="text-sm" />
                     </FormControl>
-                    <FormDescription>Total SOL to be deposited to pool</FormDescription>
+                    <FormDescription className="text-xs">Total SOL to be deposited to pool</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -229,35 +229,35 @@ export const CreateSponsoredTaskDialog = () => {
                 name="maxWinners"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Winners</FormLabel>
+                    <FormLabel className="text-sm">Number of Winners</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="1" {...field} />
+                      <Input type="number" placeholder="1" {...field} className="text-sm" />
                     </FormControl>
-                    <FormDescription>Number of people who will receive rewards</FormDescription>
+                    <FormDescription className="text-xs">Number of people who will receive rewards</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
-                className="flex-1"
+                className="w-full sm:flex-1 h-10 text-sm"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
+              <Button type="submit" disabled={isSubmitting} className="w-full sm:flex-1 h-10 text-sm">
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                    <span className="truncate">Creating...</span>
                   </>
                 ) : (
-                  "Create Task & Deposit SOL"
+                  <span className="truncate">Create Task & Deposit SOL</span>
                 )}
               </Button>
             </div>

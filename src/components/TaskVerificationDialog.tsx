@@ -180,18 +180,18 @@ export function TaskVerificationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera className="w-5 h-5" />
-            Verify Task: {task.title || task.name}
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="line-clamp-2">Verify Task: {task.title || task.name}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Task Info */}
-          <div className="p-3 bg-muted rounded-lg">
-            <p className="text-sm font-medium mb-2">{task.description}</p>
+          <div className="p-2 sm:p-3 bg-muted rounded-lg">
+            <p className="text-xs sm:text-sm font-medium mb-2">{task.description}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <MapPin className="w-3 h-3" />
               <span>Must be within {task.radius_m || 30}m of location</span>
@@ -199,11 +199,11 @@ export function TaskVerificationDialog({
           </div>
 
           {/* Security Status */}
-          <div className="flex gap-2">
-            <Badge variant={nonce ? "default" : "secondary"}>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={nonce ? "default" : "secondary"} className="text-xs">
               {nonce ? "🔐 Secured" : "⏳ Loading..."}
             </Badge>
-            <Badge variant={location ? "default" : "secondary"}>
+            <Badge variant={location ? "default" : "secondary"} className="text-xs">
               {location ? "📍 Located" : "⏳ Finding..."}
             </Badge>
           </div>
@@ -219,13 +219,13 @@ export function TaskVerificationDialog({
                 muted
               />
               <canvas ref={canvasRef} className="hidden" />
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+              <div className="absolute bottom-2 sm:bottom-4 left-0 right-0 flex justify-center">
                 <Button
-                  size="lg"
-                  className="rounded-full"
+                  size="sm"
+                  className="rounded-full h-10 sm:h-11 text-xs sm:text-sm"
                   onClick={photo ? () => setPhoto(null) : capturePhoto}
                 >
-                  <Camera className="w-5 h-5 mr-2" />
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Capture Photo
                 </Button>
               </div>
@@ -240,7 +240,7 @@ export function TaskVerificationDialog({
               <Button
                 size="sm"
                 variant="secondary"
-                className="absolute top-2 right-2"
+                className="absolute top-2 right-2 text-xs h-8"
                 onClick={() => {
                   setPhoto(null);
                   startCamera();
@@ -253,7 +253,7 @@ export function TaskVerificationDialog({
 
           {/* Verification Result */}
           {result && (
-            <div className={`p-4 rounded-lg border-2 ${
+            <div className={`p-3 sm:p-4 rounded-lg border-2 ${
               result.verified 
                 ? 'bg-success/10 border-success' 
                 : result.suspicious
@@ -262,19 +262,19 @@ export function TaskVerificationDialog({
             }`}>
               <div className="flex items-center gap-2 mb-3">
                 {result.verified ? (
-                  <CheckCircle2 className="w-5 h-5 text-success" />
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
                 ) : result.suspicious ? (
-                  <AlertTriangle className="w-5 h-5 text-warning" />
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-warning" />
                 ) : (
-                  <XCircle className="w-5 h-5 text-destructive" />
+                  <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                 )}
-                <span className="font-bold">
+                <span className="font-bold text-sm sm:text-base">
                   {result.verified ? 'Verified!' : result.suspicious ? 'Under Review' : 'Not Verified'}
                 </span>
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span>Verification Score:</span>
                   <span className="font-mono">{(result.verification_score * 100).toFixed(0)}%</span>
                 </div>
@@ -298,15 +298,15 @@ export function TaskVerificationDialog({
                   </p>
                 )}
 
-                <p className="text-sm mt-2">{result.reason}</p>
+                <p className="text-xs sm:text-sm mt-2">{result.reason}</p>
 
                 {result.verified && (
-                  <div className="flex gap-2 mt-3">
-                    <Badge className="bg-accent text-accent-foreground">
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Badge className="bg-accent text-accent-foreground text-xs">
                       +{result.xp_earned} XP
                     </Badge>
                     {result.sol_earned > 0 && (
-                      <Badge className="bg-success text-success-foreground">
+                      <Badge className="bg-success text-success-foreground text-xs">
                         💎 +{result.sol_earned} SOL
                       </Badge>
                     )}
@@ -318,32 +318,32 @@ export function TaskVerificationDialog({
 
           {/* Actions */}
           {!result && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
-                className="flex-1"
+                className="w-full sm:flex-1 h-10 text-sm"
                 onClick={() => onOpenChange(false)}
                 disabled={verifying}
               >
                 Cancel
               </Button>
               <Button
-                className="flex-1"
+                className="w-full sm:flex-1 h-10 text-sm"
                 onClick={!photo ? startCamera : handleVerify}
                 disabled={verifying || !nonce || !location}
               >
                 {verifying ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Verifying...
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                    <span className="truncate">Verifying...</span>
                   </>
                 ) : !photo ? (
                   <>
-                    <Camera className="w-4 h-4 mr-2" />
-                    Start Camera
+                    <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    <span className="truncate">Start Camera</span>
                   </>
                 ) : (
-                  'Submit for Verification'
+                  <span className="truncate">Submit for Verification</span>
                 )}
               </Button>
             </div>
