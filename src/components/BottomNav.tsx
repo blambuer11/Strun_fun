@@ -17,8 +17,8 @@ const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 z-50 safe-area-bottom">
-      <div className="container mx-auto px-1 py-1.5">
+    <nav className="fixed bottom-0 left-0 right-0 glass-strong border-t border-primary/20 z-50 safe-area-bottom">
+      <div className="container mx-auto px-1 py-2">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -26,12 +26,12 @@ const BottomNav = () => {
               <button
                 key={item.label}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-0.5 transition-colors px-2 py-1.5 rounded-lg ${
-                  isActive ? "text-accent bg-accent/10" : "text-foreground/70 hover:text-foreground"
+                className={`flex flex-col items-center gap-1 transition-all px-2 py-1.5 rounded-xl ${
+                  isActive ? "scale-110" : "hover:scale-105"
                 }`}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <item.icon className={`w-5 h-5 transition-all ${isActive ? "text-primary drop-shadow-[0_0_8px_hsl(174,100%,50%)]" : "text-muted-foreground"}`} />
+                <span className={`text-[10px] font-medium transition-all ${isActive ? "text-primary font-semibold" : "text-muted-foreground"}`}>{item.label}</span>
               </button>
             );
           })}
