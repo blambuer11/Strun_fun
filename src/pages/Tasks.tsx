@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -13,17 +13,20 @@ import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { CreateSponsoredTaskDialog } from "@/components/CreateSponsoredTaskDialog";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
 import { TaskProofsList } from "@/components/TaskProofsList";
-import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search, Upload, Twitter, Facebook, Linkedin } from "lucide-react";
+import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search, Upload, Twitter, Facebook, Linkedin, RefreshCw, Store } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Tasks = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [myTasks, setMyTasks] = useState<any[]>([]);
-  const [availableTasks, setAvailableTasks] = useState<any[]>([]);
+  const [myPersonalTasks, setMyPersonalTasks] = useState<any[]>([]);
+  const [myAcceptedTasks, setMyAcceptedTasks] = useState<any[]>([]);
+  const [marketplaceTasks, setMarketplaceTasks] = useState<any[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<any[]>([]);
   const [dailyTasksRemaining, setDailyTasksRemaining] = useState(3);
   const [dailyTasksCompleted, setDailyTasksCompleted] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
@@ -37,26 +40,46 @@ const Tasks = () => {
   const [showProofDialog, setShowProofDialog] = useState(false);
   const [selectedProofTask, setSelectedProofTask] = useState<any>(null);
   const [selectedProofUserTaskId, setSelectedProofUserTaskId] = useState<string | null>(null);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   
   // Marketplace state
-  const [marketplaceTasks, setMarketplaceTasks] = useState<any[]>([]);
-  const [filteredTasks, setFilteredTasks] = useState<any[]>([]);
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [rewardFilter, setRewardFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [availableCities, setAvailableCities] = useState<string[]>([]);
 
-  const loadMyTasks = async () => {
+  const loadMyPersonalTasks = async () => {
     if (!user) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*, pools(*)")
+      .eq("creator_id", user.id)
+      .is("pool_id", null)
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      console.error("Error loading personal tasks:", error);
+      return;
+    }
+    setMyPersonalTasks(data || []);
+  };
+
+  const loadMyAcceptedTasks = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
       .from("user_tasks")
       .select("*, tasks(*)")
       .eq("user_id", user.id)
       .order("joined_at", { ascending: false });
     
-    console.log("My Tasks loaded:", data);
-    setMyTasks(data || []);
+    if (error) {
+      console.error("Error loading accepted tasks:", error);
+      return;
+    }
+    
+    console.log("My Accepted Tasks loaded:", data);
+    setMyAcceptedTasks(data || []);
     
     // Calculate completed today
     const today = new Date().toISOString().split("T")[0];
@@ -66,39 +89,36 @@ const Tasks = () => {
     setDailyTasksCompleted(completedToday);
   };
 
-  const loadAvailableTasks = async () => {
-    if (!user) return;
-    
-    // Get sponsored tasks that user hasn't joined yet
-    const { data: allTasks } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("status", "published")
-      .not("type", "eq", "qr_checkin")
-      .order("created_at", { ascending: false });
-    
-    // Filter out tasks user has already joined
-    const userTaskIds = myTasks.map(ut => ut.task_id);
-    const available = (allTasks || []).filter(t => !userTaskIds.includes(t.id));
-    
-    setAvailableTasks(available);
-  };
-
   const loadMarketplaceTasks = async () => {
-    const { data } = await supabase
+    if (!user) return;
+
+    // Get tasks that user has accepted
+    const { data: acceptedTaskIds } = await supabase
+      .from("user_tasks")
+      .select("task_id")
+      .eq("user_id", user.id);
+
+    const acceptedIds = acceptedTaskIds?.map(ut => ut.task_id) || [];
+
+    // Get all marketplace tasks (sponsored or shared to community)
+    const { data, error } = await supabase
       .from("tasks")
       .select("*, pools(*)")
       .eq("status", "published")
-      .not("pool_id", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    
-    const tasks = data || [];
-    setMarketplaceTasks(tasks);
-    setFilteredTasks(tasks);
-    
-    // Extract unique cities
-    const cities = [...new Set(tasks.map((t: any) => t.city).filter(Boolean))];
+      .or(`pool_id.not.is.null,is_shared_to_community.eq.true`)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error loading marketplace tasks:", error);
+      return;
+    }
+
+    // Filter out tasks user has already accepted
+    const marketplace = data?.filter(task => !acceptedIds.includes(task.id)) || [];
+    setMarketplaceTasks(marketplace);
+    setFilteredTasks(marketplace);
+
+    const cities = [...new Set(marketplace.map(t => t.city).filter(Boolean))];
     setAvailableCities(cities as string[]);
   };
 
@@ -121,8 +141,6 @@ const Tasks = () => {
       filtered = filtered.filter(t => (t.sol_reward || 0) > 0);
     } else if (rewardFilter === "xp") {
       filtered = filtered.filter(t => (t.xp_reward || 0) > 0);
-    } else if (rewardFilter === "high") {
-      filtered = filtered.filter(t => (t.sol_reward || 0) > 0.1 || (t.xp_reward || 0) > 100);
     }
     
     // Search filter
@@ -173,17 +191,14 @@ const Tasks = () => {
   };
 
   useEffect(() => { 
-    loadMyTasks(); 
-    loadDailyLimit();
-    loadStats();
-    loadMarketplaceTasks();
-  }, [user]);
-
-  useEffect(() => {
-    if (myTasks.length > 0) {
-      loadAvailableTasks();
+    if (user) {
+      loadMyPersonalTasks();
+      loadMyAcceptedTasks();
+      loadMarketplaceTasks();
+      loadDailyLimit();
+      loadStats();
     }
-  }, [myTasks]);
+  }, [user]);
 
   const handleTaskSelect = async (task: any) => {
     setSelectedTask(task);
@@ -243,12 +258,12 @@ const Tasks = () => {
 
       toast({
         title: "Tasks Generated! 🎯",
-        description: `${data.tasks?.length || 0} new tasks in ${data.city}. Check the map!`,
+        description: `${data.tasks?.length || 0} new AI tasks created in ${data.city}!`,
       });
 
+      setIsGenerateDialogOpen(false);
+      loadMyPersonalTasks();
       loadDailyLimit();
-      // Reload map to show new tasks
-      window.location.reload();
     } catch (error: any) {
       if (error.code === 1) {
         toast({
@@ -274,15 +289,6 @@ const Tasks = () => {
       return;
     }
 
-    if (dailyTasksRemaining <= 0) {
-      toast({ 
-        title: "Daily Limit Reached", 
-        description: "You can only accept 3 tasks per day. Come back tomorrow!",
-        variant: "destructive" 
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("join-task", {
@@ -305,7 +311,8 @@ const Tasks = () => {
         description: `Task added to My Tasks. ${data.remaining_today} remaining today`,
       });
       
-      loadMyTasks();
+      loadMyAcceptedTasks();
+      loadMarketplaceTasks();
       loadDailyLimit();
       handleCloseTaskModal();
     } catch (error: any) {
@@ -381,7 +388,7 @@ const Tasks = () => {
         description: `Earned ${task.xp_reward} XP! You were ${Math.round(distance)}m away.`,
       });
 
-      loadMyTasks();
+      loadMyAcceptedTasks();
       loadStats();
       handleCloseTaskModal();
     } catch (error: any) {
@@ -419,8 +426,8 @@ const Tasks = () => {
         description: "Task removed from your list",
       });
 
-      loadMyTasks();
-      loadDailyLimit();
+      loadMyAcceptedTasks();
+      loadMarketplaceTasks();
       handleCloseTaskModal();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -458,752 +465,486 @@ const Tasks = () => {
     }
   };
 
-  // Find user task for selected task
-  const userTask = selectedTask 
-    ? myTasks.find(ut => ut.task_id === selectedTask.id)
-    : null;
-
-  const isTaskAccepted = !!userTask;
-  const isTaskCompleted = userTask?.status === "completed";
+  const isTaskAccepted = (taskId: string) => {
+    return myAcceptedTasks.some(ut => ut.task_id === taskId);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="container mx-auto px-4 py-6">
-        {/* AI Generate & Create Task Buttons */}
-        <Card className="p-3 sm:p-4 glass border-accent/30 mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 mb-3">
-            <div>
-              <h3 className="font-display font-bold text-sm flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-accent" />
-                Task Actions
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Generate AI tasks or create sponsored tasks
-              </p>
-            </div>
-            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"} className="w-fit">
-              {dailyTasksRemaining} left
-            </Badge>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              onClick={handleGenerateTasks}
-              disabled={generatingTasks || dailyTasksRemaining <= 0}
-              className="w-full sm:flex-1 h-10 sm:h-12 text-sm"
-            >
-              {generatingTasks ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  <span className="truncate">Generating...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  <span className="truncate">Generate Location Tasks</span>
-                </>
-              )}
-            </Button>
-            <CreateSponsoredTaskDialog />
-          </div>
-        </Card>
+      <div className="container max-w-7xl mx-auto p-4 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+            Tasks
+          </h1>
+        </div>
 
-        {/* Top Info Panel */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
-          <Card className="p-3 sm:p-4 glass border-primary/30">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <Card className="glass-strong neon-border p-4">
             <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Daily</span>
+              <Clock className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Daily Progress</span>
             </div>
-            <div className="text-xl sm:text-2xl font-bold">
-              {dailyTasksCompleted}/3
-            </div>
-            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"} className="mt-1 text-xs">
+            <div className="text-2xl font-bold">{dailyTasksCompleted}/3</div>
+            <Badge variant={dailyTasksRemaining > 0 ? "default" : "destructive"} className="mt-1">
               {dailyTasksRemaining} left
             </Badge>
           </Card>
 
-          <Card className="p-4 glass border-accent/30">
+          <Card className="glass-strong neon-border p-4">
             <div className="flex items-center gap-2 mb-1">
               <Zap className="w-4 h-4 text-accent" />
-              <span className="text-xs text-foreground font-medium">Total XP</span>
+              <span className="text-xs text-muted-foreground">Total XP</span>
             </div>
-            <div className="text-2xl font-bold text-accent">
-              {totalXP}
-            </div>
+            <div className="text-2xl font-bold text-accent">{totalXP}</div>
           </Card>
 
-          <Card className="p-4 glass border-success/30">
+          <Card className="glass-strong neon-border p-4">
             <div className="flex items-center gap-2 mb-1">
-              <Coins className="w-4 h-4 text-success" />
-              <span className="text-xs text-foreground font-medium">Total SOL</span>
+              <Coins className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs text-muted-foreground">Total SOL</span>
             </div>
-            <div className="text-2xl font-bold text-success">
-              {totalSOL.toFixed(2)}
-            </div>
+            <div className="text-2xl font-bold text-yellow-400">{totalSOL.toFixed(2)}</div>
           </Card>
         </div>
 
-        {/* Map and Task List */}
-        <TasksMap onTaskSelect={handleTaskSelect} />
+        {/* Tabs */}
+        <Tabs defaultValue="personal" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 glass-strong">
+            <TabsTrigger value="personal" className="data-[state=active]:neon-border">
+              <Sparkles className="mr-2 h-4 w-4" />
+              My AI Tasks
+            </TabsTrigger>
+            <TabsTrigger value="marketplace" className="data-[state=active]:neon-border">
+              <Store className="mr-2 h-4 w-4" />
+              Marketplace
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Task Marketplace Section */}
-        <Card className="p-4 glass mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-bold text-lg flex items-center gap-2">
-              <Award className="w-5 h-5 text-accent" />
-              Task Marketplace
-            </h3>
-            <Badge variant="outline">{filteredTasks.length} tasks</Badge>
-          </div>
-
-          {/* Filters */}
-          <div className="space-y-3 mb-4">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button variant="outline" size="icon">
-                <Filter className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <Select value={cityFilter} onValueChange={setCityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="City" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Cities</SelectItem>
-                  {availableCities.map((city) => (
-                    <SelectItem key={city} value={city}>{city}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="photo_task">Photo</SelectItem>
-                  <SelectItem value="selfie">Selfie</SelectItem>
-                  <SelectItem value="qr_checkin">QR Check-in</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={rewardFilter} onValueChange={setRewardFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Reward" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Rewards</SelectItem>
-                  <SelectItem value="sol">SOL Only</SelectItem>
-                  <SelectItem value="xp">XP Only</SelectItem>
-                  <SelectItem value="high">High Value</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Task Grid */}
-          {filteredTasks.length === 0 ? (
-            <div className="text-center py-8">
-              <Award className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">No tasks found</p>
-              <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 max-h-[600px] overflow-y-auto">
-              {filteredTasks.map((task) => (
-                <Card 
-                  key={task.id} 
-                  className="p-4 glass border-border/50 hover:border-accent/60 transition-colors cursor-pointer"
-                  onClick={() => handleTaskSelect(task)}
-                >
-                  <div className="flex gap-3">
-                    <div className="p-2 rounded-lg bg-primary/20">
-                      {task.type === 'photo_task' && <Camera className="w-5 h-5" />}
-                      {task.type === 'selfie' && <Camera className="w-5 h-5" />}
-                      {task.type === 'qr_checkin' && <MapPin className="w-5 h-5" />}
-                      {!['photo_task', 'selfie', 'qr_checkin'].includes(task.type) && <Award className="w-5 h-5" />}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold">{task.name || task.title}</h4>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {task.description}
-                      </p>
-                      {task.city && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3" />
-                          {task.city}
-                        </p>
+          {/* Personal Tasks Tab */}
+          <TabsContent value="personal" className="space-y-4 mt-4">
+            {/* Generate AI Tasks */}
+            <Card className="glass-strong neon-border p-6">
+              <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full gradient-bg h-12" disabled={dailyTasksRemaining === 0}>
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Generate AI Tasks ({dailyTasksRemaining}/3)
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="glass-strong">
+                  <DialogHeader>
+                    <DialogTitle>Generate AI Tasks</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      AI will generate 3 personalized tasks based on your current location.
+                    </p>
+                    <Button 
+                      onClick={handleGenerateTasks} 
+                      disabled={generatingTasks}
+                      className="w-full gradient-bg"
+                    >
+                      {generatingTasks ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Generate Now
+                        </>
                       )}
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          {task.type.replace(/_/g, ' ')}
-                        </Badge>
-                        {task.xp_reward > 0 && (
-                          <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
-                            <Zap className="w-3 h-3 mr-1" />
-                            {task.xp_reward} XP
-                          </Badge>
-                        )}
-                        {task.sol_reward > 0 && (
-                          <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
-                            <Coins className="w-3 h-3 mr-1" />
-                            {task.sol_reward} SOL
-                          </Badge>
-                        )}
-                        {task.max_participants && (
-                          <Badge variant="secondary" className="text-xs">
-                            {task.current_participants || 0}/{task.max_participants}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                    </Button>
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </Card>
+                </DialogContent>
+              </Dialog>
+            </Card>
 
-        {/* My Tasks Section */}
-        <Card className="p-4 glass mt-6 border-primary/50">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-bold text-lg flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-primary" />
-              My Tasks ({myTasks.length})
-            </h3>
-          </div>
-
-          {/* Instructions Card */}
-          <Card className="p-4 bg-accent/10 border-accent/30 mb-4">
-            <div className="flex items-start gap-3">
-              <Upload className="w-5 h-5 text-accent mt-0.5" />
-              <div className="flex-1">
-                <h4 className="font-semibold text-sm mb-1">How to Submit Proof</h4>
-                <p className="text-xs text-muted-foreground">
-                  1. Click "Submit Proof" button on any task below<br />
-                  2. Upload photo or video proof of completion<br />
-                  3. Your GPS location will be verified automatically<br />
-                  4. Wait for verification to earn rewards!
-                </p>
-              </div>
-            </div>
-          </Card>
-          
-          {myTasks.length === 0 ? (
-            <div className="text-center py-8">
-              <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">No tasks yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Accept tasks from the map or marketplace above</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {myTasks.map((ut) => {
-                const t = ut.tasks;
-                if (!t) return null;
-                const isPending = ut.status === 'pending';
-                const isCompleted = ut.status === 'completed';
-                
-                return (
-                  <Card 
-                    key={ut.id} 
-                    className={`p-4 glass border-2 transition-all cursor-pointer ${
-                      isPending ? 'border-warning/50 hover:border-warning' : 
-                      isCompleted ? 'border-success/50' : 'border-border/50'
-                    }`}
-                    onClick={() => isPending && handleTaskSelect(t)}
-                  >
-                    <div className="flex gap-3">
-                      <div className={`p-3 rounded-lg ${
-                        isCompleted ? 'bg-success/20' : 
-                        isPending ? 'bg-warning/20 animate-pulse' : 'bg-muted'
-                      }`}>
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6 text-success" />
-                        ) : isPending ? (
-                          <Clock className="w-6 h-6 text-warning" />
-                        ) : (
-                          <Clock className="w-6 h-6" />
-                        )}
+            {/* My AI Generated Tasks */}
+            <Card className="glass-strong neon-border p-6">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                My AI Generated Tasks ({myPersonalTasks.length})
+              </h2>
+              {myPersonalTasks.length === 0 ? (
+                <div className="text-center py-8">
+                  <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-muted-foreground">No AI tasks yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Generate some tasks to get started!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {myPersonalTasks.map((task) => (
+                    <Card key={task.id} className="p-4 glass hover:scale-[1.02] transition-transform cursor-pointer" onClick={() => handleTaskSelect(task)}>
+                      <h3 className="font-semibold text-lg">{task.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
+                      <div className="flex items-center gap-2 mt-3">
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {task.location_name || task.city}
+                        </Badge>
+                        <Badge className="bg-primary">{task.xp_reward} XP</Badge>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-bold text-base">{t.name || t.title}</h4>
-                            {(t.location_name || t.meta?.location_name) && (
-                              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                <MapPin className="w-3 h-3" />
-                                {t.location_name || t.meta?.location_name}
-                              </p>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Accepted Tasks */}
+            <Card className="glass-strong neon-border p-6">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                Accepted Tasks ({myAcceptedTasks.length})
+              </h2>
+              {myAcceptedTasks.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-muted-foreground">No accepted tasks yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Check the marketplace to accept tasks!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myAcceptedTasks.map((ut) => {
+                    const task = ut.tasks;
+                    if (!task) return null;
+                    const isPending = ut.status === 'pending';
+                    const isCompleted = ut.status === 'completed';
+                    
+                    return (
+                      <Card 
+                        key={ut.id} 
+                        className={`p-4 glass transition-all ${
+                          isPending ? 'border-2 border-yellow-500' : 
+                          isCompleted ? 'border-2 border-green-500' : ''
+                        }`}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`p-3 rounded-lg ${
+                            isCompleted ? 'bg-green-500/20' : 
+                            isPending ? 'bg-yellow-500/20' : 'bg-muted'
+                          }`}>
+                            {isCompleted ? (
+                              <CheckCircle2 className="w-6 h-6 text-green-500" />
+                            ) : isPending ? (
+                              <Clock className="w-6 h-6 text-yellow-500" />
+                            ) : (
+                              <Clock className="w-6 h-6" />
                             )}
                           </div>
-                          {isPending && (
-                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 animate-pulse">
-                              ⚡ Action Required
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="flex gap-2 mt-2">
-                          <Badge variant={isCompleted ? "default" : "outline"} className={isCompleted ? "bg-success" : ""}>
-                            {ut.status}
-                          </Badge>
-                          <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
-                            +{ut.xp_awarded || t.xp_reward} XP
-                          </Badge>
-                          {(ut.sol_awarded || t.sol_reward) > 0 && (
-                            <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
-                              {ut.sol_awarded || t.sol_reward} SOL
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        {/* Action Buttons - More Prominent */}
-                        <div className="flex gap-2 mt-4">
-                          {isPending && t.type === 'qr_checkin' && (
-                            <Button 
-                              onClick={() => handleCheckIn(t, ut.id)}
-                              disabled={checkingIn}
-                              className="flex-1 h-11"
-                              variant="default"
-                            >
-                              {checkingIn ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Checking...</>
-                              ) : (
-                                <><Navigation className="w-4 h-4 mr-2" />Check-in Now</>
+                          <div className="flex-1">
+                            <h4 className="font-bold">{task.name || task.title}</h4>
+                            {task.location_name && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                <MapPin className="w-3 h-3" />
+                                {task.location_name}
+                              </p>
+                            )}
+                            <div className="flex gap-2 mt-2">
+                              <Badge variant={isCompleted ? "default" : "outline"}>
+                                {ut.status}
+                              </Badge>
+                              <Badge className="bg-accent">
+                                +{ut.xp_awarded || task.xp_reward} XP
+                              </Badge>
+                              {(ut.sol_awarded || task.sol_reward) > 0 && (
+                                <Badge className="bg-yellow-400 text-black">
+                                  {ut.sol_awarded || task.sol_reward} SOL
+                                </Badge>
                               )}
-                            </Button>
-                          )}
-                          
-                          {isPending && t.type !== 'qr_checkin' && (
-                            <>
-                              <Button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedProofTask(t);
-                                  setSelectedProofUserTaskId(ut.id);
-                                  setShowProofDialog(true);
-                                }} 
-                                className="flex-1 h-11 bg-accent hover:bg-accent/90"
-                              >
-                                <Upload className="w-5 h-5 mr-2" />
-                                Submit Proof
-                              </Button>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCancelTask(ut.id);
-                                }}
-                                variant="outline"
-                                size="icon"
-                                className="h-11 w-11"
-                              >
-                                <XIcon className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                          
-                          {isCompleted && (
-                            <>
-                              <div className="flex gap-2 w-full">
+                            </div>
+                            
+                            <div className="flex gap-2 mt-4">
+                              {isPending && task.type === 'qr_checkin' && (
                                 <Button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShareToSocial('twitter', t, ut);
-                                  }}
-                                  variant="outline" 
-                                  size="icon"
-                                  className="h-11 w-11"
+                                  onClick={() => handleCheckIn(task, ut.id)}
+                                  disabled={checkingIn}
+                                  className="flex-1"
                                 >
-                                  <Twitter className="w-4 h-4" />
+                                  {checkingIn ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Checking...</>
+                                  ) : (
+                                    <><Navigation className="w-4 h-4 mr-2" />Check-in</>
+                                  )}
                                 </Button>
-                                <Button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShareToSocial('facebook', t, ut);
-                                  }}
-                                  variant="outline" 
-                                  size="icon"
-                                  className="h-11 w-11"
-                                >
-                                  <Facebook className="w-4 h-4" />
-                                </Button>
-                                <Button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShareToSocial('linkedin', t, ut);
-                                  }}
-                                  variant="outline" 
-                                  size="icon"
-                                  className="h-11 w-11"
-                                >
-                                  <Linkedin className="w-4 h-4" />
-                                </Button>
-                                <Button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedProofTask(t);
-                                    setSelectedProofUserTaskId(ut.id);
-                                    setShowProofDialog(true);
-                                  }} 
-                                  variant="secondary"
-                                  className="flex-1 h-11"
-                                >
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Add Proof
-                                </Button>
-                              </div>
-                            </>
+                              )}
+                              
+                              {isPending && task.type !== 'qr_checkin' && (
+                                <>
+                                  <Button 
+                                    onClick={() => {
+                                      setSelectedProofTask(task);
+                                      setSelectedProofUserTaskId(ut.id);
+                                      setShowProofDialog(true);
+                                    }} 
+                                    className="flex-1 gradient-bg"
+                                  >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Submit Proof
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleCancelTask(ut.id)}
+                                    variant="outline"
+                                    size="icon"
+                                  >
+                                    <XIcon className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                              
+                              {isCompleted && (
+                                <div className="flex gap-2 w-full">
+                                  <Button 
+                                    onClick={() => handleShareToSocial('twitter', task, ut)}
+                                    variant="outline" 
+                                    size="icon"
+                                  >
+                                    <Twitter className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    onClick={() => {
+                                      setSelectedProofTask(task);
+                                      setSelectedProofUserTaskId(ut.id);
+                                      setShowProofDialog(true);
+                                    }} 
+                                    variant="secondary"
+                                    className="flex-1"
+                                  >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Add Proof
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          {/* Marketplace Tab */}
+          <TabsContent value="marketplace" className="space-y-4 mt-4">
+            {/* Create Sponsored Task */}
+            <Card className="glass-strong neon-border p-6">
+              <CreateSponsoredTaskDialog />
+            </Card>
+
+            {/* Filters */}
+            <Card className="glass-strong neon-border p-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search tasks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 glass"
+                  />
+                </div>
+                
+                <Select value={cityFilter} onValueChange={setCityFilter}>
+                  <SelectTrigger className="glass">
+                    <SelectValue placeholder="All Cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {availableCities.map((city) => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="glass">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="photo_task">Photo</SelectItem>
+                    <SelectItem value="selfie">Selfie</SelectItem>
+                    <SelectItem value="qr_checkin">QR Check-in</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={rewardFilter} onValueChange={setRewardFilter}>
+                  <SelectTrigger className="glass">
+                    <SelectValue placeholder="All Rewards" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Rewards</SelectItem>
+                    <SelectItem value="sol">SOL Only</SelectItem>
+                    <SelectItem value="xp">XP Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </Card>
+
+            {/* Marketplace Tasks */}
+            <Card className="glass-strong neon-border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Store className="h-5 w-5 text-accent" />
+                  Community Marketplace ({filteredTasks.length})
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadMarketplaceTasks}
+                  className="glass"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+
+              {filteredTasks.length === 0 ? (
+                <div className="text-center py-8">
+                  <Store className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-muted-foreground">No tasks available</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredTasks.map((task) => (
+                    <Card key={task.id} className="p-4 glass hover:scale-[1.02] transition-transform">
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-semibold text-lg">{task.title || task.name}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                            {task.description}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {task.location_name || task.city}
+                          </Badge>
+                          <Badge variant="outline">{task.type.replace(/_/g, ' ')}</Badge>
+                          {task.pools && (
+                            <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500">
+                              Sponsored
+                            </Badge>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </Card>
 
-        {/* Available Tasks Section */}
-        {availableTasks.length > 0 && (
-          <Card className="p-4 glass mt-6">
-            <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-accent" />
-              Available Sponsored Tasks
-            </h3>
-            <div className="space-y-3">
-              {availableTasks.map((task) => (
-                <Card key={task.id} className="p-4 glass border-accent/30 hover:border-accent/60 transition-colors cursor-pointer" onClick={() => handleTaskSelect(task)}>
-                  <div className="flex gap-3">
-                    <div className="p-2 rounded-lg bg-accent/20">
-                      <Award className="w-5 h-5 text-accent" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold">{task.name || task.title}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">{task.description?.substring(0, 100)}...</p>
-                      {task.city && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3" />
-                          {task.city}
-                        </p>
-                      )}
-                      <div className="flex gap-2 mt-2">
-                        <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
-                          +{task.xp_reward} XP
-                        </Badge>
-                        {task.sol_reward > 0 && (
-                          <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
-                            {task.sol_reward} SOL
-                          </Badge>
-                        )}
-                        {task.max_participants && (
-                          <Badge variant="outline">
-                            Max {task.max_participants} winners
-                          </Badge>
-                        )}
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            {task.pools && (
+                              <div className="flex items-center gap-1 text-sm font-semibold text-yellow-400">
+                                <Coins className="h-4 w-4" />
+                                {task.pools.total_funded_sol} SOL
+                              </div>
+                            )}
+                            {task.xp_reward > 0 && (
+                              <div className="flex items-center gap-1 text-sm text-primary">
+                                <Zap className="h-4 w-4" />
+                                {task.xp_reward} XP
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleTaskSelect(task)}
+                              className="glass"
+                            >
+                              View
+                            </Button>
+                            {!isTaskAccepted(task.id) && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleAcceptTask(task)}
+                                className="gradient-bg"
+                              >
+                                Accept
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </Card>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Task Detail Modal */}
+        {selectedTaskDetail && (
+          <Dialog open={!!selectedTaskDetail} onOpenChange={(open) => !open && handleCloseTaskModal()}>
+            <DialogContent className="glass-strong max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{selectedTaskDetail.title || selectedTaskDetail.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p>{selectedTaskDetail.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {selectedTaskDetail.location_name || selectedTaskDetail.city}
+                  </Badge>
+                  <Badge className="bg-accent">
+                    <Zap className="h-3 w-3 mr-1" />
+                    {selectedTaskDetail.xp_reward} XP
+                  </Badge>
+                  {selectedTaskDetail.sol_reward > 0 && (
+                    <Badge className="bg-yellow-400 text-black">
+                      <Coins className="h-3 w-3 mr-1" />
+                      {selectedTaskDetail.sol_reward} SOL
+                    </Badge>
+                  )}
+                </div>
+                {!isTaskAccepted(selectedTaskDetail.id) && (
+                  <Button 
+                    onClick={() => handleAcceptTask(selectedTaskDetail)}
+                    className="w-full gradient-bg"
+                  >
+                    Accept Task
+                  </Button>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Task Proof Dialog */}
+        {showProofDialog && selectedProofTask && selectedProofUserTaskId && (
+          <TaskProofDialog
+            open={showProofDialog}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShowProofDialog(false);
+                setSelectedProofTask(null);
+                setSelectedProofUserTaskId(null);
+              }
+            }}
+            taskId={selectedProofTask.id}
+            userTaskId={selectedProofUserTaskId}
+            taskLocation={selectedProofTask.lat && selectedProofTask.lon ? {
+              lat: selectedProofTask.lat,
+              lon: selectedProofTask.lon,
+              radius_m: selectedProofTask.radius_m
+            } : undefined}
+            onProofSubmitted={() => {
+              setShowProofDialog(false);
+              setSelectedProofTask(null);
+              setSelectedProofUserTaskId(null);
+              loadMyAcceptedTasks();
+            }}
+          />
         )}
       </div>
-
-      {/* Task Detail Modal */}
-      {selectedTask && (
-        <Dialog open={!!selectedTask} onOpenChange={handleCloseTaskModal}>
-          <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                <span className="line-clamp-2">{selectedTask.title || selectedTask.name}</span>
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-3 sm:space-y-4">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-3">
-                  {selectedTask.description}
-                </p>
-                
-                {(selectedTask.location_name || selectedTask.meta?.location_name) && (
-                  <div className="flex items-center gap-2 text-xs sm:text-sm">
-                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="truncate">{selectedTask.location_name || selectedTask.meta?.location_name}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Rewards */}
-              <div className="flex flex-wrap gap-2">
-                <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
-                  <Zap className="w-3 h-3 mr-1" />
-                  +{selectedTask.xp_reward} XP
-                </Badge>
-                {selectedTask.sol_reward > 0 && (
-                  <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
-                    <Coins className="w-3 h-3 mr-1" />
-                    {selectedTask.sol_reward} SOL
-                  </Badge>
-                )}
-                <Badge variant="outline" className="text-xs">
-                  {selectedTask.type.replace(/_/g, ' ')}
-                </Badge>
-              </div>
-
-              {/* Task Details */}
-              <Card className="p-2 sm:p-3 bg-muted/50">
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Location:</span>
-                    <span className="font-medium truncate ml-2">{selectedTask.city}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Radius:</span>
-                    <span className="font-medium">{selectedTask.radius_m}m</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Distance:</span>
-                    <span className="font-medium">
-                      {(selectedTask.distance_meters / 1000).toFixed(1)} km
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Daily Limit:</span>
-                    <span className="font-medium">
-                      {dailyTasksCompleted}/3 completed
-                    </span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Sponsored Pool Info */}
-              {selectedTask.pools && (
-                <Card className="p-3 bg-success/10 border-success/30">
-                  <p className="text-sm text-success flex items-center gap-2">
-                    <Coins className="w-4 h-4" />
-                    <span className="font-medium">
-                      Sponsored Task - {selectedTask.pools.total_funded_sol} SOL Pool
-                    </span>
-                  </p>
-                  {selectedTask.max_participants && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {selectedTask.current_participants}/{selectedTask.max_participants} joined
-                    </p>
-                  )}
-                </Card>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
-                {!isTaskAccepted ? (
-                  <>
-                    <Button
-                      onClick={() => handleAcceptTask(selectedTask)}
-                      disabled={loading || dailyTasksRemaining <= 0}
-                      className="flex-1 h-12"
-                    >
-                      {loading ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Accepting...</>
-                      ) : (
-                        <>Accept Task ({dailyTasksRemaining} left)</>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleCloseTaskModal}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Close
-                    </Button>
-                  </>
-                ) : isTaskCompleted ? (
-                  <div className="space-y-2 w-full">
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleShareToSocial('twitter', selectedTask, userTask)}
-                        variant="outline"
-                        size="icon"
-                        className="h-12 w-12"
-                      >
-                        <Twitter className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        onClick={() => handleShareToSocial('facebook', selectedTask, userTask)}
-                        variant="outline"
-                        size="icon"
-                        className="h-12 w-12"
-                      >
-                        <Facebook className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        onClick={() => handleShareToSocial('linkedin', selectedTask, userTask)}
-                        variant="outline"
-                        size="icon"
-                        className="h-12 w-12"
-                      >
-                        <Linkedin className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        onClick={() => handleShareTask(userTask)}
-                        className="flex-1 h-12"
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share Details
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {!isTaskAccepted && (
-                      <div className="flex flex-col xs:flex-row gap-2 mb-2">
-                        <Button
-                          onClick={() => handleShareToSocial('twitter', selectedTask)}
-                          variant="outline"
-                          size="sm"
-                          className="w-full xs:w-auto text-xs"
-                        >
-                          <Twitter className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                          Twitter
-                        </Button>
-                        <Button
-                          onClick={() => handleShareToSocial('facebook', selectedTask)}
-                          variant="outline"
-                          size="sm"
-                          className="w-full xs:w-auto text-xs"
-                        >
-                          <Facebook className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                          Facebook
-                        </Button>
-                        <Button
-                          onClick={() => handleShareToSocial('linkedin', selectedTask)}
-                          variant="outline"
-                          size="sm"
-                          className="w-full xs:w-auto text-xs"
-                        >
-                          <Linkedin className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                          LinkedIn
-                        </Button>
-                      </div>
-                    )}
-                    {selectedTask.type === 'qr_checkin' ? (
-                      <Button
-                        onClick={() => handleCheckIn(selectedTask, userTask.id)}
-                        disabled={checkingIn}
-                        className="w-full h-10 sm:h-12 text-sm"
-                      >
-                        {checkingIn ? (
-                          <>
-                            <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
-                            <span className="truncate">Checking...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Navigation className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                            <span className="truncate">Check-in</span>
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button
-                          onClick={() => {
-                            setVerifyingTask(selectedTask);
-                            setVerifyingUserTaskId(userTask.id);
-                            handleCloseTaskModal();
-                          }}
-                          className="w-full sm:flex-1 h-10 sm:h-12 text-sm"
-                        >
-                          <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                          <span className="truncate">Upload Content</span>
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setSelectedProofTask(selectedTask);
-                            setSelectedProofUserTaskId(userTask.id);
-                            setShowProofDialog(true);
-                          }}
-                          variant="secondary"
-                          className="w-full sm:flex-1 h-10 sm:h-12 text-sm"
-                        >
-                          <Upload className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                          <span className="truncate">Submit Proof</span>
-                        </Button>
-                      </div>
-                    )}
-                    <Button
-                      onClick={() => handleCancelTask(userTask.id)}
-                      variant="destructive"
-                      size="sm"
-                      className="w-full sm:w-auto h-9 text-xs"
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              {/* Task Proofs Section */}
-              {selectedTask && (
-                <div className="mt-6 pt-6 border-t">
-                  <TaskProofsList taskId={selectedTask.id} />
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Task Verification Dialog */}
-      {verifyingTask && verifyingUserTaskId && (
-        <TaskVerificationDialog
-          open={!!verifyingTask}
-          onOpenChange={(open) => {
-            if (!open) {
-              setVerifyingTask(null);
-              setVerifyingUserTaskId(null);
-            }
-          }}
-          task={verifyingTask}
-          userTaskId={verifyingUserTaskId}
-          onVerified={() => {
-            loadMyTasks();
-            loadStats();
-            setVerifyingTask(null);
-            setVerifyingUserTaskId(null);
-          }}
-        />
-      )}
-
-      <TaskProofDialog
-        open={showProofDialog}
-        onOpenChange={setShowProofDialog}
-        taskId={selectedProofTask?.id || ""}
-        userTaskId={selectedProofUserTaskId || ""}
-        taskLocation={selectedProofTask ? {
-          lat: selectedProofTask.lat,
-          lon: selectedProofTask.lon,
-          radius_m: selectedProofTask.radius_m || 50
-        } : undefined}
-        onProofSubmitted={() => {
-          loadMyTasks();
-          loadStats();
-          setShowProofDialog(false);
-        }}
-      />
 
       <BottomNav />
     </div>
