@@ -12,9 +12,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import BottomNav from "@/components/BottomNav";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins, CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet, Copy, Camera, Edit2, Check, X, User } from "lucide-react";
+import { Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins, CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet, Copy, Camera, Edit2, Check, X, User, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
+import { RewardsSection } from "@/components/RewardsSection";
+import { formatDistanceToNow } from "date-fns";
+import { useWallet } from "@/hooks/useWallet";
 const Dashboard = () => {
   const {
     user,
@@ -34,9 +37,83 @@ const Dashboard = () => {
   const [newUsername, setNewUsername] = useState("");
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [walletBalance, setWalletBalance] = useState({ sol: 0, xp: 0 });
+  const [nftCount, setNftCount] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const { publicKey, loading: walletLoading } = useWallet();
   useEffect(() => {
     if (!authLoading && !user) navigate("/");
   }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchWalletBalance();
+      fetchNFTCount();
+      fetchTransactions();
+    }
+  }, [user]);
+
+  const fetchWalletBalance = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("xp")
+        .eq("id", user?.id)
+        .single();
+
+      if (profile) {
+        setWalletBalance({
+          sol: 0,
+          xp: profile.xp,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching balance:", error);
+    }
+  };
+
+  const fetchNFTCount = async () => {
+    try {
+      const { count } = await supabase
+        .from("land_nfts")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user?.id);
+
+      setNftCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching NFT count:", error);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setTransactions(data || []);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    }
+  };
+
+  const copyWalletAddress = () => {
+    if (publicKey) {
+      navigator.clipboard.writeText(publicKey);
+      toast({
+        title: "Copied!",
+        description: "Wallet address copied to clipboard",
+      });
+    }
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   // Fetch profile data
   const {
@@ -110,6 +187,40 @@ const Dashboard = () => {
       return data;
     },
     enabled: !!user?.id
+  });
+
+  // Fetch leaderboard data
+  const { data: leaderboardData } = useQuery({
+    queryKey: ["leaderboard"],
+    queryFn: async () => {
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("id, username, email, xp, avatar_url, level")
+        .order("xp", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+
+      const enrichedProfiles = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: runs } = await supabase
+            .from("runs")
+            .select("distance, xp_earned")
+            .eq("user_id", profile.id);
+
+          const totalDistance = runs?.reduce((sum, run) => sum + parseFloat(String(run.distance || 0)), 0) || 0;
+          const totalRuns = runs?.length || 0;
+
+          return {
+            ...profile,
+            totalDistance,
+            totalRuns,
+          };
+        })
+      );
+      
+      return enrichedProfiles;
+    },
   });
   const {
     data: myTasks
@@ -270,18 +381,14 @@ const Dashboard = () => {
 
       <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
         {/* Quick Actions */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Button variant="cyan" className="h-20 flex-col gap-2" onClick={() => navigate("/tasks")}>
             <MapPin className="w-6 h-6" />
             <span className="text-xs">Tasks</span>
           </Button>
-          <Button variant="purple" className="h-20 flex-col gap-2" onClick={() => navigate("/wallet")}>
-            <Wallet className="w-6 h-6" />
-            <span className="text-xs">Wallet</span>
-          </Button>
-          <Button variant="accent" className="h-20 flex-col gap-2" onClick={() => navigate("/stats")}>
+          <Button variant="accent" className="h-20 flex-col gap-2" onClick={() => navigate("/run")}>
             <Activity className="w-6 h-6" />
-            <span className="text-xs">Stats</span>
+            <span className="text-xs">Start Run</span>
           </Button>
         </div>
 
@@ -308,8 +415,8 @@ const Dashboard = () => {
             <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
             <TabsTrigger value="tasks" className="text-xs">Tasks</TabsTrigger>
             <TabsTrigger value="wallet" className="text-xs">Wallet</TabsTrigger>
-            <TabsTrigger value="stats" className="text-xs">Stats</TabsTrigger>
-            <TabsTrigger value="community" className="text-xs">Groups</TabsTrigger>
+            <TabsTrigger value="leaderboard" className="text-xs">Leaderboard</TabsTrigger>
+            <TabsTrigger value="rewards" className="text-xs">Rewards</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -421,89 +528,258 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="wallet" className="space-y-4">
-            <Card className="p-6 glass border-primary/30">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-primary/10 p-2 rounded-lg">
-                  <Wallet className="w-5 h-5 text-primary" />
+            {/* Wallet Address */}
+            {walletLoading ? (
+              <Card className="p-6 bg-gradient-to-br from-accent/10 via-card to-primary/5 border-accent/30">
+                <div className="text-center">
+                  <p className="text-muted-foreground">Loading wallet...</p>
                 </div>
-                <h3 className="text-lg font-bold">SOL Wallet</h3>
-              </div>
-              {profile?.solana_public_key ? <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-primary/5 px-4 py-3 rounded-lg font-mono text-xs break-all">
-                      {profile.solana_public_key}
-                    </code>
-                    <Button variant="ghost" size="icon" onClick={() => {
-                  navigator.clipboard.writeText(profile.solana_public_key!);
-                }} className="shrink-0">
-                      <Copy className="w-4 h-4" />
-                    </Button>
+              </Card>
+            ) : publicKey ? (
+              <Card className="p-6 bg-gradient-to-br from-accent/10 via-card to-primary/5 border-accent/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Wallet Address</p>
+                    <p className="font-mono text-base font-bold">{formatAddress(publicKey)}</p>
                   </div>
-                </div> : <div className="text-center py-4 text-muted-foreground">
-                  <Wallet className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No wallet created yet</p>
-                </div>}
-            </Card>
-
-            <Card className="p-6 glass bg-gradient-to-br from-success/10 to-success/5 border-success/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-success/20 p-3 rounded-full">
-                    <Coins className="w-6 h-6 text-success" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold">Balance</h3>
-                    <p className="text-xs text-muted-foreground">Total SOL earned</p>
-                  </div>
+                  <Button variant="ghost" size="icon" onClick={copyWalletAddress}>
+                    <Copy className="w-5 h-5" />
+                  </Button>
                 </div>
-                <div className="text-3xl font-bold text-success">{taskStats?.totalSOL.toFixed(2) || "0.00"}</div>
-              </div>
-            </Card>
-          </TabsContent>
+              </Card>
+            ) : (
+              <Card className="p-6 bg-gradient-to-br from-warning/10 via-card to-primary/5 border-warning/30">
+                <div className="text-center">
+                  <Wallet className="w-12 h-12 mx-auto mb-3 text-warning" />
+                  <p className="text-muted-foreground">No wallet found</p>
+                </div>
+              </Card>
+            )}
 
-          <TabsContent value="stats" className="space-y-4">
-            <Card className="p-6 glass bg-gradient-to-br from-card via-card to-primary/5">
-              <div className="flex items-center justify-between mb-4">
+            {/* Wallet Balance */}
+            <Card className="p-8 bg-gradient-to-br from-primary/20 via-card to-secondary/20 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,hsl(220_70%_50%/0.2),transparent)]" />
+              <div className="relative z-10 text-center space-y-4">
+                <div className="inline-flex w-24 h-24 rounded-full bg-gradient-to-br from-accent via-primary to-accent-glow items-center justify-center mx-auto relative">
+                  <div className="absolute inset-0 bg-accent/30 blur-2xl rounded-full" />
+                  <Wallet className="w-12 h-12 text-foreground relative" />
+                </div>
+                
                 <div>
-                  <h2 className="text-2xl font-bold">Level {level}</h2>
-                  <p className="text-sm text-muted-foreground">{xpInLevel} / 1000 XP</p>
-                </div>
-                <div className="bg-accent/20 p-3 rounded-full">
-                  <Trophy className="w-8 h-8 text-accent" />
+                  <h2 className="text-sm text-muted-foreground mb-1">Strun Wallet</h2>
+                  <div className="text-4xl font-bold text-gradient mb-1">{walletBalance.sol.toFixed(2)} SOL</div>
+                  <p className="text-sm text-muted-foreground">Balance</p>
                 </div>
               </div>
-              <Progress value={progressPercent} className="h-3" />
-              <p className="text-xs text-muted-foreground mt-2">{1000 - xpInLevel} XP to next level</p>
             </Card>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="p-4 glass hover-lift">
-                <Zap className="w-5 h-5 mb-2 text-primary" />
-                <div className="text-2xl font-bold gradient-text">{xp.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Total XP</div>
-              </Card>
-              <Card className="p-4 glass hover-lift">
-                <CheckCircle2 className="w-5 h-5 mb-2 text-success" />
-                <div className="text-2xl font-bold gradient-text">{taskStats?.completed || 0}</div>
-                <div className="text-xs text-muted-foreground">Tasks Done</div>
-              </Card>
+            {/* Tokens */}
+            <Card className="p-6 bg-card/95">
+              <h3 className="text-lg font-bold mb-4">Tokens</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 bg-primary/5 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-bold">SOL</div>
+                      <div className="text-sm text-muted-foreground">{walletBalance.sol.toFixed(2)} SOL</div>
+                    </div>
+                  </div>
+                  <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-accent/5 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+                      <Zap className="w-5 h-5 text-accent" />
+                    </div>
+                    <div>
+                      <div className="font-bold">XP</div>
+                      <div className="text-sm text-muted-foreground">{walletBalance.xp.toLocaleString()} XP</div>
+                    </div>
+                  </div>
+                  <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </div>
+            </Card>
+
+            {/* LandNFTs */}
+            <Card className="p-6 bg-card/95">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">LandNFTs</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Owned</span>
+                  <span className="font-bold text-accent">{nftCount} NFTs</span>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full" onClick={() => navigate("/profile")}>
+                <MapPin className="w-4 h-4 mr-2" />
+                View Collection
+                <ArrowUpRight className="w-4 h-4 ml-auto" />
+              </Button>
+            </Card>
+
+            {/* Transaction History */}
+            <Card className="p-6 bg-card/95">
+              <h3 className="text-lg font-bold mb-4">Transaction History</h3>
+              
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="w-full mb-4">
+                  <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+                  <TabsTrigger value="sends" className="flex-1">Sends</TabsTrigger>
+                  <TabsTrigger value="receives" className="flex-1">Receives</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="all" className="space-y-3 m-0">
+                  {transactions.length > 0 ? (
+                    transactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            tx.type === "earn" || tx.type === "receive" || tx.type === "reward"
+                              ? "bg-accent/20" 
+                              : "bg-warning/20"
+                          }`}>
+                            {tx.type === "earn" || tx.type === "receive" || tx.type === "reward" ? (
+                              <ArrowDownLeft className="w-5 h-5 text-accent" />
+                            ) : (
+                              <ArrowUpRight className="w-5 h-5 text-warning" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-bold">{tx.amount} {tx.currency}</div>
+                            <div className="text-sm text-muted-foreground capitalize">{tx.description || tx.type}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No transactions yet</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="sends" className="space-y-3 m-0">
+                  {transactions.filter(tx => tx.type === "send" || tx.type === "transfer").length > 0 ? (
+                    transactions.filter(tx => tx.type === "send" || tx.type === "transfer").map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-warning/20">
+                            <ArrowUpRight className="w-5 h-5 text-warning" />
+                          </div>
+                          <div>
+                            <div className="font-bold">{tx.amount} {tx.currency}</div>
+                            <div className="text-sm text-muted-foreground capitalize">{tx.description || tx.type}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No send transactions</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="receives" className="space-y-3 m-0">
+                  {transactions.filter(tx => tx.type === "earn" || tx.type === "receive" || tx.type === "reward").length > 0 ? (
+                    transactions.filter(tx => tx.type === "earn" || tx.type === "receive" || tx.type === "reward").map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-accent/20">
+                            <ArrowDownLeft className="w-5 h-5 text-accent" />
+                          </div>
+                          <div>
+                            <div className="font-bold">{tx.amount} {tx.currency}</div>
+                            <div className="text-sm text-muted-foreground capitalize">{tx.description || tx.type}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No receive transactions</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </Card>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3 pb-6">
+              <Button variant="default" size="lg" className="h-14">
+                <ArrowUpRight className="w-5 h-5 mr-2" />
+                Send
+              </Button>
+              <Button variant="accent" size="lg" className="h-14">
+                <ArrowDownLeft className="w-5 h-5 mr-2" />
+                Receive
+              </Button>
             </div>
           </TabsContent>
 
-          <TabsContent value="community" className="space-y-4">
-            <Card className="p-6 glass">
-              <h3 className="font-bold mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                My Groups
-              </h3>
-              {myGroups?.length ? myGroups.map(g => <div key={g.id} className="p-3 glass rounded-lg mb-2 hover-lift cursor-pointer" onClick={() => navigate("/group")}>
-                  <div className="font-medium text-foreground">{g.groups?.name}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{g.groups?.location}</div>
-                </div>) : <p className="text-muted-foreground text-center py-4">No groups joined yet</p>}
-              <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/group")}>
-                Browse Groups →
-              </Button>
-            </Card>
+          <TabsContent value="leaderboard" className="space-y-3">
+            {leaderboardData?.map((player, index) => {
+              const isCurrentUser = player.id === user?.id;
+              return (
+                <div
+                  key={player.id}
+                  className={`p-4 rounded-xl flex items-center gap-4 ${
+                    isCurrentUser ? "bg-accent/20 border border-accent/30" : "bg-card"
+                  }`}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                      index === 0
+                        ? "bg-warning text-warning-foreground"
+                        : index === 1
+                          ? "bg-muted text-foreground"
+                          : index === 2
+                            ? "bg-warning/50 text-warning-foreground"
+                            : "bg-muted/50 text-muted-foreground"
+                    }`}
+                  >
+                    {index + 1}
+                  </div>
+                  <div className="text-3xl">
+                    {isCurrentUser ? "👤" : ["🏃", "👑", "🗺️", "🌙", "⚡", "🔥", "💪", "🎯", "🌟", "🏆"][index % 10]}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold">{isCurrentUser ? "You" : (player.username || player.email?.split('@')[0] || "Anonymous")}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Level {player.level || 1} • {player.xp.toLocaleString()} XP
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {player.totalRuns} runs • {player.totalDistance?.toFixed(1) || 0} km
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </TabsContent>
+
+          <TabsContent value="rewards" className="space-y-4">
+            <div className="container mx-auto px-4 py-6">
+              {user?.id && <RewardsSection userLevel={level} />}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
