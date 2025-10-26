@@ -192,13 +192,15 @@ const Profile = () => {
             </div>
 
             {isOwnProfile && (
-              <Button 
-                variant="outline" 
-                className="w-full sm:w-auto"
-                onClick={() => navigate("/dashboard")}
-              >
-                Edit Profile
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => navigate("/dashboard")}
+                >
+                  Edit Profile
+                </Button>
+              </div>
             )}
           </div>
         </Card>

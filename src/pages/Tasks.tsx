@@ -525,7 +525,7 @@ const Tasks = () => {
           <Card className="p-4 glass border-accent/30">
             <div className="flex items-center gap-2 mb-1">
               <Zap className="w-4 h-4 text-accent" />
-              <span className="text-xs text-foreground/80 font-medium">Total XP</span>
+              <span className="text-xs text-foreground font-medium">Total XP</span>
             </div>
             <div className="text-2xl font-bold text-accent">
               {totalXP}
@@ -535,7 +535,7 @@ const Tasks = () => {
           <Card className="p-4 glass border-success/30">
             <div className="flex items-center gap-2 mb-1">
               <Coins className="w-4 h-4 text-success" />
-              <span className="text-xs text-foreground/80 font-medium">Total SOL</span>
+              <span className="text-xs text-foreground font-medium">Total SOL</span>
             </div>
             <div className="text-2xl font-bold text-success">
               {totalSOL.toFixed(2)}
@@ -650,13 +650,13 @@ const Tasks = () => {
                           {task.type.replace(/_/g, ' ')}
                         </Badge>
                         {task.xp_reward > 0 && (
-                          <Badge className="bg-accent/20 text-accent text-xs">
+                          <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
                             <Zap className="w-3 h-3 mr-1" />
                             {task.xp_reward} XP
                           </Badge>
                         )}
                         {task.sol_reward > 0 && (
-                          <Badge className="bg-success/20 text-success text-xs">
+                          <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
                             <Coins className="w-3 h-3 mr-1" />
                             {task.sol_reward} SOL
                           </Badge>
@@ -758,11 +758,11 @@ const Tasks = () => {
                           <Badge variant={isCompleted ? "default" : "outline"} className={isCompleted ? "bg-success" : ""}>
                             {ut.status}
                           </Badge>
-                          <Badge className="bg-accent/20 text-accent">
+                          <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
                             +{ut.xp_awarded || t.xp_reward} XP
                           </Badge>
                           {(ut.sol_awarded || t.sol_reward) > 0 && (
-                            <Badge className="bg-success/20 text-success">
+                            <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
                               {ut.sol_awarded || t.sol_reward} SOL
                             </Badge>
                           )}
@@ -899,11 +899,11 @@ const Tasks = () => {
                         </p>
                       )}
                       <div className="flex gap-2 mt-2">
-                        <Badge className="bg-accent/20 text-accent">
+                        <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
                           +{task.xp_reward} XP
                         </Badge>
                         {task.sol_reward > 0 && (
-                          <Badge className="bg-success/20 text-success">
+                          <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
                             {task.sol_reward} SOL
                           </Badge>
                         )}
@@ -949,12 +949,12 @@ const Tasks = () => {
 
               {/* Rewards */}
               <div className="flex flex-wrap gap-2">
-                <Badge className="bg-accent/20 text-accent text-xs">
+                <Badge className="bg-accent border-2 border-accent/50 text-background font-bold shadow-lg">
                   <Zap className="w-3 h-3 mr-1" />
                   +{selectedTask.xp_reward} XP
                 </Badge>
                 {selectedTask.sol_reward > 0 && (
-                  <Badge className="bg-success/20 text-success text-xs">
+                  <Badge className="bg-success border-2 border-success/50 text-background font-bold shadow-lg">
                     <Coins className="w-3 h-3 mr-1" />
                     {selectedTask.sol_reward} SOL
                   </Badge>
