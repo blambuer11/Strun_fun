@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import BottomNav from "@/components/BottomNav";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
-import { 
+import {
   Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins,
-  CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target
+  CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
@@ -126,49 +126,86 @@ const Dashboard = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
-        <Card className="p-6 bg-gradient-to-br from-card to-primary/5 border-primary/20">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-2xl font-bold">Level {level}</h2>
-              <p className="text-sm text-muted-foreground">{xpInLevel} / 1000 XP</p>
-            </div>
-            <div className="bg-accent/20 p-3 rounded-full">
-              <Trophy className="w-8 h-8 text-accent" />
+        {/* Quick Actions */}
+        <div className="grid grid-cols-3 gap-3">
+          <Button 
+            variant="cyan" 
+            className="h-20 flex-col gap-2" 
+            onClick={() => navigate("/tasks")}
+          >
+            <MapPin className="w-6 h-6" />
+            <span className="text-xs">Tasks</span>
+          </Button>
+          <Button 
+            variant="purple" 
+            className="h-20 flex-col gap-2"
+            onClick={() => navigate("/wallet")}
+          >
+            <Wallet className="w-6 h-6" />
+            <span className="text-xs">Wallet</span>
+          </Button>
+          <Button 
+            variant="accent" 
+            className="h-20 flex-col gap-2"
+            onClick={() => navigate("/stats")}
+          >
+            <Activity className="w-6 h-6" />
+            <span className="text-xs">Stats</span>
+          </Button>
+        </div>
+
+        <Card className="p-6 glass">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/20 p-2 rounded-lg">
+                <Trophy className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Level {level}</p>
+                <h2 className="text-3xl font-bold gradient-text">{xp.toLocaleString()} XP</h2>
+              </div>
             </div>
           </div>
-          <Progress value={progressPercent} className="h-3" />
+          <Progress value={progressPercent} className="h-2 mb-2" />
+          <p className="text-xs text-muted-foreground text-right">{xpInLevel} / 1000 XP</p>
         </Card>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="community">Community</TabsTrigger>
-            <TabsTrigger value="rewards">Rewards</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-card/50 backdrop-blur-lg">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs sm:text-sm">My Tasks</TabsTrigger>
+            <TabsTrigger value="community" className="text-xs sm:text-sm">Groups</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card className="p-4">
-                <div className="text-2xl font-bold">{xp.toLocaleString()}</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="p-4 glass hover-lift">
+                <Zap className="w-5 h-5 mb-2 text-primary" />
+                <div className="text-2xl font-bold gradient-text">{xp.toLocaleString()}</div>
                 <div className="text-xs text-muted-foreground">Total XP</div>
               </Card>
-              <Card className="p-4">
-                <div className="text-2xl font-bold">{taskStats?.completed || 0}</div>
+              <Card className="p-4 glass hover-lift">
+                <CheckCircle2 className="w-5 h-5 mb-2 text-success" />
+                <div className="text-2xl font-bold gradient-text">{taskStats?.completed || 0}</div>
                 <div className="text-xs text-muted-foreground">Tasks Done</div>
               </Card>
-              <Card className="p-4">
-                <div className="text-2xl font-bold">{taskStats?.totalSOL.toFixed(2) || "0.00"}</div>
+              <Card className="p-4 glass hover-lift">
+                <Coins className="w-5 h-5 mb-2 text-secondary" />
+                <div className="text-2xl font-bold gradient-text">{taskStats?.totalSOL.toFixed(2) || "0.00"}</div>
                 <div className="text-xs text-muted-foreground">SOL Earned</div>
               </Card>
-              <Card className="p-4">
-                <div className="text-2xl font-bold">{myGroups?.length || 0}</div>
+              <Card className="p-4 glass hover-lift">
+                <Users className="w-5 h-5 mb-2 text-accent" />
+                <div className="text-2xl font-bold gradient-text">{myGroups?.length || 0}</div>
                 <div className="text-xs text-muted-foreground">Groups</div>
               </Card>
             </div>
             
-            <Card className="p-6">
-              <h3 className="font-bold mb-4">Task Status</h3>
+            <Card className="p-6 glass">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Task Status
+              </h3>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={(entry) => `${entry.name}: ${entry.value}`}>
@@ -184,21 +221,21 @@ const Dashboard = () => {
 
           <TabsContent value="tasks" className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Card className="p-4 bg-success/10">
-                <CheckCircle2 className="w-4 h-4 mb-2" />
-                <div className="text-2xl font-bold">{taskStats?.completed || 0}</div>
+              <Card className="p-4 glass hover-lift">
+                <CheckCircle2 className="w-5 h-5 mb-2 text-success" />
+                <div className="text-2xl font-bold gradient-text">{taskStats?.completed || 0}</div>
                 <div className="text-xs text-muted-foreground">Completed</div>
               </Card>
-              <Card className="p-4 bg-primary/10">
-                <Clock className="w-4 h-4 mb-2" />
-                <div className="text-2xl font-bold">{taskStats?.pending || 0}</div>
+              <Card className="p-4 glass hover-lift">
+                <Clock className="w-5 h-5 mb-2 text-primary" />
+                <div className="text-2xl font-bold gradient-text">{taskStats?.pending || 0}</div>
                 <div className="text-xs text-muted-foreground">Pending</div>
               </Card>
             </div>
 
-            <Card className="p-6">
+            <Card className="p-6 glass">
               <h3 className="font-bold mb-4 flex items-center gap-2">
-                <Target className="w-5 h-5" />
+                <Target className="w-5 h-5 text-primary" />
                 My Tasks
               </h3>
               <div className="space-y-3">
@@ -206,8 +243,8 @@ const Dashboard = () => {
                   myTasks.map((ut) => (
                     <div 
                       key={ut.id} 
-                      className={`flex items-center justify-between p-3 bg-background/50 rounded-lg ${
-                        ut.status === "pending" ? "cursor-pointer hover:bg-background/80 transition-colors" : ""
+                      className={`flex items-center justify-between p-3 glass rounded-lg ${
+                        ut.status === "pending" ? "cursor-pointer hover-lift" : ""
                       }`}
                       onClick={() => {
                         if (ut.status === "pending" && ut.tasks) {
@@ -218,12 +255,12 @@ const Dashboard = () => {
                       }}
                     >
                       <div className="flex-1">
-                        <div className="font-medium">{ut.tasks?.title || ut.tasks?.name}</div>
+                        <div className="font-medium text-foreground">{ut.tasks?.title || ut.tasks?.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {ut.status === "completed" ? "✓ Completed" : "⏱ In Progress"} • +{ut.xp_awarded || ut.tasks?.xp_reward || 0} XP
+                          {ut.status === "completed" ? "✓ Completed" : "⏱ In Progress"} • <span className="text-primary font-bold">+{ut.xp_awarded || ut.tasks?.xp_reward || 0} XP</span>
                         </div>
                       </div>
-                      <Badge variant={ut.status === "completed" ? "secondary" : "default"}>
+                      <Badge variant={ut.status === "completed" ? "default" : "outline"} className="text-xs">
                         {ut.status}
                       </Badge>
                     </div>
@@ -239,24 +276,24 @@ const Dashboard = () => {
               )}
             </Card>
 
-            <Card className="p-6">
+            <Card className="p-6 glass">
               <h3 className="font-bold mb-4 flex items-center gap-2">
-                <Upload className="w-5 h-5" />
+                <Upload className="w-5 h-5 text-primary" />
                 My Proofs
               </h3>
               <div className="space-y-3">
                 {myProofs && myProofs.length > 0 ? (
                   myProofs.slice(0, 5).map((proof) => (
-                    <div key={proof.id} className="flex justify-between p-3 bg-background/50 rounded-lg">
+                    <div key={proof.id} className="flex justify-between p-3 glass rounded-lg hover-lift">
                       <div className="flex-1">
-                        <div className="font-medium line-clamp-1">{proof.content}</div>
+                        <div className="font-medium line-clamp-1 text-foreground">{proof.content}</div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(proof.created_at).toLocaleDateString()}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <ThumbsUp className="w-4 h-4 text-success" />
-                        <span className="font-medium">{proof.upvotes}</span>
+                        <span className="font-bold text-success">{proof.upvotes}</span>
                       </div>
                     </div>
                   ))
@@ -268,24 +305,20 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="community" className="space-y-4">
-            <Card className="p-6">
-              <h3 className="font-bold mb-4">
-                <Users className="w-5 h-5 inline mr-2" />
-                Groups
+            <Card className="p-6 glass">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                My Groups
               </h3>
               {myGroups?.length ? myGroups.map((g) => (
-                <div key={g.id} className="p-3 bg-background/50 rounded-lg mb-2">{g.groups?.name}</div>
-              )) : <p className="text-muted-foreground">No groups</p>}
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="rewards" className="space-y-4">
-            <Card className="p-6">
-              <h3 className="font-bold mb-4">
-                <Trophy className="w-5 h-5 inline mr-2" />
-                Achievements
-              </h3>
-              <p className="text-muted-foreground">Complete tasks to earn badges and rewards!</p>
+                <div key={g.id} className="p-3 glass rounded-lg mb-2 hover-lift cursor-pointer" onClick={() => navigate("/group")}>
+                  <div className="font-medium text-foreground">{g.groups?.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{g.groups?.location}</div>
+                </div>
+              )) : <p className="text-muted-foreground text-center py-4">No groups joined yet</p>}
+              <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/group")}>
+                Browse Groups →
+              </Button>
             </Card>
           </TabsContent>
         </Tabs>

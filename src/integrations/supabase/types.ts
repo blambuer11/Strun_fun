@@ -976,6 +976,7 @@ export type Database = {
           current_participants: number | null
           description: string | null
           id: string
+          is_shared_to_community: boolean | null
           lat: number | null
           location_name: string | null
           lon: number | null
@@ -1001,6 +1002,7 @@ export type Database = {
           current_participants?: number | null
           description?: string | null
           id?: string
+          is_shared_to_community?: boolean | null
           lat?: number | null
           location_name?: string | null
           lon?: number | null
@@ -1026,6 +1028,7 @@ export type Database = {
           current_participants?: number | null
           description?: string | null
           id?: string
+          is_shared_to_community?: boolean | null
           lat?: number | null
           location_name?: string | null
           lon?: number | null
