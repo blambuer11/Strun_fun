@@ -27,7 +27,7 @@ const BottomNav = () => {
                 key={item.label}
                 onClick={() => navigate(item.path)}
                 className={`flex flex-col items-center gap-0.5 transition-colors px-2 py-1.5 rounded-lg ${
-                  isActive ? "text-accent bg-accent/10" : "text-muted-foreground hover:text-foreground"
+                  isActive ? "text-accent bg-accent/10" : "text-foreground/70 hover:text-foreground"
                 }`}
               >
                 <item.icon className="w-5 h-5" />

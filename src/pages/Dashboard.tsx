@@ -161,8 +161,10 @@ const Dashboard = () => {
                 <Trophy className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Level {level}</p>
-                <h2 className="text-3xl font-bold gradient-text">{xp.toLocaleString()} XP</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-3xl font-bold gradient-text">{xp.toLocaleString()} XP</h2>
+                </div>
+                <p className="text-[10px] text-muted-foreground/80 font-light mt-0.5">Level {level}</p>
               </div>
             </div>
           </div>
