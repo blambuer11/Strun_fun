@@ -12,18 +12,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import BottomNav from "@/components/BottomNav";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins,
-  CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet, Copy,
-  Camera, Edit2, Check, X, User
-} from "lucide-react";
+import { Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins, CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet, Copy, Camera, Edit2, Check, X, User } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
-
 const Dashboard = () => {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const {
+    user,
+    signOut,
+    loading: authLoading
+  } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showProofDialog, setShowProofDialog] = useState(false);
@@ -33,179 +34,228 @@ const Dashboard = () => {
   const [newUsername, setNewUsername] = useState("");
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
-
   useEffect(() => {
     if (!authLoading && !user) navigate("/");
   }, [user, authLoading, navigate]);
 
   // Fetch profile data
-  const { data: profile } = useQuery({
+  const {
+    data: profile
+  } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      const {
+        data
+      } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   // Fetch task statistics
-  const { data: taskStats } = useQuery({
+  const {
+    data: taskStats
+  } = useQuery({
     queryKey: ["task-stats", user?.id],
     queryFn: async () => {
-      if (!user?.id) return { total: 0, completed: 0, pending: 0, totalXP: 0, totalSOL: 0 };
-      const { data } = await supabase.from("user_tasks").select("status, xp_awarded, sol_awarded").eq("user_id", user.id);
+      if (!user?.id) return {
+        total: 0,
+        completed: 0,
+        pending: 0,
+        totalXP: 0,
+        totalSOL: 0
+      };
+      const {
+        data
+      } = await supabase.from("user_tasks").select("status, xp_awarded, sol_awarded").eq("user_id", user.id);
       return {
         total: data?.length || 0,
         completed: data?.filter(t => t.status === "completed").length || 0,
         pending: data?.filter(t => t.status === "pending").length || 0,
         totalXP: data?.reduce((sum, t) => sum + (t.xp_awarded || 0), 0) || 0,
-        totalSOL: data?.reduce((sum, t) => sum + Number(t.sol_awarded || 0), 0) || 0,
+        totalSOL: data?.reduce((sum, t) => sum + Number(t.sol_awarded || 0), 0) || 0
       };
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   // Fetch user's task proofs
-  const { data: myProofs } = useQuery({
+  const {
+    data: myProofs
+  } = useQuery({
     queryKey: ["my-proofs", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data } = await supabase.from("task_proofs").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      const {
+        data
+      } = await supabase.from("task_proofs").select("*").eq("user_id", user.id).order("created_at", {
+        ascending: false
+      });
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
 
   // Fetch user's groups
-  const { data: myGroups } = useQuery({
+  const {
+    data: myGroups
+  } = useQuery({
     queryKey: ["groups-user", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data } = await supabase.from("group_members").select("*, groups(*)").eq("user_id", user.id);
+      const {
+        data
+      } = await supabase.from("group_members").select("*, groups(*)").eq("user_id", user.id);
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
-
-  const { data: myTasks } = useQuery({
+  const {
+    data: myTasks
+  } = useQuery({
     queryKey: ["my-tasks", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data } = await supabase
-        .from("user_tasks")
-        .select("*, tasks(*)")
-        .eq("user_id", user.id)
-        .order("joined_at", { ascending: false })
-        .limit(10);
+      const {
+        data
+      } = await supabase.from("user_tasks").select("*, tasks(*)").eq("user_id", user.id).order("joined_at", {
+        ascending: false
+      }).limit(10);
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id
   });
-
   const xp = profile?.xp || 0;
   const level = Math.floor(xp / 1000) + 1;
   const xpInLevel = xp % 1000;
-  const progressPercent = (xpInLevel / 1000) * 100;
+  const progressPercent = xpInLevel / 1000 * 100;
   const avatarUrl = profile?.avatar_url || null;
   const userName = profile?.username || "Runner";
-
   useEffect(() => {
     if (profile?.username) {
       setNewUsername(profile.username);
     }
   }, [profile?.username]);
-
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
-
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       const file = event.target.files?.[0];
       if (!file) return;
-
       if (!file.type.startsWith('image/')) {
-        toast({ title: "Invalid File", description: "Please upload an image file", variant: "destructive" });
+        toast({
+          title: "Invalid File",
+          description: "Please upload an image file",
+          variant: "destructive"
+        });
         return;
       }
-
       if (file.size > 5 * 1024 * 1024) {
-        toast({ title: "File Too Large", description: "Please upload an image smaller than 5MB", variant: "destructive" });
+        toast({
+          title: "File Too Large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive"
+        });
         return;
       }
-
       setUploading(true);
-
       if (avatarUrl) {
         const oldPath = avatarUrl.split('/').pop();
         if (oldPath) {
           await supabase.storage.from('avatars').remove([`${user?.id}/${oldPath}`]);
         }
       }
-
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${user?.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+      const {
+        error: uploadError
+      } = await supabase.storage.from('avatars').upload(filePath, file);
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user?.id);
+      const {
+        data: {
+          publicUrl
+        }
+      } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const {
+        error: updateError
+      } = await supabase.from('profiles').update({
+        avatar_url: publicUrl
+      }).eq('id', user?.id);
       if (updateError) throw updateError;
-
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-      toast({ title: "Success! Avatar Updated", description: "Your profile photo has been updated successfully" });
+      queryClient.invalidateQueries({
+        queryKey: ['profile', user?.id]
+      });
+      toast({
+        title: "Success! Avatar Updated",
+        description: "Your profile photo has been updated successfully"
+      });
     } catch (error) {
-      toast({ title: "Upload Failed", description: "Failed to upload avatar. Please try again.", variant: "destructive" });
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload avatar. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setUploading(false);
     }
   };
-
   const handleSaveUsername = async () => {
     if (!newUsername.trim()) {
-      toast({ title: "Invalid Username", description: "Username cannot be empty", variant: "destructive" });
+      toast({
+        title: "Invalid Username",
+        description: "Username cannot be empty",
+        variant: "destructive"
+      });
       return;
     }
-
     try {
       setUpdating(true);
-      const { error } = await supabase.from('profiles').update({ username: newUsername.trim() }).eq('id', user?.id);
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        username: newUsername.trim()
+      }).eq('id', user?.id);
       if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['profile', user?.id]
+      });
       setIsEditingUsername(false);
-      toast({ title: "Success! Username Updated", description: "Your username has been updated successfully" });
+      toast({
+        title: "Success! Username Updated",
+        description: "Your username has been updated successfully"
+      });
     } catch (error) {
-      toast({ title: "Update Failed", description: "Failed to update username. Please try again.", variant: "destructive" });
+      toast({
+        title: "Update Failed",
+        description: "Failed to update username. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setUpdating(false);
     }
   };
-
   const handleCancelEdit = () => {
     setNewUsername(profile?.username || "");
     setIsEditingUsername(false);
   };
-
-  const taskStatusData = [
-    { name: "Completed", value: taskStats?.completed || 0, color: "hsl(var(--success))" },
-    { name: "Pending", value: taskStats?.pending || 0, color: "hsl(var(--primary))" },
-  ];
-
+  const taskStatusData = [{
+    name: "Completed",
+    value: taskStats?.completed || 0,
+    color: "hsl(var(--success))"
+  }, {
+    name: "Pending",
+    value: taskStats?.pending || 0,
+    color: "hsl(var(--primary))"
+  }];
   if (authLoading || !profile) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <Activity className="w-12 h-12 text-accent animate-pulse" />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <header className="border-b bg-card/50 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -221,27 +271,15 @@ const Dashboard = () => {
       <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-3">
-          <Button 
-            variant="cyan" 
-            className="h-20 flex-col gap-2" 
-            onClick={() => navigate("/tasks")}
-          >
+          <Button variant="cyan" className="h-20 flex-col gap-2" onClick={() => navigate("/tasks")}>
             <MapPin className="w-6 h-6" />
             <span className="text-xs">Tasks</span>
           </Button>
-          <Button 
-            variant="purple" 
-            className="h-20 flex-col gap-2"
-            onClick={() => navigate("/wallet")}
-          >
+          <Button variant="purple" className="h-20 flex-col gap-2" onClick={() => navigate("/wallet")}>
             <Wallet className="w-6 h-6" />
             <span className="text-xs">Wallet</span>
           </Button>
-          <Button 
-            variant="accent" 
-            className="h-20 flex-col gap-2"
-            onClick={() => navigate("/stats")}
-          >
+          <Button variant="accent" className="h-20 flex-col gap-2" onClick={() => navigate("/stats")}>
             <Activity className="w-6 h-6" />
             <span className="text-xs">Stats</span>
           </Button>
@@ -276,65 +314,7 @@ const Dashboard = () => {
 
           <TabsContent value="overview" className="space-y-4">
             {/* Profile Edit Card */}
-            <Card className="p-6 glass">
-              <div className="flex flex-col items-center text-center">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                />
-                <div className="relative mb-4">
-                  <div className="absolute inset-0 bg-accent/30 blur-xl rounded-full" />
-                  <button
-                    onClick={handleAvatarClick}
-                    disabled={uploading}
-                    className="relative w-24 h-24 bg-gradient-to-br from-accent to-accent-glow rounded-full flex items-center justify-center overflow-hidden group cursor-pointer hover:opacity-90 transition-opacity disabled:cursor-not-allowed"
-                  >
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-12 h-12 text-accent-foreground" />
-                    )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Camera className="w-6 h-6 text-white" />
-                    </div>
-                  </button>
-                  {uploading && (
-                    <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                      <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                    </div>
-                  )}
-                </div>
-
-                {isEditingUsername ? (
-                  <div className="flex items-center gap-2 mb-2">
-                    <Input
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      className="h-8 max-w-[200px]"
-                      placeholder="Enter username"
-                      disabled={updating}
-                    />
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveUsername} disabled={updating}>
-                      <Check className="w-4 h-4 text-accent" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleCancelEdit} disabled={updating}>
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-2xl font-bold">{userName}</h2>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingUsername(true)}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-                <p className="text-sm text-muted-foreground">{profile?.email}</p>
-              </div>
-            </Card>
+            
 
             <div className="grid grid-cols-2 gap-3">
               <Card className="p-4 glass hover-lift">
@@ -366,10 +346,8 @@ const Dashboard = () => {
               </h3>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={(entry) => `${entry.name}: ${entry.value}`}>
-                    {taskStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                  <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={entry => `${entry.name}: ${entry.value}`}>
+                    {taskStatusData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -397,21 +375,13 @@ const Dashboard = () => {
                 My Tasks
               </h3>
               <div className="space-y-3">
-                {myTasks && myTasks.length > 0 ? (
-                  myTasks.map((ut) => (
-                    <div 
-                      key={ut.id} 
-                      className={`flex items-center justify-between p-3 glass rounded-lg ${
-                        ut.status === "pending" ? "cursor-pointer hover-lift" : ""
-                      }`}
-                      onClick={() => {
-                        if (ut.status === "pending" && ut.tasks) {
-                          setSelectedProofTask(ut.tasks);
-                          setSelectedProofUserTaskId(ut.id);
-                          setShowProofDialog(true);
-                        }
-                      }}
-                    >
+                {myTasks && myTasks.length > 0 ? myTasks.map(ut => <div key={ut.id} className={`flex items-center justify-between p-3 glass rounded-lg ${ut.status === "pending" ? "cursor-pointer hover-lift" : ""}`} onClick={() => {
+                if (ut.status === "pending" && ut.tasks) {
+                  setSelectedProofTask(ut.tasks);
+                  setSelectedProofUserTaskId(ut.id);
+                  setShowProofDialog(true);
+                }
+              }}>
                       <div className="flex-1">
                         <div className="font-medium text-foreground">{ut.tasks?.title || ut.tasks?.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -421,17 +391,11 @@ const Dashboard = () => {
                       <Badge variant={ut.status === "completed" ? "default" : "outline"} className="text-xs">
                         {ut.status}
                       </Badge>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No tasks accepted yet</p>
-                )}
+                    </div>) : <p className="text-center text-muted-foreground py-8">No tasks accepted yet</p>}
               </div>
-              {myTasks && myTasks.length > 0 && (
-                <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/tasks")}>
+              {myTasks && myTasks.length > 0 && <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/tasks")}>
                   View All Tasks →
-                </Button>
-              )}
+                </Button>}
             </Card>
 
             <Card className="p-6 glass">
@@ -440,9 +404,7 @@ const Dashboard = () => {
                 My Proofs
               </h3>
               <div className="space-y-3">
-                {myProofs && myProofs.length > 0 ? (
-                  myProofs.slice(0, 5).map((proof) => (
-                    <div key={proof.id} className="flex justify-between p-3 glass rounded-lg hover-lift">
+                {myProofs && myProofs.length > 0 ? myProofs.slice(0, 5).map(proof => <div key={proof.id} className="flex justify-between p-3 glass rounded-lg hover-lift">
                       <div className="flex-1">
                         <div className="font-medium line-clamp-1 text-foreground">{proof.content}</div>
                         <div className="text-xs text-muted-foreground">
@@ -453,11 +415,7 @@ const Dashboard = () => {
                         <ThumbsUp className="w-4 h-4 text-success" />
                         <span className="font-bold text-success">{proof.upvotes}</span>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No proofs submitted yet</p>
-                )}
+                    </div>) : <p className="text-center text-muted-foreground py-8">No proofs submitted yet</p>}
               </div>
             </Card>
           </TabsContent>
@@ -470,30 +428,21 @@ const Dashboard = () => {
                 </div>
                 <h3 className="text-lg font-bold">SOL Wallet</h3>
               </div>
-              {profile?.solana_public_key ? (
-                <div className="space-y-3">
+              {profile?.solana_public_key ? <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <code className="flex-1 bg-primary/5 px-4 py-3 rounded-lg font-mono text-xs break-all">
                       {profile.solana_public_key}
                     </code>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => {
-                        navigator.clipboard.writeText(profile.solana_public_key!);
-                      }}
-                      className="shrink-0"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => {
+                  navigator.clipboard.writeText(profile.solana_public_key!);
+                }} className="shrink-0">
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
+                </div> : <div className="text-center py-4 text-muted-foreground">
                   <Wallet className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No wallet created yet</p>
-                </div>
-              )}
+                </div>}
             </Card>
 
             <Card className="p-6 glass bg-gradient-to-br from-success/10 to-success/5 border-success/30">
@@ -547,12 +496,10 @@ const Dashboard = () => {
                 <Users className="w-5 h-5 text-primary" />
                 My Groups
               </h3>
-              {myGroups?.length ? myGroups.map((g) => (
-                <div key={g.id} className="p-3 glass rounded-lg mb-2 hover-lift cursor-pointer" onClick={() => navigate("/group")}>
+              {myGroups?.length ? myGroups.map(g => <div key={g.id} className="p-3 glass rounded-lg mb-2 hover-lift cursor-pointer" onClick={() => navigate("/group")}>
                   <div className="font-medium text-foreground">{g.groups?.name}</div>
                   <div className="text-xs text-muted-foreground mt-1">{g.groups?.location}</div>
-                </div>
-              )) : <p className="text-muted-foreground text-center py-4">No groups joined yet</p>}
+                </div>) : <p className="text-muted-foreground text-center py-4">No groups joined yet</p>}
               <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/group")}>
                 Browse Groups →
               </Button>
@@ -562,27 +509,16 @@ const Dashboard = () => {
       </div>
 
       {/* Proof Dialog */}
-      {selectedProofTask && selectedProofUserTaskId && (
-        <TaskProofDialog
-          open={showProofDialog}
-          onOpenChange={setShowProofDialog}
-          taskId={selectedProofTask.id}
-          userTaskId={selectedProofUserTaskId}
-          taskLocation={{
-            lat: selectedProofTask.lat,
-            lon: selectedProofTask.lon,
-            radius_m: selectedProofTask.radius_m || 50
-          }}
-          onProofSubmitted={() => {
-            setShowProofDialog(false);
-            window.location.reload();
-          }}
-        />
-      )}
+      {selectedProofTask && selectedProofUserTaskId && <TaskProofDialog open={showProofDialog} onOpenChange={setShowProofDialog} taskId={selectedProofTask.id} userTaskId={selectedProofUserTaskId} taskLocation={{
+      lat: selectedProofTask.lat,
+      lon: selectedProofTask.lon,
+      radius_m: selectedProofTask.radius_m || 50
+    }} onProofSubmitted={() => {
+      setShowProofDialog(false);
+      window.location.reload();
+    }} />}
 
       <BottomNav />
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
