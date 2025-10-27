@@ -189,7 +189,7 @@ const Dashboard = () => {
     enabled: !!user?.id
   });
 
-  // Fetch leaderboard data
+  // Fetch leaderboard data (top 50 + current user)
   const { data: leaderboardData } = useQuery({
     queryKey: ["leaderboard"],
     queryFn: async () => {
@@ -197,7 +197,7 @@ const Dashboard = () => {
         .from("profiles")
         .select("id, username, email, xp, avatar_url, level")
         .order("xp", { ascending: false })
-        .limit(10);
+        .limit(50);
       
       if (error) throw error;
 
@@ -221,6 +221,23 @@ const Dashboard = () => {
       
       return enrichedProfiles;
     },
+  });
+
+  // Get current user's rank
+  const { data: userRank } = useQuery({
+    queryKey: ["user-rank", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data: allProfiles } = await supabase
+        .from("profiles")
+        .select("id, xp")
+        .order("xp", { ascending: false });
+      
+      const rank = (allProfiles || []).findIndex(p => p.id === user.id) + 1;
+      return rank > 0 ? rank : null;
+    },
+    enabled: !!user?.id,
   });
   const {
     data: myTasks
@@ -735,11 +752,34 @@ const Dashboard = () => {
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-3 pb-6">
-              <Button variant="default" size="lg" className="h-14">
+              <Button 
+                variant="default" 
+                size="lg" 
+                className="h-14"
+                onClick={() => {
+                  toast({
+                    title: "Send Feature",
+                    description: "Send SOL/XP feature coming soon!",
+                  });
+                }}
+              >
                 <ArrowUpRight className="w-5 h-5 mr-2" />
                 Send
               </Button>
-              <Button variant="accent" size="lg" className="h-14">
+              <Button 
+                variant="accent" 
+                size="lg" 
+                className="h-14"
+                onClick={() => {
+                  if (publicKey) {
+                    navigator.clipboard.writeText(publicKey);
+                    toast({
+                      title: "Wallet Address Copied",
+                      description: "Share this address to receive SOL/XP",
+                    });
+                  }
+                }}
+              >
                 <ArrowDownLeft className="w-5 h-5 mr-2" />
                 Receive
               </Button>
@@ -747,6 +787,24 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="leaderboard" className="space-y-3">
+            {/* Current User Position (if not in top 50) */}
+            {userRank && userRank > 50 && profile && (
+              <Card className="p-4 bg-accent/20 border border-accent/30 mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-accent/30">
+                    #{userRank}
+                  </div>
+                  <div className="text-3xl">👤</div>
+                  <div className="flex-1">
+                    <div className="font-bold">You</div>
+                    <div className="text-sm text-muted-foreground">
+                      Level {profile.level || 1} • {profile.xp.toLocaleString()} XP
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {leaderboardData?.map((player, index) => {
               const isCurrentUser = player.id === user?.id;
               return (

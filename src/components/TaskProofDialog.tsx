@@ -287,7 +287,7 @@ export const TaskProofDialog = ({
           </div>
 
           <div>
-            <Label htmlFor="media" className="text-sm">Upload Photo/Video</Label>
+            <Label htmlFor="media" className="text-sm">Photo/Video</Label>
             <Input
               id="media"
               type="file"

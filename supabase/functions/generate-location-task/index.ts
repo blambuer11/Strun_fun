@@ -104,27 +104,29 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
 
     const prompt = `Generate ${count} fun, location-based tasks for ${cityName} around coordinates (${lat}, ${lon}).
+
+IMPORTANT: Generate all tasks IN ENGLISH language only.
     
 Each task should be:
 - Fun and engaging for social content
 - Located at interesting public places (parks, squares, landmarks, bridges)
 - Safe and accessible
 - Encourage short video/photo content
-- Include at least one "çak yap" (quick reaction) video task
+- Include at least one "quick reaction" video task
 - Include at least one QR check-in task at a landmark
 
 For each task, provide:
 {
-  "title": "short catchy title",
-  "description": "what user needs to do, max 100 chars",
+  "title": "short catchy title IN ENGLISH",
+  "description": "what user needs to do IN ENGLISH, max 100 chars",
   "type": "qr_checkin | content_photo | content_video | video_reaction",
   "coordinates": {"lat": number, "lon": number},
   "radius_m": 30-50,
-  "location_name": "landmark or place name",
-  "verification_prompt": "detailed prompt for AI to verify completion"
+  "location_name": "landmark or place name IN ENGLISH",
+  "verification_prompt": "detailed prompt IN ENGLISH for AI to verify completion"
 }
 
-Return ONLY a JSON array of ${count} tasks, no other text.`;
+Return ONLY a JSON array of ${count} tasks, no other text. ALL CONTENT MUST BE IN ENGLISH.`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
