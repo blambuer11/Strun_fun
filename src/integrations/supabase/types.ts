@@ -1379,6 +1379,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_level_from_xp: { Args: { xp_amount: number }; Returns: number }
+      check_and_award_badges: {
+        Args: { p_level: number; p_user_id: string }
+        Returns: undefined
+      }
       check_daily_task_limit: { Args: { p_user_id: string }; Returns: boolean }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
@@ -1396,6 +1401,7 @@ export type Database = {
         Args: { user_id: string; xp_amount: number }
         Returns: undefined
       }
+      recalculate_all_levels: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

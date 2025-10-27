@@ -237,10 +237,18 @@ const Dashboard = () => {
     },
     enabled: !!user?.id
   });
+  // Use level from database (auto-calculated by increment_xp function)
   const xp = profile?.xp || 0;
-  const level = Math.floor(xp / 1000) + 1;
-  const xpInLevel = xp % 1000;
-  const progressPercent = xpInLevel / 1000 * 100;
+  const level = profile?.level || 1;
+  
+  // Calculate XP needed for current and next level
+  // Formula: level = floor(sqrt(xp / 100)) + 1
+  // Reversed: xp_for_level = ((level - 1) ^ 2) * 100
+  const currentLevelXP = Math.pow(level - 1, 2) * 100;
+  const nextLevelXP = Math.pow(level, 2) * 100;
+  const xpInLevel = xp - currentLevelXP;
+  const xpNeededForNextLevel = nextLevelXP - currentLevelXP;
+  const progressPercent = (xpInLevel / xpNeededForNextLevel) * 100;
   const avatarUrl = profile?.avatar_url || null;
   const userName = profile?.username || "Runner";
   useEffect(() => {
@@ -407,7 +415,9 @@ const Dashboard = () => {
             </div>
           </div>
           <Progress value={progressPercent} className="h-2 mb-2" />
-          <p className="text-xs text-muted-foreground text-right">{xpInLevel} / 1000 XP</p>
+          <p className="text-xs text-muted-foreground text-right">
+            {xpInLevel.toLocaleString()} / {xpNeededForNextLevel.toLocaleString()} XP to Level {level + 1}
+          </p>
         </Card>
 
         <Tabs defaultValue="overview" className="w-full">
