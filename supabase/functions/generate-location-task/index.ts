@@ -158,29 +158,74 @@ Return ONLY a JSON array of ${count} tasks, no other text. ALL CONTENT MUST BE I
       generatedTasks = [];
     }
 
-    // Insert tasks into database
-    const tasksToInsert = generatedTasks.map((t: any) => ({
-      creator_id: userId,
-      title: t.title || 'Task',
-      name: t.title || 'Task',
-      description: t.description || '',
-      city: cityName,
-      type: t.type || 'content_photo',
-      coordinates: t.coordinates || { lat, lon },
-      lat: t.coordinates?.lat || lat,
-      lon: t.coordinates?.lon || lon,
-      radius_m: t.radius_m || 30,
-      xp_reward: 50,
-      sol_reward: 0,
-      status: 'published',
-      active_from: new Date().toISOString(),
-      meta: { 
-        generated_by: 'ai', 
-        city: cityName,
-        location_name: t.location_name,
-        verification_prompt: t.verification_prompt
+    // Insert tasks into database with parcel check
+    const tasksToInsert = [];
+    
+    for (const t of generatedTasks) {
+      const taskLat = t.coordinates?.lat || lat;
+      const taskLon = t.coordinates?.lon || lon;
+      
+      // Check parcel ownership using coordsToParcelId
+      const parcelId = await (async () => {
+        try {
+          const response = await fetch(`${supabaseUrl}/functions/v1/check-parcel`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ lat: taskLat, lon: taskLon })
+          });
+          const data = await response.json();
+          return data.parcel_id;
+        } catch (e) {
+          console.error('Parcel check error:', e);
+          return null;
+        }
+      })();
+
+      let requires_rent = false;
+      let rent_amount_usdc = 0;
+
+      if (parcelId) {
+        const { data: parcel } = await supabase
+          .from('parcels')
+          .select('owner_id, rent_amount_usdc')
+          .eq('parcel_id', parcelId)
+          .maybeSingle();
+
+        if (parcel && parcel.owner_id && parcel.owner_id !== userId) {
+          requires_rent = true;
+          rent_amount_usdc = parcel.rent_amount_usdc || 0.10;
+        }
       }
-    }));
+
+      tasksToInsert.push({
+        creator_id: userId,
+        title: t.title || 'Task',
+        name: t.title || 'Task',
+        description: t.description || '',
+        city: cityName,
+        type: t.type || 'content_photo',
+        coordinates: { lat: taskLat, lon: taskLon },
+        lat: taskLat,
+        lon: taskLon,
+        radius_m: t.radius_m || 30,
+        xp_reward: 50,
+        sol_reward: 0,
+        parcel_id: parcelId,
+        requires_rent,
+        rent_amount_usdc,
+        status: 'published',
+        active_from: new Date().toISOString(),
+        meta: { 
+          generated_by: 'ai', 
+          city: cityName,
+          location_name: t.location_name,
+          verification_prompt: t.verification_prompt
+        }
+      });
+    }
 
     const { data: tasks, error: insertError } = await supabase
       .from('tasks')

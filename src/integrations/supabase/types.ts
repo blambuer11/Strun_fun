@@ -370,6 +370,81 @@ export type Database = {
           },
         ]
       }
+      parcel_accesses: {
+        Row: {
+          amount_paid: number | null
+          created_at: string | null
+          id: string
+          last_paid_tx: string | null
+          paid_until: string | null
+          parcel_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid?: number | null
+          created_at?: string | null
+          id?: string
+          last_paid_tx?: string | null
+          paid_until?: string | null
+          parcel_id: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number | null
+          created_at?: string | null
+          id?: string
+          last_paid_tx?: string | null
+          paid_until?: string | null
+          parcel_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parcels: {
+        Row: {
+          center_lat: number | null
+          center_lon: number | null
+          created_at: string | null
+          id: string
+          is_minted: boolean | null
+          nft_token: string | null
+          owner_id: string | null
+          owner_wallet: string | null
+          parcel_id: string
+          rent_amount_usdc: number | null
+          rent_policy: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          center_lat?: number | null
+          center_lon?: number | null
+          created_at?: string | null
+          id?: string
+          is_minted?: boolean | null
+          nft_token?: string | null
+          owner_id?: string | null
+          owner_wallet?: string | null
+          parcel_id: string
+          rent_amount_usdc?: number | null
+          rent_policy?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          center_lat?: number | null
+          center_lon?: number | null
+          created_at?: string | null
+          id?: string
+          is_minted?: boolean | null
+          nft_token?: string | null
+          owner_id?: string | null
+          owner_wallet?: string | null
+          parcel_id?: string
+          rent_amount_usdc?: number | null
+          rent_policy?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       partner_locations: {
         Row: {
           created_at: string | null
@@ -406,6 +481,51 @@ export type Database = {
           sponsor_banner_url?: string | null
           sponsor_name?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          memo: string | null
+          nonce: string | null
+          payee_id: string | null
+          payer_id: string
+          purpose: string
+          status: string | null
+          token: string
+          tx_hash: string
+          verified_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          memo?: string | null
+          nonce?: string | null
+          payee_id?: string | null
+          payer_id: string
+          purpose: string
+          status?: string | null
+          token: string
+          tx_hash: string
+          verified_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          memo?: string | null
+          nonce?: string | null
+          payee_id?: string | null
+          payer_id?: string
+          purpose?: string
+          status?: string | null
+          token?: string
+          tx_hash?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
@@ -701,6 +821,7 @@ export type Database = {
           duration: number
           id: string
           pace: number | null
+          parcel_ids: Json | null
           route_coordinates: Json | null
           started_at: string
           user_id: string
@@ -714,6 +835,7 @@ export type Database = {
           duration: number
           id?: string
           pace?: number | null
+          parcel_ids?: Json | null
           route_coordinates?: Json | null
           started_at: string
           user_id: string
@@ -727,6 +849,7 @@ export type Database = {
           duration?: number
           id?: string
           pace?: number | null
+          parcel_ids?: Json | null
           route_coordinates?: Json | null
           started_at?: string
           user_id?: string
@@ -995,8 +1118,11 @@ export type Database = {
           max_participants: number | null
           meta: Json | null
           name: string | null
+          parcel_id: string | null
           pool_id: string | null
           radius_m: number | null
+          rent_amount_usdc: number | null
+          requires_rent: boolean | null
           sol_reward: number | null
           status: string | null
           title: string
@@ -1021,8 +1147,11 @@ export type Database = {
           max_participants?: number | null
           meta?: Json | null
           name?: string | null
+          parcel_id?: string | null
           pool_id?: string | null
           radius_m?: number | null
+          rent_amount_usdc?: number | null
+          requires_rent?: boolean | null
           sol_reward?: number | null
           status?: string | null
           title: string
@@ -1047,8 +1176,11 @@ export type Database = {
           max_participants?: number | null
           meta?: Json | null
           name?: string | null
+          parcel_id?: string | null
           pool_id?: string | null
           radius_m?: number | null
+          rent_amount_usdc?: number | null
+          requires_rent?: boolean | null
           sol_reward?: number | null
           status?: string | null
           title?: string

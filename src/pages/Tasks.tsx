@@ -19,6 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FloatingMascot } from "@/components/FloatingMascot";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RentPaymentDialog } from "@/components/RentPaymentDialog";
+import { useParcelInfo } from "@/hooks/useParcelInfo";
 
 const Tasks = () => {
   const navigate = useNavigate();
@@ -43,6 +45,8 @@ const Tasks = () => {
   const [selectedProofTask, setSelectedProofTask] = useState<any>(null);
   const [selectedProofUserTaskId, setSelectedProofUserTaskId] = useState<string | null>(null);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [showRentDialog, setShowRentDialog] = useState(false);
+  const [rentTaskInfo, setRentTaskInfo] = useState<any>(null);
   
   // Marketplace state
   const [cityFilter, setCityFilter] = useState<string>("all");
@@ -992,6 +996,26 @@ const Tasks = () => {
           />
         )}
       </div>
+
+      {/* Rent Payment Dialog */}
+      {rentTaskInfo && (
+        <RentPaymentDialog
+          open={showRentDialog}
+          onOpenChange={setShowRentDialog}
+          taskId={rentTaskInfo.id}
+          parcelInfo={{
+            parcel_id: rentTaskInfo.parcel_id,
+            owner_id: rentTaskInfo.creator_id,
+            rent_amount_usdc: rentTaskInfo.rent_amount_usdc || 0.10,
+            rent_policy: 'per_run'
+          }}
+          onSuccess={async () => {
+            await handleAcceptTask(rentTaskInfo);
+            setShowRentDialog(false);
+            setRentTaskInfo(null);
+          }}
+        />
+      )}
 
       {/* Runny - AI Fitness Assistant */}
       <FloatingMascot 
