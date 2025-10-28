@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import characterRunning from "@/assets/character-running.png";
+import runnyMascot from "@/assets/runny-mascot.png";
 
 type MascotMood = "idle" | "running" | "cheering" | "confused" | "tired" | "hype";
 
@@ -64,9 +64,9 @@ export const FloatingMascot = ({ mood = "idle", message, onClick }: FloatingMasc
         >
           <div className="w-full h-full rounded-full bg-card flex items-center justify-center overflow-hidden">
             <img
-              src={characterRunning}
-              alt="STRUN Mascot"
-              className="w-12 h-12 object-contain"
+              src={runnyMascot}
+              alt="Runny - Your AI Fitness Assistant"
+              className="w-14 h-14 object-contain"
             />
           </div>
           {/* Mood Emoji Badge */}

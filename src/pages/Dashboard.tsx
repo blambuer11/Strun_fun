@@ -18,6 +18,8 @@ import strunLogo from "@/assets/strun-logo.jpg";
 import { RewardsSection } from "@/components/RewardsSection";
 import { formatDistanceToNow } from "date-fns";
 import { useWallet } from "@/hooks/useWallet";
+import { FloatingMascot } from "@/components/FloatingMascot";
+import runnyMascot from "@/assets/runny-mascot.png";
 const Dashboard = () => {
   const {
     user,
@@ -447,6 +449,23 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
+            {/* Runny Welcome Card */}
+            <Card className="p-4 glass bg-gradient-to-r from-primary/10 to-accent/10 border-primary/30">
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-primary via-secondary to-accent p-1">
+                  <div className="w-full h-full rounded-full bg-card flex items-center justify-center">
+                    <img src={runnyMascot} alt="Runny" className="w-14 h-14 object-contain" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg gradient-text mb-1">Meet Runny!</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Your AI fitness & task assistant. I'll help you stay motivated, complete challenges, and earn rewards!
+                  </p>
+                </div>
+              </div>
+            </Card>
+
             {/* Profile Edit Card */}
             
 
@@ -861,6 +880,12 @@ const Dashboard = () => {
       setShowProofDialog(false);
       window.location.reload();
     }} />}
+
+      {/* Runny - AI Fitness Assistant */}
+      <FloatingMascot 
+        mood={level > 5 ? "cheering" : "hype"}
+        message={level === 1 ? "Hey! I'm Runny, your AI fitness buddy! Let's get moving!" : level > 10 ? "You're crushing it! Keep going!" : "Ready for today's challenge?"}
+      />
 
       <BottomNav />
     </div>;

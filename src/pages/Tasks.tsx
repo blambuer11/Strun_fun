@@ -17,6 +17,7 @@ import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FloatingMascot } from "@/components/FloatingMascot";
 
 const Tasks = () => {
   const navigate = useNavigate();
@@ -943,6 +944,12 @@ const Tasks = () => {
           />
         )}
       </div>
+
+      {/* Runny - AI Fitness Assistant */}
+      <FloatingMascot 
+        mood={myAcceptedTasks.length > 0 ? "hype" : "idle"}
+        message={myAcceptedTasks.length === 0 ? "Ready to tackle some tasks? Let's go!" : myAcceptedTasks.some(t => t.status === 'completed') ? "Great job completing tasks!" : "You've got this! Complete those tasks!"}
+      />
 
       <BottomNav />
     </div>

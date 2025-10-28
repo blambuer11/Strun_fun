@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
 import GoogleMap from "@/components/GoogleMap";
 import strunLogo from "@/assets/strun-logo.jpg";
+import { FloatingMascot } from "@/components/FloatingMascot";
 
 const Run = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -538,6 +539,12 @@ const Run = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Runny - AI Fitness Assistant */}
+      <FloatingMascot 
+        mood={isRunning ? "running" : isPaused ? "tired" : "cheering"}
+        message={isRunning ? "You're doing great! Keep it up!" : isPaused ? "Take a breath, you got this!" : distance > 1 ? "Amazing run! Ready for more?" : "Let's go for a run!"}
+      />
     </div>
   );
 };

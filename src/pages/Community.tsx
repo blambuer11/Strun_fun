@@ -33,6 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { FloatingMascot } from "@/components/FloatingMascot";
 
 interface Group {
   id: string;
@@ -870,6 +871,12 @@ const Community = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Runny - AI Fitness Assistant */}
+      <FloatingMascot 
+        mood="cheering"
+        message="Share your achievements with the community!"
+      />
       
       <BottomNav />
     </div>
