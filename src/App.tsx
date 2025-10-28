@@ -16,6 +16,7 @@ import Community from "./pages/Community";
 import Tasks from "./pages/Tasks";
 import Admin from "./pages/Admin";
 import Share from "./pages/Share";
+import MyLand from "./pages/MyLand";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/group" element={<Group />} />
             <Route path="/community" element={<Community />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/my-land" element={<MyLand />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/share/:taskId" element={<Share />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -289,9 +289,16 @@ const Tasks = () => {
     }
   };
 
-  const handleAcceptTask = async (task: any) => {
+  const handleAcceptTask = async (task: any, bypassRentDialog = false) => {
     if (!user) {
       toast({ title: "Login Required", description: "Please log in to accept tasks", variant: "destructive" });
+      return;
+    }
+
+    // Check if task requires rent and we haven't bypassed the dialog
+    if (task.requires_rent && task.parcel_id && !bypassRentDialog) {
+      setRentTaskInfo(task);
+      setShowRentDialog(true);
       return;
     }
 
@@ -885,10 +892,22 @@ const Tasks = () => {
                               Sponsored
                             </Badge>
                           )}
+                          {task.requires_rent && (
+                            <Badge className="bg-orange-500 text-white flex items-center gap-1">
+                              <Coins className="h-3 w-3" />
+                              Rent Required
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between">
                           <div className="space-y-1">
+                            {task.requires_rent && (
+                              <div className="flex items-center gap-1 text-sm font-semibold text-orange-500">
+                                <Coins className="h-4 w-4" />
+                                {task.rent_amount_usdc} USDC
+                              </div>
+                            )}
                             {task.pools && (
                               <div className="flex items-center gap-1 text-sm font-semibold text-yellow-400">
                                 <Coins className="h-4 w-4" />
@@ -1010,7 +1029,7 @@ const Tasks = () => {
             rent_policy: 'per_run'
           }}
           onSuccess={async () => {
-            await handleAcceptTask(rentTaskInfo);
+            await handleAcceptTask(rentTaskInfo, true);
             setShowRentDialog(false);
             setRentTaskInfo(null);
           }}

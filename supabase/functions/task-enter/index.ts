@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { Connection } from "https://esm.sh/@solana/web3.js@1.87.6";
 import { calculatePaidUntil } from "../_shared/parcel-utils.ts";
+import { verifyPayment, ExpectedPayment } from "../_shared/solana-verify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +10,8 @@ const corsHeaders = {
 };
 
 const PLATFORM_TREASURY = Deno.env.get("PLATFORM_TREASURY_ADDRESS") || "TREASURY_PLACEHOLDER";
+const SOLANA_RPC_URL = Deno.env.get("SOLANA_RPC_URL") || "https://api.devnet.solana.com";
+const USDC_MINT = Deno.env.get("USDC_MINT_ADDRESS") || "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Devnet USDC
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -95,7 +99,7 @@ serve(async (req) => {
     const txHash = req.headers.get("X-PAYMENT");
     
     if (txHash) {
-      // Verify payment (simplified - in production, verify on-chain)
+      // Check replay protection
       const { data: existingPayment } = await supabaseClient
         .from("payments")
         .select("*")
@@ -103,23 +107,54 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existingPayment && existingPayment.status === "verified") {
-        throw new Error("Transaction already used");
+        throw new Error("Transaction already used (replay protection)");
       }
 
-      // Create/update payment record
+      // Generate nonce for this verification
+      const nonce = crypto.randomUUID();
+      
+      // Verify on-chain payment
+      console.log("Verifying Solana payment:", txHash);
+      const connection = new Connection(SOLANA_RPC_URL, "confirmed");
+      
+      const expected: ExpectedPayment = {
+        amount: task.rent_amount_usdc.toString(),
+        tokenMint: USDC_MINT,
+        payTo: PLATFORM_TREASURY,
+        memoPrefix: `land:${task.parcel_id}:task:${taskId}:user:${user.id}`,
+        decimals: 6 // USDC decimals
+      };
+
+      const verifyResult = await verifyPayment(txHash, expected, connection);
+      
+      if (!verifyResult.success) {
+        console.error("Payment verification failed:", verifyResult.reason);
+        return new Response(
+          JSON.stringify({ 
+            error: "Payment verification failed", 
+            reason: verifyResult.reason 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+
+      console.log("Payment verified successfully");
+
+      // Create payment record
       const adminClient = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
       );
 
-      await adminClient.from("payments").upsert({
+      await adminClient.from("payments").insert({
         tx_hash: txHash,
         amount: task.rent_amount_usdc,
         token: "USDC",
         payer_id: user.id,
         payee_id: parcel.owner_id,
         purpose: "task_access",
-        memo: `land:${task.parcel_id}:task:${taskId}:user:${user.id}`,
+        memo: verifyResult.matchedMemo || `land:${task.parcel_id}:task:${taskId}:user:${user.id}`,
+        nonce: nonce,
         status: "verified",
         verified_at: new Date().toISOString()
       });
@@ -138,8 +173,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           access: true, 
-          message: "Payment verified, access granted",
-          paid_until: paidUntil.toISOString()
+          message: "Payment verified on-chain, access granted",
+          paid_until: paidUntil.toISOString(),
+          verified: true
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );

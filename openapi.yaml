@@ -1,0 +1,585 @@
+openapi: 3.0.3
+info:
+  title: STRUN API
+  version: 1.0.0
+  description: |
+    STRUN platform API - parcel ownership, tasks and x402 payment flow.
+    Key endpoints: parcel info, task enter (402 Payment Required), confirm payment.
+servers:
+  - url: https://api.strun.app/v1
+    description: Production
+  - url: https://dev.api.strun.app/v1
+    description: Development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        wallet:
+          type: string
+    Parcel:
+      type: object
+      required:
+        - parcel_id
+      properties:
+        parcel_id:
+          type: string
+          description: H3/geo-hash id
+        owner_id:
+          type: string
+          nullable: true
+        owner_wallet:
+          type: string
+          nullable: true
+        rent_amount_usdc:
+          type: number
+          format: float
+          description: Price in USDC per policy unit
+        rent_policy:
+          type: string
+          enum: [per_run, per_hour, per_day]
+        is_minted:
+          type: boolean
+        nft_token:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        parcel_id:
+          type: string
+          nullable: true
+        requires_rent:
+          type: boolean
+        rent_amount_usdc:
+          type: number
+          format: float
+        reward_xp:
+          type: integer
+        reward_sol:
+          type: number
+          format: float
+        active_from:
+          type: string
+          format: date-time
+        active_to:
+          type: string
+          format: date-time
+    PaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          example: "0.10"
+        token:
+          type: string
+          example: "USDC"
+        pay_to:
+          type: string
+          description: On-chain address or platform treasury
+        memo:
+          type: string
+        nonce:
+          type: string
+        expires_at:
+          type: integer
+          description: epoch ms
+    PaymentVerifyRequest:
+      type: object
+      properties:
+        txHash:
+          type: string
+    ParcelAccess:
+      type: object
+      properties:
+        parcel_id:
+          type: string
+        user_id:
+          type: string
+        paid_until:
+          type: string
+          format: date-time
+        last_paid_tx:
+          type: string
+    PaymentRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        tx_hash:
+          type: string
+        amount:
+          type: number
+        token:
+          type: string
+        payer_id:
+          type: string
+        payee_id:
+          type: string
+        purpose:
+          type: string
+        status:
+          type: string
+          enum: [pending, verified, failed]
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            jwt_missing:
+              value:
+                error: "Authentication required"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    PaymentRequired402:
+      description: Payment Required (x402 style)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Payment required to access this task on owned land"
+              payment:
+                $ref: '#/components/schemas/PaymentRequest'
+          examples:
+            example-402:
+              value:
+                message: "Payment required to access this task on owned land"
+                payment:
+                  amount: "0.10"
+                  token: "USDC"
+                  pay_to: "TREASURY_ADDRESS_OR_OWNER_ADDRESS"
+                  memo: "land:parcel_abc:task:task123:user:user789:nonce:abc123"
+                  nonce: "abc123"
+                  expires_at: 1700000000000
+
+paths:
+
+  /runs:
+    post:
+      summary: Upload a completed run
+      description: Upload run geojson and stats. Server may assign parcel ownership if conditions met.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                geojson:
+                  type: object
+                  description: GeoJSON LineString of the run
+                distance_m:
+                  type: number
+                duration_s:
+                  type: integer
+                calories:
+                  type: number
+      responses:
+        '201':
+          description: Run uploaded and processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                  verified:
+                    type: boolean
+                  parcels_assigned:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /parcels/{parcelId}:
+    get:
+      summary: Get parcel metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parcelId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Parcel info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parcel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Owner sets rent & policy for parcel
+      description: Owner-only action to set rent and policy. (Requires owner auth)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parcelId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rent_amount_usdc:
+                  type: number
+                rent_policy:
+                  type: string
+                  enum: [per_run, per_hour, per_day]
+      responses:
+        '200':
+          description: Updated parcel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parcel'
+        '403':
+          description: Forbidden (not owner)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /parcels/{parcelId}/set-rent:
+    post:
+      summary: Shortcut to set rent (owner)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parcelId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rent_amount_usdc:
+                  type: number
+                rent_policy:
+                  type: string
+                  enum: [per_run, per_hour, per_day]
+      responses:
+        '200':
+          description: Rent updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parcel'
+
+  /tasks:
+    get:
+      summary: List tasks / search tasks
+      description: Query tasks by location or filters
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lat
+          schema:
+            type: number
+        - in: query
+          name: lon
+          schema:
+            type: number
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: parcel_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+
+  /tasks/{taskId}:
+    get:
+      summary: Get task detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/{taskId}/enter:
+    get:
+      summary: Check entry / request access for a task
+      description: |
+        Used to check whether a user can start/accept a task. If the task is on owned land and the user
+        has not paid access, the server returns **402 Payment Required** with payment details (x402 style).
+        If already paid or task not requiring rent, returns access granted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Access granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: boolean
+                    example: true
+        '402':
+          $ref: '#/components/responses/PaymentRequired402'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tasks/{taskId}/confirm-payment:
+    post:
+      summary: Confirm payment for a task access (client sends txHash)
+      description: |
+        Client calls this after performing the on-chain payment (txHash). Server verifies transaction and,
+        if valid, grants access and records payment.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentVerifyRequest'
+      responses:
+        '200':
+          description: Payment verified and access granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: boolean
+                    example: true
+                  parcel_access:
+                    $ref: '#/components/schemas/ParcelAccess'
+                  payment:
+                    $ref: '#/components/schemas/PaymentRecord'
+        '400':
+          description: Payment verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '402':
+          $ref: '#/components/responses/PaymentRequired402'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tasks/{taskId}/accept:
+    post:
+      summary: Accept task (high-level)
+      description: |
+        High-level endpoint to accept a task. It will internally call /enter and if necessary trigger
+        the payment flow. If payment is required, a 402 will be returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task accepted (and paid if needed)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_task_id:
+                    type: string
+                  status:
+                    type: string
+                    example: accepted_paid
+        '402':
+          $ref: '#/components/responses/PaymentRequired402'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ai/generate-tasks:
+    post:
+      summary: Generate AI tasks for a user at location
+      description: |
+        Generates up to 3 personalized tasks near the given location. If AI selects coords that fall inside
+        an owned parcel, generated task will be flagged requires_rent and rent_amount prefilled.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                lat:
+                  type: number
+                lon:
+                  type: number
+                count:
+                  type: integer
+                  default: 3
+      responses:
+        '200':
+          description: Generated tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+
+  /parcel_accesses:
+    get:
+      summary: Check parcel accesses (user or parcel)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: user_id
+          schema:
+            type: string
+        - in: query
+          name: parcel_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Access entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParcelAccess'
+
+  /owner/payouts:
+    get:
+      summary: Owner payout history (owner only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Payout records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentRecord'
+
+tags:
+  - name: runs
+    description: Run upload & processing
+  - name: parcels
+    description: Parcel / ownership APIs
+  - name: tasks
+    description: Task discovery and payment flows
+  - name: ai
+    description: AI task generation
+  - name: payments
+    description: Payment verification & records
