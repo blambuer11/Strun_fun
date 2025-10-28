@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Heart, Repeat2, MessageCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
@@ -33,6 +34,7 @@ interface PostCardProps {
 }
 
 export const PostCard = ({ post, userLiked, userReposted, onUpdate }: PostCardProps) => {
+  const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(userLiked);
   const [isReposted, setIsReposted] = useState(userReposted);
   const [likesCount, setLikesCount] = useState(post.likes_count);
@@ -165,12 +167,20 @@ export const PostCard = ({ post, userLiked, userReposted, onUpdate }: PostCardPr
       <Card className="p-0 bg-card/95 overflow-hidden">
         <div className="p-4 flex items-start justify-between">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-accent-glow flex items-center justify-center text-accent-foreground font-bold">
+            <button 
+              onClick={() => navigate(`/profile/${post.user_id}`)}
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-accent-glow flex items-center justify-center text-accent-foreground font-bold hover:opacity-80 transition-opacity cursor-pointer"
+            >
               {post.author[0]}
-            </div>
+            </button>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold">{post.author}</span>
+                <button 
+                  onClick={() => navigate(`/profile/${post.user_id}`)}
+                  className="font-bold hover:underline cursor-pointer"
+                >
+                  {post.author}
+                </button>
                 <span className="text-sm text-muted-foreground">{post.handle}</span>
                 <span className="text-sm text-muted-foreground">· {post.time}</span>
               </div>
