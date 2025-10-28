@@ -13,11 +13,12 @@ import { TaskVerificationDialog } from "@/components/TaskVerificationDialog";
 import { CreateSponsoredTaskDialog } from "@/components/CreateSponsoredTaskDialog";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
 import { TaskProofsList } from "@/components/TaskProofsList";
-import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search, Upload, Twitter, Facebook, Linkedin, RefreshCw, Store } from "lucide-react";
+import { MapPin, Camera, Share2, CheckCircle2, Clock, Zap, Coins, Navigation, X as XIcon, Loader2, Sparkles, Award, Filter, Search, Upload, Twitter, Facebook, Linkedin, RefreshCw, Store, HelpCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FloatingMascot } from "@/components/FloatingMascot";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const Tasks = () => {
   const navigate = useNavigate();
@@ -566,10 +567,33 @@ const Tasks = () => {
 
             {/* My AI Generated Tasks */}
             <Card className="bg-card border border-border p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="h-5 w-5 text-primary" />
-                My AI Generated Tasks ({myPersonalTasks.length})
-              </h2>
+                <h2 className="text-xl font-bold">
+                  My AI Generated Tasks ({myPersonalTasks.length})
+                </h2>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-muted-foreground hover:text-primary transition-colors">
+                      <HelpCircle className="w-5 h-5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm">My AI Tasks System</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Generate personalized AI tasks based on your location. These tasks are private to you unless you share them.
+                      </p>
+                      <div className="pt-2 border-t space-y-1 text-xs">
+                        <div>• <strong>Daily Limit:</strong> Generate up to 3 times per day</div>
+                        <div>• <strong>Location-Based:</strong> Tasks are created for nearby points of interest</div>
+                        <div>• <strong>AI-Powered:</strong> Each task is uniquely generated for you</div>
+                        <div>• <strong>Share Option:</strong> Share your tasks with the community</div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
               {myPersonalTasks.length === 0 ? (
                 <div className="text-center py-8">
                   <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -790,10 +814,34 @@ const Tasks = () => {
             {/* Marketplace Tasks */}
             <Card className="bg-card border border-border p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Store className="h-5 w-5 text-primary" />
-                  Community Marketplace ({filteredTasks.length})
-                </h2>
+                  <h2 className="text-xl font-bold">
+                    Community Marketplace ({filteredTasks.length})
+                  </h2>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="text-muted-foreground hover:text-primary transition-colors">
+                        <HelpCircle className="w-5 h-5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm">Marketplace System</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Accept public tasks from the community and sponsors. Complete them to earn XP and SOL rewards!
+                        </p>
+                        <div className="pt-2 border-t space-y-1 text-xs">
+                          <div>• <strong>Daily Limit:</strong> Accept up to 3 tasks per day</div>
+                          <div>• <strong>Sponsored Tasks:</strong> Earn real SOL cryptocurrency</div>
+                          <div>• <strong>Community Tasks:</strong> Tasks shared by other users</div>
+                          <div>• <strong>Filters:</strong> Search by city, type, and rewards</div>
+                          <div>• <strong>Verification:</strong> Submit proof to complete tasks</div>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"

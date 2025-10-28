@@ -12,7 +12,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import BottomNav from "@/components/BottomNav";
 import { TaskProofDialog } from "@/components/TaskProofDialog";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins, CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet, Copy, Camera, Edit2, Check, X, User, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Activity, MapPin, Zap, LogOut, Award, Trophy, Users, Coins, CheckCircle2, Clock, MessageSquare, ThumbsUp, Upload, Eye, Target, Wallet, Copy, Camera, Edit2, Check, X, User, ArrowUpRight, ArrowDownLeft, HelpCircle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import strunLogo from "@/assets/strun-logo.jpg";
 import { RewardsSection } from "@/components/RewardsSection";
@@ -428,6 +429,26 @@ const Dashboard = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-3xl font-bold gradient-text">{xp.toLocaleString()} XP</h2>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="text-muted-foreground hover:text-primary transition-colors">
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72">
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm">XP & Level System</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Earn XP by completing tasks and running. Your level is calculated as: <strong>Level = √(XP/100) + 1</strong>
+                        </p>
+                        <div className="pt-2 border-t space-y-1 text-xs">
+                          <div>• <strong>Running:</strong> Earn XP based on distance</div>
+                          <div>• <strong>Tasks:</strong> Complete challenges for XP rewards</div>
+                          <div>• <strong>Level Up:</strong> Each level requires more XP than the last</div>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <p className="text-[10px] text-muted-foreground/80 font-light mt-0.5">Level {level}</p>
               </div>
@@ -864,6 +885,30 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="rewards" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-xl font-bold">Rewards & Badges</h3>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="text-muted-foreground hover:text-primary transition-colors">
+                    <HelpCircle className="w-5 h-5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Rewards & Badges System</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Unlock exclusive badges and rewards as you level up and complete milestones!
+                    </p>
+                    <div className="pt-2 border-t space-y-1 text-xs">
+                      <div>• <strong>Level Badges:</strong> Unlock new badges every 5 levels</div>
+                      <div>• <strong>Achievement Badges:</strong> Complete special challenges</div>
+                      <div>• <strong>NFTs:</strong> Mint Land NFTs for runs over 0.5km</div>
+                      <div>• <strong>SOL Rewards:</strong> Earn crypto by completing sponsored tasks</div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             <div className="container mx-auto px-4 py-6">
               {user?.id && <RewardsSection userLevel={level} />}
             </div>
