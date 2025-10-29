@@ -1,0 +1,38 @@
+# Solana dApp Store Publishing - DO NOT COMMIT SECRETS
+
+# Environment variables (contains sensitive paths)
+.env
+
+# Solana keypair (CRITICAL - NEVER COMMIT)
+keypair.json
+*.json
+!config.yaml
+!package.json
+
+# Private keys
+*.key
+*.pem
+
+# Build artifacts
+node_modules/
+.pnpm-store/
+dist/
+
+# Publishing outputs
+.dapp-store/
+
+# Temporary files
+*.tmp
+*.log
+
+# MacOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Media assets (optional - remove if you want to track them)
+# media/app-release.apk
+# media/*.png
+# media/*.mp4

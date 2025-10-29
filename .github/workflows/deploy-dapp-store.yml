@@ -44,16 +44,16 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
       
-      - name: Initialize TWA (if not exists)
+      - name: Build TWA APK
         run: |
+          # Note: TWA should be pre-built in repo
+          # This workflow assumes twa/ directory exists
           if [ ! -d "twa" ]; then
-            bubblewrap init --manifest ./twa-manifest.json
+            echo "Error: twa directory not found. Run 'bubblewrap init' locally first."
+            exit 1
           fi
-      
-      - name: Update TWA
-        run: |
           cd twa
-          bubblewrap update
+          chmod +x gradlew
       
       - name: Build Release APK
         run: |
@@ -69,8 +69,22 @@ jobs:
           sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       
-      - name: Install dApp Store CLI
-        run: npm install -g @solana-mobile/dapp-store-cli
+      - name: Copy APK to Publishing Directory
+        run: |
+          mkdir -p publishing/media
+          cp twa/app/build/outputs/apk/release/app-release.apk publishing/media/
+      
+      - name: Setup Publishing Directory
+        run: |
+          cd publishing
+          npm init -y
+          npm install --save-dev @solana-mobile/dapp-store-cli
+      
+      - name: Setup Android Environment
+        run: |
+          echo "ANDROID_TOOLS_DIR=\"$ANDROID_HOME/build-tools/34.0.0\"" > publishing/.env
+          echo "JAVA_HOME=\"$JAVA_HOME\"" >> publishing/.env
+          echo "SOLANA_KEYPAIR_PATH=\"./keypair.json\"" >> publishing/.env
       
       - name: Setup Solana Keypair
         run: |

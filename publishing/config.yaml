@@ -1,0 +1,220 @@
+# Solana dApp Store Publishing Configuration
+# Replace all <<values>> with your actual information
+
+# DO NOT MODIFY - Auto-populated by CLI
+app:
+  address: ""
+
+# DO NOT MODIFY - Auto-populated by CLI
+publisher:
+  address: ""
+
+release:
+  # DO NOT MODIFY - Auto-populated by CLI
+  address: ""
+
+  # Path to your signed release APK
+  # Must be signed with unique key (not Google Play key)
+  apk_file: ./media/app-release.apk
+
+  # App package name (must match APK)
+  android_package: app.strun.mobile
+
+  # Version information
+  version_name: "1.0.0"
+  version_code: 1
+
+  # Catalog metadata (en-US is required, add more locales as needed)
+  catalog:
+    en-US:
+      # App name (max 30 characters)
+      name: Strun
+
+      # Short description (max 80 characters)
+      short_description: >-
+        Run to own land, earn SOL & USDC rent. AI tasks, on-chain payments, NFT land ownership.
+
+      # Full description (max 4000 characters)
+      long_description: |
+        **Move. Earn. Own.**
+        
+        Strun revolutionizes fitness by combining running with blockchain ownership. Every step you take claims territory as NFT land parcels, creating a decentralized fitness economy.
+        
+        **Key Features:**
+        
+        🏃 **Track & Earn**
+        - Real-time GPS tracking with route mapping
+        - Earn XP and level up with every run
+        - Mint run history as verifiable NFTs
+        
+        🗺️ **Own Land**
+        - Claim hexagonal parcels (H3 grid system)
+        - Mint Land NFTs for areas you've run
+        - Set rent prices in USDC for your parcels
+        - Earn passive income when others use your land
+        
+        💰 **x402 Payments**
+        - Instant on-chain USDC payments
+        - Pay rent to land owners seamlessly
+        - Verified transactions on Solana blockchain
+        - Low fees, high speed (<1 second confirmation)
+        
+        🎯 **AI-Generated Tasks**
+        - Location-based challenges powered by AI
+        - Photo verification with computer vision
+        - SOL and USDC rewards for completing tasks
+        - Community-created sponsored tasks
+        
+        🤝 **Social Features**
+        - Share achievements to community feed
+        - Join group runs and challenges
+        - Compete on leaderboards
+        - Follow friends and rivals
+        
+        🏆 **Progression System**
+        - XP-based leveling (every 100 XP = 1 level)
+        - Unlock exclusive badges and achievements
+        - Daily task limits reset each day
+        - Referral rewards for inviting friends
+        
+        **Blockchain Benefits:**
+        - True ownership of your fitness data
+        - Transparent, verifiable achievements
+        - Decentralized land ownership
+        - Interoperable NFTs (can be traded)
+        - Community-driven economy
+        
+        **Technology:**
+        - Built on Solana blockchain
+        - Mobile Wallet Adapter integration
+        - Supports Phantom, Solflare, and other Solana wallets
+        - IPFS decentralized storage for NFT metadata
+        - Real-time verification with anti-cheat systems
+        
+        **Getting Started:**
+        1. Create account & connect Solana wallet
+        2. Enable GPS permissions
+        3. Start your first run
+        4. Claim land and complete tasks
+        5. Earn rewards and level up!
+        
+        Join the Web3 fitness revolution. Download Strun today!
+
+      # What's new in this version (max 500 characters)
+      new_in_version: >-
+        Initial release! Features include GPS run tracking, Land NFT minting, x402 instant payments, AI-powered tasks, community feed, and full Solana Mobile Wallet Adapter support.
+
+      # Solana Saga-specific features (optional, max 500 characters)
+      saga_features: >-
+        Optimized for Solana Saga with native Mobile Wallet Adapter integration. Seamless wallet connection, instant transaction approvals, and enhanced security with Seed Vault support.
+
+    # Example: French localization (add more locales as needed)
+    # fr-FR:
+    #   name: Strun
+    #   short_description: >-
+    #     Courez pour posséder des terrains, gagnez des loyers SOL et USDC.
+    #   long_description: |
+    #     [French description here]
+    #   new_in_version: >-
+    #     [French version notes]
+    #   saga_features: >-
+    #     [French Saga features]
+
+  # Media assets
+  media:
+    # App icon (512x512 PNG, required)
+    - file: ./media/icon-512.png
+      purpose: icon
+      type: image/png
+
+    # Banner graphic (1200x600 PNG, required)
+    - file: ./media/banner-1200x600.png
+      purpose: banner
+      type: image/png
+
+    # Feature graphic for Editor's Choice (1200x1200 PNG, optional)
+    - file: ./media/feature-1200x1200.png
+      purpose: feature_graphic
+      type: image/png
+
+    # Screenshots (minimum 4, 1920x1080 PNG recommended)
+    - file: ./media/screenshot-1-dashboard.png
+      purpose: screenshot
+      type: image/png
+
+    - file: ./media/screenshot-2-run-tracking.png
+      purpose: screenshot
+      type: image/png
+
+    - file: ./media/screenshot-3-tasks.png
+      purpose: screenshot
+      type: image/png
+
+    - file: ./media/screenshot-4-land-nft.png
+      purpose: screenshot
+      type: image/png
+
+    - file: ./media/screenshot-5-community.png
+      purpose: screenshot
+      type: image/png
+
+    # Optional: Video preview (.mp4, requires ffmpeg)
+    # - file: ./media/preview-video.mp4
+    #   purpose: video
+    #   type: video/mp4
+
+  # App URLs
+  urls:
+    # License/terms URL (required)
+    license_url: https://strun.app/terms.html
+
+    # Website URL (required)
+    website_url: https://strun.app
+
+    # Privacy policy URL (required)
+    privacy_policy_url: https://strun.app/privacy-policy.html
+
+    # Support/contact URL (required)
+    support_url: https://strun.app/support.html
+
+    # Source code URL (optional, for open-source apps)
+    # source_code_url: https://github.com/strun/strun-mobile
+
+  # Content rating (self-declaration)
+  # Options: "E" (Everyone), "T" (Teen), "M" (Mature)
+  content_rating: E
+
+  # App category (required)
+  # Options: "DeFi", "NFT", "Games", "Entertainment", "Social", "Tools", "Finance", "Education", "Health", "Productivity"
+  category: Health
+
+  # Optional: Google Play Store package (if also published on Google Play)
+  # google_store_package: app.strun.mobile
+
+  # Optional: Extension wallet (if your app is a wallet extension)
+  # extension: true
+
+  # Testing instructions (NOT published on-chain, only for reviewers)
+  testing_instructions: |
+    **Test Account:**
+    - Email: test@strun.app
+    - Password: TestStrun2025!
+
+    **Testing Steps:**
+    1. Create account or use test credentials above
+    2. Connect Phantom or Solflare wallet (use Devnet for testing)
+    3. Grant location permissions when prompted
+    4. Start a run to test GPS tracking
+    5. Complete a task to test x402 payment flow
+    6. Claim a land parcel to test NFT minting
+
+    **Test Wallet (Devnet):**
+    - Address: [Your test wallet address]
+    - Pre-funded with 1 SOL and 10 USDC for testing
+
+    **Known Issues:**
+    - None at this time
+
+    **Contact for Issues:**
+    - Email: support@strun.app
+    - Discord: @strundev
