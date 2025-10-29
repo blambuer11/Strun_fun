@@ -1,0 +1,17 @@
+{
+  "name": "strun-publishing",
+  "version": "1.0.0",
+  "description": "Solana dApp Store publishing tools for Strun",
+  "private": true,
+  "scripts": {
+    "validate": "dapp-store validate -k keypair.json -b $ANDROID_TOOLS_DIR",
+    "create:publisher": "dapp-store create publisher -k keypair.json -u $SOLANA_RPC_URL -p 500000",
+    "create:app": "dapp-store create app -k keypair.json -u $SOLANA_RPC_URL -p 500000",
+    "create:release": "dapp-store create release -k keypair.json -b $ANDROID_TOOLS_DIR -u $SOLANA_RPC_URL -p 500000",
+    "submit": "dapp-store publish submit -k keypair.json -u $SOLANA_RPC_URL --requestor-is-authorized --complies-with-solana-dapp-store-policies",
+    "deploy": "npm run validate && npm run create:release && npm run submit"
+  },
+  "devDependencies": {
+    "@solana-mobile/dapp-store-cli": "^2.0.0"
+  }
+}
