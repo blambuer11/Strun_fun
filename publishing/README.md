@@ -433,7 +433,7 @@ Before submitting, verify:
 
 - **Technical Issues:** #dapp-store on Solana Mobile Discord
 - **Policy Questions:** support@solanamobile.com
-- **App-Specific:** support@strun.app
+- **App-Specific:** info@strun.fun
 
 ---
 
