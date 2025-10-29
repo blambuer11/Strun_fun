@@ -15,7 +15,7 @@ release:
 
   # Path to your signed release APK
   # Must be signed with unique key (not Google Play key)
-  apk_file: ./media/app-release.apk
+  apk_file: ./files/strun-release.apk
 
   # App package name (must match APK)
   android_package: app.strun.mobile
@@ -123,7 +123,7 @@ release:
   # Media assets
   media:
     # App icon (512x512 PNG, required)
-    - file: ./media/icon-512.png
+    - file: ./media/icon-512x512.png
       purpose: icon
       type: image/png
 
@@ -138,23 +138,15 @@ release:
       type: image/png
 
     # Screenshots (minimum 4, 1920x1080 PNG recommended)
-    - file: ./media/screenshot-1-dashboard.png
+    - file: ./media/screenshot-login.png
       purpose: screenshot
       type: image/png
 
-    - file: ./media/screenshot-2-run-tracking.png
+    - file: ./media/screenshot-tasks.png
       purpose: screenshot
       type: image/png
 
-    - file: ./media/screenshot-3-tasks.png
-      purpose: screenshot
-      type: image/png
-
-    - file: ./media/screenshot-4-land-nft.png
-      purpose: screenshot
-      type: image/png
-
-    - file: ./media/screenshot-5-community.png
+    - file: ./media/screenshot-myland.png
       purpose: screenshot
       type: image/png
 
@@ -166,16 +158,16 @@ release:
   # App URLs
   urls:
     # License/terms URL (required)
-    license_url: https://strun.app/terms.html
+    license_url: https://strun.fun/terms
 
     # Website URL (required)
-    website_url: https://strun.app
+    website_url: https://strun.fun
 
     # Privacy policy URL (required)
-    privacy_policy_url: https://strun.app/privacy-policy.html
+    privacy_policy_url: https://strun.fun/privacy-policy.html
 
     # Support/contact URL (required)
-    support_url: https://strun.app/support.html
+    support_url: https://strun.fun/support.html
 
     # Source code URL (optional, for open-source apps)
     # source_code_url: https://github.com/strun/strun-mobile
@@ -196,25 +188,23 @@ release:
 
   # Testing instructions (NOT published on-chain, only for reviewers)
   testing_instructions: |
-    **Test Account:**
-    - Email: test@strun.app
-    - Password: TestStrun2025!
-
     **Testing Steps:**
-    1. Create account or use test credentials above
-    2. Connect Phantom or Solflare wallet (use Devnet for testing)
+    1. Create account with any email (auto-confirmed)
+    2. Connect Phantom or Solflare wallet (Mainnet)
     3. Grant location permissions when prompted
-    4. Start a run to test GPS tracking
-    5. Complete a task to test x402 payment flow
-    6. Claim a land parcel to test NFT minting
-
-    **Test Wallet (Devnet):**
-    - Address: [Your test wallet address]
-    - Pre-funded with 1 SOL and 10 USDC for testing
-
-    **Known Issues:**
-    - None at this time
-
+    4. Navigate to "Tasks" tab to test AI task generation
+    5. Start a run from "Run" tab to test GPS tracking
+    6. Check "My Land" to view owned territory parcels
+    7. Visit "Community" to test social features
+    
+    **Features to Test:**
+    - Email authentication and profile creation
+    - Solana wallet integration (Phantom/Solflare)
+    - GPS tracking and route mapping
+    - AI-generated tasks with SOL rewards
+    - Territory claiming and land NFT minting
+    - Community feed and social interactions
+    
     **Contact for Issues:**
-    - Email: support@strun.app
-    - Discord: @strundev
+    - Email: info@strun.fun
+    - Website: https://strun.fun

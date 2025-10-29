@@ -11,12 +11,12 @@ publishing/
 ├── .env.example          # Environment variables template
 ├── keypair.json          # Solana keypair (DO NOT COMMIT)
 ├── media/                # Publishing assets
-│   ├── icon-512.png      # 512x512 app icon
+│   ├── icon-512x512.png   # 512x512 app icon
 │   ├── banner-1200x600.png    # 1200x600 banner
-│   ├── feature-1200x1200.png  # 1200x1200 feature graphic (optional)
-│   ├── screenshot-*.png  # Screenshots (min 4)
-│   ├── preview-video.mp4 # Preview video (optional)
-│   └── app-release.apk   # Signed release APK
+│   ├── feature-1200x1200.png  # 1200x1200 feature graphic
+│   ├── screenshot-*.png  # Screenshots (min 3)
+├── files/                # APK files
+│   └── strun-release.apk # Signed release APK
 └── README.md             # This file
 ```
 
@@ -182,10 +182,10 @@ cd ../twa
 ./gradlew assembleRelease
 
 # Copy APK to publishing directory
-cp app/build/outputs/apk/release/app-release.apk ../publishing/media/
+cp app/build/outputs/apk/release/app-release.apk ../publishing/files/strun-release.apk
 
 # Verify APK signature
-jarsigner -verify -verbose -certs ../publishing/media/app-release.apk
+jarsigner -verify -verbose -certs ../publishing/files/strun-release.apk
 ```
 
 ### 6. Configure config.yaml
@@ -224,8 +224,8 @@ npx dapp-store validate -k keypair.json -b $ANDROID_TOOLS_DIR
 ```bash
 npx dapp-store create publisher \
   --name "Strun Team" \
-  --website "https://strun.app" \
-  --email "support@strun.app" \
+  --website "https://strun.fun" \
+  --email "info@strun.fun" \
   -k keypair.json \
   -u devnet
 
