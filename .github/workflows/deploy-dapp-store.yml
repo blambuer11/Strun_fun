@@ -1,0 +1,159 @@
+name: Deploy to Solana dApp Store
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build PWA
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+      
+      - name: Decode Android Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+      
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+      
+      - name: Initialize TWA (if not exists)
+        run: |
+          if [ ! -d "twa" ]; then
+            bubblewrap init --manifest ./twa-manifest.json
+          fi
+      
+      - name: Update TWA
+        run: |
+          cd twa
+          bubblewrap update
+      
+      - name: Build Release APK
+        run: |
+          cd twa
+          ./gradlew assembleRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: strun-key
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      
+      - name: Install dApp Store CLI
+        run: npm install -g @solana-mobile/dapp-store-cli
+      
+      - name: Setup Solana Keypair
+        run: |
+          echo '${{ secrets.SOLANA_PUBLISHER_KEYPAIR }}' > publisher-keypair.json
+          chmod 600 publisher-keypair.json
+      
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION_CODE=${{ github.run_number }}
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+      
+      - name: Create Release NFT
+        id: create_release
+        run: |
+          RELEASE_ADDRESS=$(dapp-store create release \
+            --app-address ${{ secrets.DAPP_STORE_APP_ADDRESS }} \
+            --version-name ${{ env.VERSION }} \
+            --version-code ${{ env.VERSION_CODE }} \
+            --apk ./twa/app/build/outputs/apk/release/app-release.apk \
+            --keypair ./publisher-keypair.json \
+            --network mainnet \
+            | grep -oP 'Release address: \K[A-Za-z0-9]+')
+          echo "RELEASE_ADDRESS=$RELEASE_ADDRESS" >> $GITHUB_ENV
+          echo "::set-output name=release_address::$RELEASE_ADDRESS"
+      
+      - name: Submit to dApp Store
+        run: |
+          dapp-store submit release \
+            --release-address ${{ env.RELEASE_ADDRESS }} \
+            --keypair ./publisher-keypair.json \
+            --network mainnet
+      
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: strun-release-${{ env.VERSION }}.apk
+          path: twa/app/build/outputs/apk/release/app-release.apk
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: twa/app/build/outputs/apk/release/app-release.apk
+          body: |
+            ## Strun v${{ env.VERSION }}
+            
+            ### What's New
+            - [Add release notes here]
+            
+            ### Installation
+            - **Solana dApp Store:** Available now (pending review)
+            - **Direct APK:** Download attached `app-release.apk`
+            
+            ### Solana Release NFT
+            Address: `${{ env.RELEASE_ADDRESS }}`
+            [View on Explorer](https://explorer.solana.com/address/${{ env.RELEASE_ADDRESS }})
+            
+            ### Verification
+            SHA-256: [Add checksum]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f android.keystore publisher-keypair.json
+      
+      - name: Notify Discord
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"🚀 **Strun v${{ env.VERSION }}** deployed to Solana dApp Store!\\n\\nRelease NFT: \`${{ env.RELEASE_ADDRESS }}\`\\n\\nStatus: Pending review\"}"
+
+# Required GitHub Secrets:
+# - ANDROID_KEYSTORE_BASE64: Base64 encoded keystore file
+# - KEYSTORE_PASSWORD: Keystore password
+# - KEY_PASSWORD: Key password
+# - SOLANA_PUBLISHER_KEYPAIR: JSON keypair for dApp Store publishing
+# - DAPP_STORE_APP_ADDRESS: App NFT address from initial setup
+# - VITE_SUPABASE_URL: Supabase URL
+# - VITE_SUPABASE_PUBLISHABLE_KEY: Supabase publishable key
+# - VITE_SUPABASE_PROJECT_ID: Supabase project ID
+# - DISCORD_WEBHOOK_URL: (Optional) Discord webhook for notifications

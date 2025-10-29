@@ -17,15 +17,44 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['robots.txt'],
       manifest: {
-        name: 'Strun - Run, Claim, Earn',
+        name: 'Strun - Move. Earn. Own.',
         short_name: 'Strun',
-        description: 'Blockchain-powered fitness app. Track runs, claim territory, mint NFTs, and earn XP rewards.',
+        description: 'Run to own land, earn SOL & USDC rent. AI tasks, on-chain payments, NFT land ownership on Solana.',
         theme_color: '#0EA5E9',
         background_color: '#0F172A',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        id: '/',
+        categories: ['fitness', 'health', 'games', 'finance'],
+        iarc_rating_id: '',
+        lang: 'en-US',
+        dir: 'ltr',
+        screenshots: [
+          {
+            src: '/screenshot-1.png',
+            sizes: '1080x1920',
+            type: 'image/png',
+            form_factor: 'narrow'
+          }
+        ],
+        shortcuts: [
+          {
+            name: 'Start Run',
+            short_name: 'Run',
+            description: 'Start tracking your run',
+            url: '/run',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Tasks',
+            short_name: 'Tasks',
+            description: 'View available tasks',
+            url: '/tasks',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          }
+        ],
         icons: [
           {
             src: '/pwa-192x192.png',
@@ -51,7 +80,9 @@ export default defineConfig(({ mode }) => ({
             type: 'image/png',
             purpose: 'maskable'
           }
-        ]
+        ],
+        related_applications: [],
+        prefer_related_applications: false
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg}'],

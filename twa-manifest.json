@@ -1,0 +1,46 @@
+{
+  "packageId": "app.strun.mobile",
+  "host": "strun.app",
+  "name": "Strun",
+  "launcherName": "Strun",
+  "display": "standalone",
+  "themeColor": "#0EA5E9",
+  "navigationColor": "#0F172A",
+  "backgroundColor": "#0F172A",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://strun.app/pwa-512x512.png",
+  "maskableIconUrl": "https://strun.app/pwa-512x512.png",
+  "monochromeIconUrl": "https://strun.app/pwa-192x192.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "strun-key"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://strun.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "enableSiteSettingsShortcut": true,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "minSdkVersion": 24,
+  "targetSdkVersion": 34
+}
