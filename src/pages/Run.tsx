@@ -30,10 +30,13 @@ const Run = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [runData, setRunData] = useState<any>(null);
   const [isMinting, setIsMinting] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<'active' | 'waiting' | 'error'>('waiting');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading } = useAuth();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const gpsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timer effect - MUST be before conditional returns
   useEffect(() => {
@@ -52,6 +55,25 @@ const Run = () => {
       }
     };
   }, [isRunning, isPaused]);
+
+  // Cleanup GPS timeout on unmount or stop
+  useEffect(() => {
+    return () => {
+      if (gpsTimeoutRef.current) {
+        clearTimeout(gpsTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Reset GPS status when stopped
+  useEffect(() => {
+    if (!isRunning) {
+      setGpsStatus('waiting');
+      if (gpsTimeoutRef.current) {
+        clearTimeout(gpsTimeoutRef.current);
+      }
+    }
+  }, [isRunning]);
 
   // Redirect to login if not authenticated - MUST be before conditional returns
   useEffect(() => {
@@ -125,6 +147,8 @@ const Run = () => {
       setDistance(0);
       setDuration(0);
       setCalories(0);
+      setGpsStatus('active');
+      lastLocationRef.current = initialLocation;
       
       toast({
         title: "Run Started!",
@@ -332,7 +356,35 @@ const Run = () => {
           path={coordinates}
           onLocationUpdate={(location) => {
             if (isRunning && !isPaused) {
+              console.log("Location update received:", location);
+              
+              // Update GPS status
+              setGpsStatus('active');
+              if (gpsTimeoutRef.current) {
+                clearTimeout(gpsTimeoutRef.current);
+              }
+              
+              // Set timeout to detect GPS freeze
+              gpsTimeoutRef.current = setTimeout(() => {
+                setGpsStatus('error');
+                toast({
+                  title: "GPS Signal Lost",
+                  description: "Trying to reconnect...",
+                  variant: "destructive",
+                });
+              }, 8000);
+              
               const newCoord = { lat: location.lat, lng: location.lng };
+              
+              // Only add if location changed significantly (> 5 meters)
+              if (lastLocationRef.current) {
+                const distanceFromLast = calculateDistance([lastLocationRef.current, newCoord]);
+                if (distanceFromLast < 0.005) { // Less than 5 meters
+                  return;
+                }
+              }
+              
+              lastLocationRef.current = newCoord;
               setCoordinates((prev) => [...prev, newCoord]);
               const newDistance = calculateDistance([...coordinates, newCoord]);
               setDistance(newDistance);
@@ -340,9 +392,24 @@ const Run = () => {
           }}
         />
         
+        {/* GPS Status Indicator */}
+        {isRunning && (
+          <div className="absolute top-4 right-4">
+            <div className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-lg ${
+              gpsStatus === 'active' 
+                ? 'bg-green-500/90 text-white' 
+                : gpsStatus === 'error'
+                ? 'bg-red-500/90 text-white animate-pulse'
+                : 'bg-yellow-500/90 text-white'
+            }`}>
+              {gpsStatus === 'active' ? '● GPS Active' : gpsStatus === 'error' ? '● GPS Error' : '● GPS Waiting'}
+            </div>
+          </div>
+        )}
+        
         {/* Floating Stats */}
         {isRunning && (
-          <div className="absolute top-4 left-4 right-4 space-y-2">
+          <div className="absolute top-14 left-4 right-4 space-y-2">
             <Card className="p-4 bg-card/90 backdrop-blur-lg">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>

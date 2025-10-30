@@ -159,40 +159,68 @@ const GoogleMap = ({
   useEffect(() => {
     if (!tracking || !map || !marker || !path) return;
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const newLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
+    let watchId: number | null = null;
+    let lastUpdateTime = Date.now();
+    const UPDATE_INTERVAL = 2000; // Update every 2 seconds
 
-        // Update marker position
-        marker.setPosition(newLocation);
-        map.panTo(newLocation);
+    const startTracking = () => {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const now = Date.now();
+          // Throttle updates to prevent too frequent updates
+          if (now - lastUpdateTime < UPDATE_INTERVAL) return;
+          
+          lastUpdateTime = now;
+          
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
 
-        // Only add to internal path if no external path is provided
-        if (!externalPath) {
-          pathCoordinates.current.push(newLocation);
-          path.setPath(pathCoordinates.current);
+          console.log("GPS Update:", newLocation);
+
+          // Update marker position
+          marker.setPosition(newLocation);
+          map.panTo(newLocation);
+
+          // Only add to internal path if no external path is provided
+          if (!externalPath) {
+            pathCoordinates.current.push(newLocation);
+            path.setPath(pathCoordinates.current);
+          }
+
+          // Call callback
+          if (onLocationUpdate) {
+            onLocationUpdate(newLocation);
+          }
+        },
+        (error) => {
+          console.error("Geolocation tracking error:", error);
+          // Try to restart tracking after error
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+          }
+          setTimeout(() => {
+            if (tracking) {
+              console.log("Restarting GPS tracking...");
+              startTracking();
+            }
+          }, 3000);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000, // Reduced timeout
+          maximumAge: 0, // Always get fresh location
         }
+      );
+    };
 
-        // Call callback
-        if (onLocationUpdate) {
-          onLocationUpdate(newLocation);
-        }
-      },
-      (error) => {
-        console.error("Geolocation tracking error:", error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
-    );
+    startTracking();
 
     return () => {
-      navigator.geolocation.clearWatch(watchId);
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
     };
   }, [tracking, map, marker, path, onLocationUpdate, externalPath]);
 
