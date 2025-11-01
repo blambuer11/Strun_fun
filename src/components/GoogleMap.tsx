@@ -161,7 +161,7 @@ const GoogleMap = ({
 
     let watchId: number | null = null;
     let lastUpdateTime = Date.now();
-    const UPDATE_INTERVAL = 2000; // Update every 2 seconds
+    const UPDATE_INTERVAL = 500; // Update every 0.5 seconds for smooth tracking
 
     const startTracking = () => {
       watchId = navigator.geolocation.watchPosition(
@@ -209,8 +209,8 @@ const GoogleMap = ({
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000, // Reduced timeout
-          maximumAge: 0, // Always get fresh location
+          timeout: 10000,
+          maximumAge: 1000,
         }
       );
     };

@@ -376,10 +376,10 @@ const Run = () => {
               
               const newCoord = { lat: location.lat, lng: location.lng };
               
-              // Only add if location changed significantly (> 5 meters)
+              // Only add if location changed significantly (> 2 meters)
               if (lastLocationRef.current) {
                 const distanceFromLast = calculateDistance([lastLocationRef.current, newCoord]);
-                if (distanceFromLast < 0.005) { // Less than 5 meters
+                if (distanceFromLast < 0.002) { // Less than 2 meters
                   return;
                 }
               }
