@@ -352,11 +352,12 @@ const Run = () => {
       {/* Map */}
       <div className="flex-1 relative min-h-0">
         <GoogleMap 
+          center={coordinates.length > 0 ? coordinates[0] : undefined}
           tracking={isRunning && !isPaused}
           path={coordinates}
           onLocationUpdate={(location) => {
             if (isRunning && !isPaused) {
-              console.log("Location update received:", location);
+              console.log("Run.tsx: Location update received:", location);
               
               // Update GPS status
               setGpsStatus('active');
@@ -380,14 +381,22 @@ const Run = () => {
               if (lastLocationRef.current) {
                 const distanceFromLast = calculateDistance([lastLocationRef.current, newCoord]);
                 if (distanceFromLast < 0.002) { // Less than 2 meters
+                  console.log("Run.tsx: Movement too small, skipping update");
                   return;
                 }
               }
               
+              console.log("Run.tsx: Adding new coordinate:", newCoord);
               lastLocationRef.current = newCoord;
-              setCoordinates((prev) => [...prev, newCoord]);
-              const newDistance = calculateDistance([...coordinates, newCoord]);
-              setDistance(newDistance);
+              
+              // Fix: Use callback form to get latest coordinates
+              setCoordinates((prevCoords) => {
+                const updatedCoords = [...prevCoords, newCoord];
+                const newDistance = calculateDistance(updatedCoords);
+                console.log("Run.tsx: Updated distance:", newDistance);
+                setDistance(newDistance);
+                return updatedCoords;
+              });
             }
           }}
         />

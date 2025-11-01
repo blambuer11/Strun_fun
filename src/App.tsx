@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SolanaMobileWalletProvider } from "@/contexts/SolanaMobileWalletContext";
 import { InstallPWA } from "@/components/InstallPWA";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -23,31 +24,33 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <InstallPWA />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/email-auth" element={<EmailAuth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/run" element={<Run />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/:userId" element={<Profile />} />
-            <Route path="/group" element={<Group />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/my-land" element={<MyLand />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/share/:taskId" element={<Share />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <SolanaMobileWalletProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <InstallPWA />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/email-auth" element={<EmailAuth />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/run" element={<Run />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:userId" element={<Profile />} />
+              <Route path="/group" element={<Group />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/my-land" element={<MyLand />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/share/:taskId" element={<Share />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </SolanaMobileWalletProvider>
   </QueryClientProvider>
 );
 
