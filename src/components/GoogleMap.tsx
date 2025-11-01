@@ -31,15 +31,18 @@ const GoogleMap = ({
 
   // Get user's initial location
   useEffect(() => {
+    console.log("GoogleMap: Requesting initial location...");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
+        const location = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        });
+        };
+        console.log("GoogleMap: Initial location acquired:", location);
+        setUserLocation(location);
       },
       (error) => {
-        console.error("Error getting initial location:", error);
+        console.error("GoogleMap: Error getting initial location:", error);
       },
       {
         enableHighAccuracy: true,
@@ -79,10 +82,11 @@ const GoogleMap = ({
     if (!scriptLoaded || !mapRef.current || !(window as any).google || map) return;
 
     const initialCenter = userLocation || center;
+    console.log("GoogleMap: Initializing map with center:", initialCenter);
     
     const mapInstance = new (window as any).google.maps.Map(mapRef.current, {
       center: initialCenter,
-      zoom,
+      zoom: userLocation ? 18 : zoom, // Zoom closer when we have user location
       mapTypeId: 'roadmap',
       disableDefaultUI: false,
       zoomControl: true,
@@ -102,14 +106,15 @@ const GoogleMap = ({
       map: mapInstance,
       icon: {
         path: (window as any).google.maps.SymbolPath.CIRCLE,
-        scale: 8,
+        scale: 10,
         fillColor: "#10b981",
         fillOpacity: 1,
         strokeColor: "#ffffff",
-        strokeWeight: 2,
+        strokeWeight: 3,
       },
     });
     setMarker(newMarker);
+    console.log("GoogleMap: User marker created at:", initialCenter);
 
     // Create polyline for path
     const newPath = new (window as any).google.maps.Polyline({
@@ -164,6 +169,7 @@ const GoogleMap = ({
     const UPDATE_INTERVAL = 500; // Update every 0.5 seconds for smooth tracking
 
     const startTracking = () => {
+      console.log("GoogleMap: Starting GPS tracking...");
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const now = Date.now();
@@ -177,7 +183,7 @@ const GoogleMap = ({
             lng: position.coords.longitude,
           };
 
-          console.log("GPS Update:", newLocation);
+          console.log("GoogleMap: GPS Update received:", newLocation);
 
           // Update marker position
           marker.setPosition(newLocation);
@@ -191,6 +197,7 @@ const GoogleMap = ({
 
           // Call callback
           if (onLocationUpdate) {
+            console.log("GoogleMap: Calling onLocationUpdate with:", newLocation);
             onLocationUpdate(newLocation);
           }
         },
