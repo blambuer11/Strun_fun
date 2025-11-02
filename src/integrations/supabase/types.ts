@@ -1536,6 +1536,7 @@ export type Database = {
         Args: { user_id: string; xp_amount: number }
         Returns: undefined
       }
+      is_profile_owner: { Args: { profile_user_id: string }; Returns: boolean }
       recalculate_all_levels: { Args: never; Returns: undefined }
     }
     Enums: {

@@ -12,7 +12,65 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, city, lat, lon, count = 3, solPool, maxParticipants, taskDescription, taskTitle } = await req.json();
+    // Fix #4: Add input validation
+    const body = await req.json();
+    
+    // Validate required fields
+    if (!body.userId || typeof body.userId !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid userId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate coordinates
+    const lat = parseFloat(body.lat);
+    const lon = parseFloat(body.lon);
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid latitude (must be between -90 and 90)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (isNaN(lon) || lon < -180 || lon > 180) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid longitude (must be between -180 and 180)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate count
+    const count = body.count ? parseInt(body.count) : 3;
+    if (isNaN(count) || count < 1 || count > 10) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid count (must be between 1 and 10)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate solPool if provided
+    const solPool = body.solPool ? parseFloat(body.solPool) : null;
+    if (solPool !== null && (isNaN(solPool) || solPool < 0 || solPool > 1000)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid solPool (must be between 0 and 1000)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate maxParticipants if provided
+    const maxParticipants = body.maxParticipants ? parseInt(body.maxParticipants) : null;
+    if (maxParticipants !== null && (isNaN(maxParticipants) || maxParticipants < 1 || maxParticipants > 1000)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid maxParticipants (must be between 1 and 1000)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate and sanitize text fields
+    const taskDescription = body.taskDescription ? String(body.taskDescription).trim().slice(0, 500) : null;
+    const taskTitle = body.taskTitle ? String(body.taskTitle).trim().slice(0, 100) : null;
+    const city = body.city ? String(body.city).trim().slice(0, 100) : null;
+    const userId = body.userId;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -46,15 +104,15 @@ serve(async (req) => {
 
     // If sponsored task
     if (solPool && maxParticipants && taskDescription) {
-      const solPerCompletion = parseFloat(solPool) / parseInt(maxParticipants);
+      const solPerCompletion = solPool / maxParticipants;
       
       // Create pool
       const { data: pool, error: poolError } = await supabase
         .from('pools')
         .insert({
           creator_id: userId,
-          total_funded_sol: parseFloat(solPool),
-          required_creator_stake: parseFloat(solPool),
+          total_funded_sol: solPool,
+          required_creator_stake: solPool,
           min_participants: 1,
           status: 'active'
         })
@@ -79,7 +137,7 @@ serve(async (req) => {
           radius_m: 50,
           xp_reward: 100,
           sol_reward: solPerCompletion,
-          max_participants: parseInt(maxParticipants),
+          max_participants: maxParticipants,
           pool_id: pool.id,
           status: 'published',
           active_from: new Date().toISOString(),
