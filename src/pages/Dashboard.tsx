@@ -698,31 +698,33 @@ const Dashboard = () => {
                 My Land NFTs
               </h3>
               
-              {/* Unminted Parcels Section */}
+              {/* Ready to Mint Section - Highlighted */}
               {unmintedParcels && unmintedParcels.length > 0 && (
-                <div className="space-y-3 mb-6">
-                  <div className="text-sm font-semibold text-accent flex items-center gap-2">
-                    <Coins className="w-4 h-4" />
+                <div className="mb-6 p-5 border-2 border-accent rounded-lg bg-gradient-to-br from-accent/20 to-primary/20">
+                  <div className="text-lg font-bold text-accent flex items-center gap-2 mb-4">
+                    <Coins className="w-6 h-6" />
                     Ready to Mint ({unmintedParcels.length})
                   </div>
-                  {unmintedParcels.map((parcel) => (
-                    <div key={`parcel-${parcel.id}`} className="flex items-center justify-between p-3 glass rounded-lg border-accent/30 bg-gradient-to-r from-accent/10 to-primary/10">
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground">Parcel #{parcel.parcel_id.slice(0, 8)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Location: {parcel.center_lat?.toFixed(4)}, {parcel.center_lon?.toFixed(4)}
+                  <div className="space-y-3">
+                    {unmintedParcels.map((parcel) => (
+                      <div key={`parcel-${parcel.id}`} className="flex items-center justify-between p-4 bg-card/80 rounded-lg border border-accent/40">
+                        <div className="flex-1">
+                          <div className="font-medium text-foreground">Parcel #{parcel.parcel_id.slice(0, 8)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Location: {parcel.center_lat?.toFixed(4)}, {parcel.center_lon?.toFixed(4)}
+                          </div>
                         </div>
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => handleMintLand(parcel)}
+                          disabled={mintLoading}
+                        >
+                          {mintLoading ? "Minting..." : "Mint NFT"}
+                        </Button>
                       </div>
-                      <Button 
-                        size="sm" 
-                        variant="accent"
-                        onClick={() => handleMintLand(parcel)}
-                        disabled={mintLoading}
-                      >
-                        {mintLoading ? "Minting..." : "Mint NFT"}
-                      </Button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
               
