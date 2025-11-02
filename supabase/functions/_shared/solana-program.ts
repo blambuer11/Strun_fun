@@ -47,7 +47,7 @@ export function decodePrivateKey(encryptedKey: string): Keypair {
  * Find Program Derived Address (PDA)
  */
 export async function findProgramAddress(
-  seeds: (Buffer | Uint8Array)[],
+  seeds: Uint8Array[],
   programId: PublicKey = STRUN_PROGRAM_ID
 ): Promise<[PublicKey, number]> {
   return await PublicKey.findProgramAddress(seeds, programId);
@@ -57,9 +57,10 @@ export async function findProgramAddress(
  * Create a task PDA
  */
 export async function findTaskPDA(taskId: string): Promise<[PublicKey, number]> {
+  const encoder = new TextEncoder();
   return await findProgramAddress([
-    Buffer.from(TASK_SEED),
-    Buffer.from(taskId),
+    encoder.encode(TASK_SEED),
+    encoder.encode(taskId),
   ]);
 }
 
@@ -68,9 +69,10 @@ export async function findTaskPDA(taskId: string): Promise<[PublicKey, number]> 
  */
 export async function findLandPDA(coordinates: { lat: number; lng: number }): Promise<[PublicKey, number]> {
   const coordinatesStr = `${coordinates.lat.toFixed(6)},${coordinates.lng.toFixed(6)}`;
+  const encoder = new TextEncoder();
   return await findProgramAddress([
-    Buffer.from(LAND_SEED),
-    Buffer.from(coordinatesStr),
+    encoder.encode(LAND_SEED),
+    encoder.encode(coordinatesStr),
   ]);
 }
 
@@ -78,9 +80,10 @@ export async function findLandPDA(coordinates: { lat: number; lng: number }): Pr
  * Create a run PDA
  */
 export async function findRunPDA(runId: string): Promise<[PublicKey, number]> {
+  const encoder = new TextEncoder();
   return await findProgramAddress([
-    Buffer.from(RUN_SEED),
-    Buffer.from(runId),
+    encoder.encode(RUN_SEED),
+    encoder.encode(runId),
   ]);
 }
 
@@ -88,9 +91,10 @@ export async function findRunPDA(runId: string): Promise<[PublicKey, number]> {
  * Create a user profile PDA
  */
 export async function findUserProfilePDA(userId: string): Promise<[PublicKey, number]> {
+  const encoder = new TextEncoder();
   return await findProgramAddress([
-    Buffer.from(USER_PROFILE_SEED),
-    Buffer.from(userId),
+    encoder.encode(USER_PROFILE_SEED),
+    encoder.encode(userId),
   ]);
 }
 
@@ -139,15 +143,16 @@ export async function sendAndConfirmTransaction(
 /**
  * Create instruction data buffer
  */
-export function createInstructionData(instruction: number, data?: any): Buffer {
+export function createInstructionData(instruction: number, data?: any): Uint8Array {
   if (!data) {
-    return Buffer.from([instruction]);
+    return new Uint8Array([instruction]);
   }
   
-  const dataBuffer = Buffer.from(JSON.stringify(data));
-  const instructionBuffer = Buffer.alloc(1 + dataBuffer.length);
-  instructionBuffer.writeUInt8(instruction, 0);
-  dataBuffer.copy(instructionBuffer, 1);
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(JSON.stringify(data));
+  const instructionBuffer = new Uint8Array(1 + dataBuffer.length);
+  instructionBuffer[0] = instruction;
+  instructionBuffer.set(dataBuffer, 1);
   
   return instructionBuffer;
 }
@@ -163,6 +168,6 @@ export function buildInstruction(
   return new TransactionInstruction({
     keys,
     programId: STRUN_PROGRAM_ID,
-    data: createInstructionData(instruction, data),
+    data: createInstructionData(instruction, data) as any,
   });
 }

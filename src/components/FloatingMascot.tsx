@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
 import runnyMascot from "@/assets/runny-mascot.png";
+import { RunnyChat } from "./RunnyChat";
 
 type MascotMood = "idle" | "running" | "cheering" | "confused" | "tired" | "hype";
 
 interface FloatingMascotProps {
   mood?: MascotMood;
   message?: string;
-  onClick?: () => void;
 }
 
-export const FloatingMascot = ({ mood = "idle", message, onClick }: FloatingMascotProps) => {
+export const FloatingMascot = ({ mood = "idle", message }: FloatingMascotProps) => {
   const [showMessage, setShowMessage] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     if (message) {
@@ -59,8 +60,9 @@ export const FloatingMascot = ({ mood = "idle", message, onClick }: FloatingMasc
       {/* Floating Mascot */}
       <div className="fixed bottom-24 left-4 z-40">
         <button
-          onClick={onClick}
+          onClick={() => setChatOpen(true)}
           className={`relative w-16 h-16 rounded-full bg-gradient-to-br from-primary via-secondary to-accent p-1 shadow-lg hover:scale-110 transition-transform ${getMascotAnimation()}`}
+          aria-label="Chat with Runny"
         >
           <div className="w-full h-full rounded-full bg-card flex items-center justify-center overflow-hidden">
             <img
@@ -86,6 +88,9 @@ export const FloatingMascot = ({ mood = "idle", message, onClick }: FloatingMasc
           </div>
         )}
       </div>
+
+      {/* Chat Dialog */}
+      <RunnyChat open={chatOpen} onOpenChange={setChatOpen} />
     </>
   );
 };
