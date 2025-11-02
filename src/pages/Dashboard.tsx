@@ -296,7 +296,7 @@ const Dashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch user's land NFTs
+  // Fetch user's land NFTs (only minted ones)
   const { data: myLandNFTs } = useQuery({
     queryKey: ["my-land-nfts", user?.id],
     queryFn: async () => {
@@ -305,6 +305,7 @@ const Dashboard = () => {
         .from("land_nfts")
         .select("*")
         .eq("user_id", user.id)
+        .eq("status", "minted")
         .order("minted_at", { ascending: false });
       return data;
     },

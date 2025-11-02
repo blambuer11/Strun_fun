@@ -113,6 +113,26 @@ serve(async (req) => {
 
     console.log('Land minted successfully:', signature);
 
+    // Update land_nfts table with mint status and transaction hash
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const adminClient = createClient(supabaseUrl, supabaseKey);
+
+    const { error: updateError } = await adminClient
+      .from('land_nfts')
+      .update({
+        status: 'minted',
+        mint_transaction_hash: signature,
+      })
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (updateError) {
+      console.error('Failed to update NFT status:', updateError);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -125,6 +145,33 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in solana-mint-land:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    // Mark NFT as failed if minting failed
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const adminClient = createClient(supabaseUrl, supabaseKey);
+
+      // Try to get user from auth header if available
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await adminClient.auth.getUser(token);
+        
+        if (user) {
+          await adminClient
+            .from('land_nfts')
+            .update({ status: 'failed' })
+            .eq('user_id', user.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1);
+        }
+      }
+    } catch (updateError) {
+      console.error('Failed to update NFT status to failed:', updateError);
+    }
+
     return new Response(
       JSON.stringify({ error: 'Failed to mint land', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

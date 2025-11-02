@@ -117,6 +117,7 @@ serve(async (req) => {
         polygon_coordinates: closedPolygon,
         area_size: area,
         mint_transaction_hash: ipfsCid, // Store CID as transaction hash for now
+        status: 'pending', // Set initial status as pending
       })
       .select()
       .single();
