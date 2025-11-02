@@ -21,6 +21,9 @@ import { formatDistanceToNow } from "date-fns";
 import { useWallet } from "@/hooks/useWallet";
 import { FloatingMascot } from "@/components/FloatingMascot";
 import runnyMascot from "@/assets/runny-mascot.png";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Bell } from "lucide-react";
+
 const Dashboard = () => {
   const {
     user,
@@ -44,6 +47,8 @@ const Dashboard = () => {
   const [nftCount, setNftCount] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
   const { publicKey, loading: walletLoading } = useWallet();
+  const { permission, loading: notifLoading, requestPermission, sendTestNotification } = useNotifications();
+
   useEffect(() => {
     if (!authLoading && !user) navigate("/");
   }, [user, authLoading, navigate]);
@@ -419,6 +424,54 @@ const Dashboard = () => {
             <span className="text-xs">Start Run</span>
           </Button>
         </div>
+
+        {/* Notification Card */}
+        {permission !== "granted" && (
+          <Card className="p-4 glass border-accent/30 bg-gradient-to-r from-accent/10 to-primary/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-accent/20 p-2 rounded-lg">
+                  <Bell className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Enable Notifications</h3>
+                  <p className="text-xs text-muted-foreground">Get updates from Runny</p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="accent"
+                onClick={requestPermission}
+                disabled={notifLoading}
+              >
+                {notifLoading ? "..." : "Enable"}
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {permission === "granted" && (
+          <Card className="p-4 glass border-success/30 bg-gradient-to-r from-success/10 to-primary/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-success/20 p-2 rounded-lg">
+                  <Bell className="w-5 h-5 text-success" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Notifications Active</h3>
+                  <p className="text-xs text-muted-foreground">You're all set!</p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={sendTestNotification}
+              >
+                Test
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-6 glass">
           <div className="flex items-center justify-between mb-3">

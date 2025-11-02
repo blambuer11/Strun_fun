@@ -715,6 +715,7 @@ export type Database = {
           daily_task_accept_count: number | null
           daily_task_count: number | null
           email: string
+          fcm_token: string | null
           id: string
           instagram_url: string | null
           last_accept_date: string | null
@@ -736,6 +737,7 @@ export type Database = {
           daily_task_accept_count?: number | null
           daily_task_count?: number | null
           email: string
+          fcm_token?: string | null
           id: string
           instagram_url?: string | null
           last_accept_date?: string | null
@@ -757,6 +759,7 @@ export type Database = {
           daily_task_accept_count?: number | null
           daily_task_count?: number | null
           email?: string
+          fcm_token?: string | null
           id?: string
           instagram_url?: string | null
           last_accept_date?: string | null

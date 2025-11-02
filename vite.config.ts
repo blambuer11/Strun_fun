@@ -98,7 +98,13 @@ export default defineConfig(({ mode }) => ({
               }
             }
           }
-        ]
+        ],
+        // Enable notification support
+        navigateFallback: null,
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module'
       }
     })
   ].filter(Boolean),
