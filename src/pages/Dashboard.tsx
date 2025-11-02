@@ -23,6 +23,9 @@ import { FloatingMascot } from "@/components/FloatingMascot";
 import runnyMascot from "@/assets/runny-mascot.png";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Bell } from "lucide-react";
+import { useStrunProgram } from "@/hooks/useStrunProgram";
+import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { DEVNET_RPC } from "@/lib/solana-program";
 
 const Dashboard = () => {
   const {
@@ -48,6 +51,8 @@ const Dashboard = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const { publicKey, loading: walletLoading } = useWallet();
   const { permission, loading: notifLoading, requestPermission, sendTestNotification } = useNotifications();
+  const { mintLand, loading: mintLoading } = useStrunProgram();
+  const [devnetBalance, setDevnetBalance] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/");
@@ -58,8 +63,20 @@ const Dashboard = () => {
       fetchWalletBalance();
       fetchNFTCount();
       fetchTransactions();
+      fetchDevnetBalance();
     }
-  }, [user]);
+  }, [user, publicKey]);
+
+  const fetchDevnetBalance = async () => {
+    if (!publicKey) return;
+    try {
+      const connection = new Connection(DEVNET_RPC, "confirmed");
+      const balance = await connection.getBalance(new PublicKey(publicKey));
+      setDevnetBalance(balance / LAMPORTS_PER_SOL);
+    } catch (error) {
+      console.error("Error fetching devnet balance:", error);
+    }
+  };
 
   const fetchWalletBalance = async () => {
     try {
@@ -262,6 +279,56 @@ const Dashboard = () => {
     },
     enabled: !!user?.id
   });
+
+  // Fetch user's runs
+  const { data: myRuns } = useQuery({
+    queryKey: ["my-runs", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("runs")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false })
+        .limit(5);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch user's land NFTs
+  const { data: myLandNFTs } = useQuery({
+    queryKey: ["my-land-nfts", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("land_nfts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("minted_at", { ascending: false });
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const handleMintLand = async (coordinates: any) => {
+    try {
+      const result = await mintLand(coordinates);
+      if (result) {
+        toast({
+          title: "Success!",
+          description: "Land NFT minted successfully",
+        });
+        queryClient.invalidateQueries({ queryKey: ["my-land-nfts", user?.id] });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Mint Failed",
+        description: error?.message || "Failed to mint land NFT",
+        variant: "destructive",
+      });
+    }
+  };
   // Use level from database (auto-calculated by increment_xp function)
   const xp = profile?.xp || 0;
   const level = profile?.level || 1;
@@ -556,8 +623,8 @@ const Dashboard = () => {
               </Card>
               <Card className="p-4 glass hover-lift">
                 <Coins className="w-5 h-5 mb-2 text-secondary" />
-                <div className="text-2xl font-bold gradient-text">{taskStats?.totalSOL.toFixed(2) || "0.00"}</div>
-                <div className="text-xs text-muted-foreground">SOL Earned</div>
+                <div className="text-2xl font-bold gradient-text">{devnetBalance.toFixed(4)}</div>
+                <div className="text-xs text-muted-foreground">Devnet SOL</div>
               </Card>
               <Card className="p-4 glass hover-lift">
                 <Users className="w-5 h-5 mb-2 text-accent" />
@@ -565,6 +632,75 @@ const Dashboard = () => {
                 <div className="text-xs text-muted-foreground">Groups</div>
               </Card>
             </div>
+
+            {/* My Runs */}
+            <Card className="p-6 glass">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" />
+                My Runs
+              </h3>
+              <div className="space-y-3">
+                {myRuns && myRuns.length > 0 ? (
+                  myRuns.map((run) => (
+                    <div key={run.id} className="flex items-center justify-between p-3 glass rounded-lg hover-lift">
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">
+                          {(parseFloat(String(run.distance)) / 1000).toFixed(2)} km
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(run.completed_at).toLocaleDateString()} • 
+                          <span className="text-primary font-bold ml-1">+{run.xp_earned} XP</span>
+                        </div>
+                      </div>
+                      <Badge variant="default" className="text-xs">
+                        {Math.floor(run.duration / 60)} min
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No runs yet. Start your first run!</p>
+                )}
+              </div>
+              {myRuns && myRuns.length > 0 && (
+                <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/run")}>
+                  Start New Run →
+                </Button>
+              )}
+            </Card>
+
+            {/* My Land NFTs */}
+            <Card className="p-6 glass">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                My Land NFTs
+              </h3>
+              <div className="space-y-3">
+                {myLandNFTs && myLandNFTs.length > 0 ? (
+                  myLandNFTs.map((nft) => (
+                    <div key={nft.id} className="flex items-center justify-between p-3 glass rounded-lg hover-lift">
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">{nft.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Area: {parseFloat(String(nft.area_size)).toFixed(2)} m²
+                        </div>
+                      </div>
+                      <Badge variant="default" className="text-xs">
+                        Owned
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No land NFTs yet. Complete runs to claim land!</p>
+                )}
+              </div>
+              <Button 
+                variant="outline" 
+                className="w-full mt-4" 
+                onClick={() => navigate("/myland")}
+              >
+                View My Land →
+              </Button>
+            </Card>
             
             <Card className="p-6 glass">
               <h3 className="font-bold mb-4 flex items-center gap-2">
