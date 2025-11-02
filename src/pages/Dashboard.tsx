@@ -311,8 +311,28 @@ const Dashboard = () => {
     enabled: !!user?.id,
   });
 
-  const handleMintLand = async (coordinates: any) => {
+  // Fetch user's unminted parcels
+  const { data: unmintedParcels } = useQuery({
+    queryKey: ["unminted-parcels", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from("parcels")
+        .select("*")
+        .eq("owner_id", user.id)
+        .eq("is_minted", false)
+        .order("created_at", { ascending: false });
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const handleMintLand = async (parcel: any) => {
     try {
+      const coordinates = {
+        lat: parcel.center_lat,
+        lng: parcel.center_lon,
+      };
       const result = await mintLand(coordinates);
       if (result) {
         toast({
@@ -320,6 +340,8 @@ const Dashboard = () => {
           description: "Land NFT minted successfully",
         });
         queryClient.invalidateQueries({ queryKey: ["my-land-nfts", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["unminted-parcels", user?.id] });
+        fetchDevnetBalance();
       }
     } catch (error: any) {
       toast({
@@ -667,6 +689,36 @@ const Dashboard = () => {
                 </Button>
               )}
             </Card>
+
+            {/* Unminted Parcels - Ready to Mint */}
+            {unmintedParcels && unmintedParcels.length > 0 && (
+              <Card className="p-6 glass border-accent/30 bg-gradient-to-br from-accent/10 to-primary/10">
+                <h3 className="font-bold mb-4 flex items-center gap-2">
+                  <Coins className="w-5 h-5 text-accent" />
+                  Ready to Mint
+                </h3>
+                <div className="space-y-3">
+                  {unmintedParcels.map((parcel) => (
+                    <div key={parcel.id} className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">Parcel #{parcel.parcel_id.slice(0, 8)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Location: {parcel.center_lat?.toFixed(4)}, {parcel.center_lon?.toFixed(4)}
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="accent"
+                        onClick={() => handleMintLand(parcel)}
+                        disabled={mintLoading}
+                      >
+                        {mintLoading ? "Minting..." : "Mint NFT"}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {/* My Land NFTs */}
             <Card className="p-6 glass">
