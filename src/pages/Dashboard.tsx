@@ -690,65 +690,56 @@ const Dashboard = () => {
               )}
             </Card>
 
-            {/* Unminted Parcels - Ready to Mint */}
-            {unmintedParcels && unmintedParcels.length > 0 && (
-              <Card className="p-6 glass border-accent/30 bg-gradient-to-br from-accent/10 to-primary/10">
-                <h3 className="font-bold mb-4 flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-accent" />
-                  Ready to Mint
-                </h3>
-                <div className="space-y-3">
-                  {unmintedParcels.map((parcel) => (
-                    <div key={parcel.id} className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground">Parcel #{parcel.parcel_id.slice(0, 8)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Location: {parcel.center_lat?.toFixed(4)}, {parcel.center_lon?.toFixed(4)}
-                        </div>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        variant="accent"
-                        onClick={() => handleMintLand(parcel)}
-                        disabled={mintLoading}
-                      >
-                        {mintLoading ? "Minting..." : "Mint NFT"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {/* My Land NFTs */}
+            {/* My Land NFTs & Parcels */}
             <Card className="p-6 glass">
               <h3 className="font-bold mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-primary" />
                 My Land NFTs
               </h3>
               <div className="space-y-3">
-                {myLandNFTs && myLandNFTs.length > 0 ? (
-                  myLandNFTs.map((nft) => (
-                    <div key={nft.id} className="flex items-center justify-between p-3 glass rounded-lg hover-lift">
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground">{nft.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Area: {parseFloat(String(nft.area_size)).toFixed(2)} m²
-                        </div>
+                {/* Show unminted parcels first */}
+                {unmintedParcels && unmintedParcels.map((parcel) => (
+                  <div key={`parcel-${parcel.id}`} className="flex items-center justify-between p-3 glass rounded-lg border-accent/30 bg-gradient-to-r from-accent/10 to-primary/10">
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground">Parcel #{parcel.parcel_id.slice(0, 8)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Location: {parcel.center_lat?.toFixed(4)}, {parcel.center_lon?.toFixed(4)}
                       </div>
-                      <Badge variant="default" className="text-xs">
-                        Owned
-                      </Badge>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No land NFTs yet. Complete runs to claim land!</p>
+                    <Button 
+                      size="sm" 
+                      variant="accent"
+                      onClick={() => handleMintLand(parcel)}
+                      disabled={mintLoading}
+                    >
+                      {mintLoading ? "Minting..." : "Mint NFT"}
+                    </Button>
+                  </div>
+                ))}
+                
+                {/* Show minted NFTs */}
+                {myLandNFTs && myLandNFTs.map((nft) => (
+                  <div key={`nft-${nft.id}`} className="flex items-center justify-between p-3 glass rounded-lg hover-lift">
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground">{nft.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Area: {parseFloat(String(nft.area_size)).toFixed(2)} m²
+                      </div>
+                    </div>
+                    <Badge variant="default" className="text-xs">
+                      Owned
+                    </Badge>
+                  </div>
+                ))}
+                
+                {(!myLandNFTs || myLandNFTs.length === 0) && (!unmintedParcels || unmintedParcels.length === 0) && (
+                  <p className="text-center text-muted-foreground py-8">No land yet. Complete runs to claim parcels!</p>
                 )}
               </div>
               <Button 
                 variant="outline" 
                 className="w-full mt-4" 
-                onClick={() => navigate("/myland")}
+                onClick={() => navigate("/my-land")}
               >
                 View My Land →
               </Button>
