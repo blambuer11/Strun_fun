@@ -95,7 +95,7 @@ export const useStrunProgram = () => {
     }
   };
 
-  const mintLand = async (coordinates: Location) => {
+  const mintLand = async (coordinates: Location, nftId?: string) => {
     if (!user) {
       toast.error('Please login first');
       return null;
@@ -104,7 +104,7 @@ export const useStrunProgram = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('solana-mint-land', {
-        body: { coordinates },
+        body: { coordinates, nftId },
       });
 
       if (error) throw error;

@@ -22,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { coordinates } = await req.json();
+    const { coordinates, nftId } = await req.json();
     
     if (!coordinates || !coordinates.lat || !coordinates.lng) {
       return new Response(
@@ -118,16 +118,35 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, supabaseKey);
 
-    const { error: updateError } = await adminClient
-      .from('land_nfts')
-      .update({
-        status: 'minted',
-        mint_transaction_hash: signature,
-      })
-      .eq('user_id', user.id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    let updateError = null;
+    
+    if (nftId) {
+      // Update specific NFT by ID
+      const { error } = await adminClient
+        .from('land_nfts')
+        .update({
+          status: 'minted',
+          mint_transaction_hash: signature,
+          minted_at: new Date().toISOString(),
+        })
+        .eq('id', nftId)
+        .eq('user_id', user.id);
+      updateError = error;
+    } else {
+      // Fallback: update most recent pending NFT
+      const { error } = await adminClient
+        .from('land_nfts')
+        .update({
+          status: 'minted',
+          mint_transaction_hash: signature,
+          minted_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      updateError = error;
+    }
 
     if (updateError) {
       console.error('Failed to update NFT status:', updateError);
@@ -152,6 +171,10 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const adminClient = createClient(supabaseUrl, supabaseKey);
 
+      // Try to get nftId from request body
+      const body = await req.clone().json();
+      const nftId = body?.nftId;
+
       // Try to get user from auth header if available
       const authHeader = req.headers.get('Authorization');
       if (authHeader) {
@@ -159,13 +182,23 @@ serve(async (req) => {
         const { data: { user } } = await adminClient.auth.getUser(token);
         
         if (user) {
-          await adminClient
-            .from('land_nfts')
-            .update({ status: 'failed' })
-            .eq('user_id', user.id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false })
-            .limit(1);
+          if (nftId) {
+            // Update specific NFT by ID
+            await adminClient
+              .from('land_nfts')
+              .update({ status: 'failed' })
+              .eq('id', nftId)
+              .eq('user_id', user.id);
+          } else {
+            // Fallback: update most recent pending NFT
+            await adminClient
+              .from('land_nfts')
+              .update({ status: 'failed' })
+              .eq('user_id', user.id)
+              .eq('status', 'pending')
+              .order('created_at', { ascending: false })
+              .limit(1);
+          }
         }
       }
     } catch (updateError) {

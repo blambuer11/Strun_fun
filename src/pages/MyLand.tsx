@@ -81,7 +81,7 @@ const MyLand = () => {
         lat: coordinates[0].lat,
         lng: coordinates[0].lng,
       };
-      const result = await mintLand(center);
+      const result = await mintLand(center, nft.id);
       if (result) {
         toast({
           title: "Success!",
@@ -90,6 +90,7 @@ const MyLand = () => {
         queryClient.invalidateQueries({ queryKey: ["my-land-nfts", user?.id] });
       }
     } catch (error: any) {
+      console.error("Mint error:", error);
       toast({
         title: "Mint Failed",
         description: error?.message || "Failed to mint on Solana",
