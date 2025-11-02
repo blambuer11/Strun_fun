@@ -1,10 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const NearbySchema = z.object({
+  lat: z.number().min(-90).max(90).finite(),
+  lon: z.number().min(-180).max(180).finite(),
+  radius_km: z.number().positive().max(100).finite().default(10)
+});
 
 // Haversine distance calculation
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -28,14 +35,9 @@ serve(async (req) => {
   }
 
   try {
-    const { lat, lon, radius_km = 10 } = await req.json();
-
-    if (!lat || !lon) {
-      return new Response(
-        JSON.stringify({ error: 'Missing lat or lon' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Validate input
+    const body = await req.json();
+    const { lat, lon, radius_km } = NearbySchema.parse(body);
 
     // Use anon key instead of service role - tasks are public data
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -88,6 +90,19 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

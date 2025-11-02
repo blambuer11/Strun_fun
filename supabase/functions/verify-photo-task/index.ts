@@ -1,10 +1,25 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const VerifyPhotoSchema = z.object({
+  taskId: z.string().uuid(),
+  userTaskId: z.string().uuid(),
+  imageBase64: z.string().max(10485760), // 10MB limit
+  lat: z.number().min(-90).max(90).finite(),
+  lon: z.number().min(-180).max(180).finite(),
+  nonce: z.string().max(100).optional(),
+  clientTimestamp: z.string().datetime().optional(),
+  deviceInfo: z.object({
+    platform: z.string().max(50).optional(),
+    model: z.string().max(100).optional()
+  }).optional()
+});
 
 // Haversine distance calculation
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -28,12 +43,16 @@ serve(async (req) => {
   }
 
   try {
-    const { taskId, userTaskId, imageBase64, lat, lon, nonce, clientTimestamp, deviceInfo } = await req.json();
+    // Validate input
+    const body = await req.json();
+    const { taskId, userTaskId, imageBase64, lat, lon, nonce, clientTimestamp, deviceInfo } = VerifyPhotoSchema.parse(body);
 
-    if (!taskId || !userTaskId || !imageBase64 || !lat || !lon) {
+    // Get authenticated user from JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -43,8 +62,20 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Create client with user context
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get task and user_task details
     const { data: task, error: taskError } = await supabase
@@ -61,10 +92,11 @@ serve(async (req) => {
       .from('user_tasks')
       .select('*')
       .eq('id', userTaskId)
+      .eq('user_id', user.id) // Verify ownership
       .single();
 
     if (userTaskError || !userTask) {
-      throw new Error('User task not found');
+      throw new Error('User task not found or unauthorized');
     }
 
     // Verify nonce if provided
@@ -74,7 +106,7 @@ serve(async (req) => {
         .from('nonces')
         .select('*')
         .eq('nonce', nonce)
-        .eq('user_id', userTask.user_id)
+        .eq('user_id', user.id)
         .eq('task_id', taskId)
         .eq('used', false)
         .single();
@@ -115,7 +147,7 @@ serve(async (req) => {
     const { data: media, error: mediaError } = await supabase
       .from('media')
       .insert({
-        user_id: userTask.user_id,
+        user_id: user.id,
         task_id: taskId,
         url: imageBase64, // In production, upload to storage first
         file_hash: fileHash,
@@ -148,24 +180,26 @@ Be strict but fair. Score 0.0 to 1.0 where:
 - 0.5-0.6 = Questionable quality or match
 - Below 0.5 = Does not meet requirements`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    console.log('Calling Lovable AI for verification...');
+    
+    const aiResponse = await fetch('https://api.lovable.app/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: "google/gemini-2.5-flash",
         messages: [
           {
-            role: 'user',
+            role: "user",
             content: [
               {
-                type: 'text',
+                type: "text",
                 text: verificationPrompt
               },
               {
-                type: 'image_url',
+                type: "image_url",
                 image_url: {
                   url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
                 }
@@ -173,172 +207,141 @@ Be strict but fair. Score 0.0 to 1.0 where:
             ]
           }
         ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'verify_photo',
-              description: 'Verify if the photo matches the task requirements',
-              parameters: {
-                type: 'object',
-                properties: {
-                  verified: {
-                    type: 'boolean',
-                    description: 'True if photo matches requirements'
-                  },
-                  reason: {
-                    type: 'string',
-                    description: 'Explanation for the verification result'
-                  },
-                  confidence: {
-                    type: 'number',
-                    description: 'Confidence score from 0 to 1'
-                  }
-                },
-                required: ['verified', 'reason', 'confidence'],
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: 'function', function: { name: 'verify_photo' } }
-      }),
+        max_tokens: 500
+      })
     });
-
-    if (aiResponse.status === 429) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI gateway error:', aiResponse.status, errorText);
-      throw new Error('Failed to verify photo with AI');
+      console.error('AI API Error:', errorText);
+      throw new Error(`AI verification failed: ${aiResponse.status} ${errorText}`);
     }
 
-    const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    
-    if (!toolCall) {
-      throw new Error('No verification result from AI');
+    const aiResult = await aiResponse.json();
+    const aiVerification = aiResult.choices[0].message.content;
+
+    console.log('AI Verification Response:', aiVerification);
+
+    // Parse AI response for score and reasoning
+    let contentVerified = false;
+    let aiConfidence = 0;
+    let aiReasoning = aiVerification;
+
+    // Try to extract score from response
+    const scoreMatch = aiVerification.match(/(?:score|rating|confidence)[:\s]+(\d*\.?\d+)/i);
+    if (scoreMatch) {
+      aiConfidence = parseFloat(scoreMatch[1]);
+      contentVerified = aiConfidence >= 0.6;
+    } else if (aiVerification.toLowerCase().includes('verified') || 
+               aiVerification.toLowerCase().includes('approved') ||
+               aiVerification.toLowerCase().includes('matches')) {
+      contentVerified = true;
+      aiConfidence = 0.8;
     }
 
-    const verificationResult = JSON.parse(toolCall.function.arguments);
-    const aiScore = verificationResult.confidence;
-    const aiContentVerified = verificationResult.verified && aiScore > 0.5;
+    // Calculate weighted final score
+    const gpsWeight = 0.3;
+    const aiWeight = 0.6;
+    const nonceWeight = 0.1;
 
-    // Calculate final verification score (weighted)
-    const weights = {
-      gps: 0.3,
-      ai: 0.5,
-      nonce: 0.2
-    };
-    
     const finalScore = (
-      (gpsVerified ? 1 : 0) * weights.gps +
-      aiScore * weights.ai +
-      (nonceVerified ? 1 : 0) * weights.nonce
+      (gpsVerified ? gpsWeight : 0) +
+      (contentVerified ? aiWeight : 0) +
+      (nonceVerified ? nonceWeight : 0)
     );
 
-    const verified = finalScore >= 0.7 && gpsVerified && aiContentVerified;
-    const suspicious = !gpsVerified || !nonceVerified || aiScore < 0.6;
+    const isVerified = finalScore >= 0.6; // Need at least 60% score
+    const xpEarned = isVerified ? (task.xp_reward || 0) : 0;
 
-    console.log('Verification scores:', {
-      gpsVerified,
-      aiScore,
-      nonceVerified,
-      finalScore,
-      verified,
-      suspicious
-    });
+    // Record verification
+    const { data: verification } = await supabase
+      .from('verifications')
+      .insert({
+        user_task_id: userTaskId,
+        media_id: media.id,
+        gps_verified: gpsVerified,
+        content_verified: contentVerified,
+        nonce_verified: nonceVerified,
+        gps_distance_m: Math.round(distance),
+        ai_confidence: aiConfidence,
+        ai_reasoning: aiReasoning,
+        verification_score: finalScore,
+        verified_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-    // Create verification record
-    await supabase.from('verifications').insert({
-      user_task_id: userTaskId,
-      method: 'automated',
-      gps_verified: gpsVerified,
-      exif_verified: true, // We checked GPS
-      ai_content_verified: aiContentVerified,
-      ai_score: aiScore,
-      ai_reason: verificationResult.reason,
-      nonce_verified: nonceVerified,
-      qr_verified: false,
-      final_status: verified ? 'verified' : (suspicious ? 'pending_review' : 'rejected')
-    });
-
-    // Update user_task
-    const updateData: any = {
-      media_id: media.id,
-      status: verified ? 'verified' : 'rejected',
-      verification_score: finalScore,
-      lat,
-      lon,
-      device_meta: deviceInfo,
-      suspicious,
-      submitted_at: new Date().toISOString(),
-      nonce_used: nonce
-    };
-
-    if (verified) {
-      updateData.verified_at = new Date().toISOString();
-      updateData.xp_awarded = task.xp_reward;
-      updateData.sol_awarded = task.sol_reward || 0;
-    }
-
-    const { error: updateError } = await supabase
+    // Update user_task status
+    const newStatus = isVerified ? 'verified' : 'failed';
+    await supabase
       .from('user_tasks')
-      .update(updateData)
+      .update({
+        status: newStatus,
+        verification_score: finalScore,
+        completed_at: isVerified ? new Date().toISOString() : null,
+        xp_awarded: xpEarned
+      })
       .eq('id', userTaskId);
 
-    if (updateError) throw updateError;
-
-    // Award XP if verified
-    if (verified) {
-      await supabase.rpc('increment_xp', {
-        user_id: userTask.user_id,
-        xp_amount: task.xp_reward
-      });
-
-      // Generate claim token for SOL reward
-      if (task.sol_reward && task.sol_reward > 0) {
-        const claimToken = crypto.randomUUID();
-        await supabase
-          .from('user_tasks')
-          .update({ claim_token: claimToken, status: 'verified' })
-          .eq('id', userTaskId);
-      }
+    if (isVerified && xpEarned > 0) {
+      // Award XP (handled by trigger, but generate claim token for SOL rewards)
+      const claimToken = crypto.randomUUID();
+      await supabase
+        .from('user_tasks')
+        .update({ sol_claim_token: claimToken })
+        .eq('id', userTaskId);
     }
 
+    console.log('Verification Result:', {
+      gpsVerified,
+      contentVerified,
+      nonceVerified,
+      finalScore,
+      isVerified,
+      xpEarned
+    });
+
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        verified,
-        verification_score: finalScore,
-        gps_verified: gpsVerified,
-        ai_verified: aiContentVerified,
-        nonce_verified: nonceVerified,
-        reason: verificationResult.reason,
-        xp_earned: verified ? task.xp_reward : 0,
-        sol_earned: verified ? (task.sol_reward || 0) : 0,
-        suspicious,
-        distance_meters: Math.round(distance)
+      JSON.stringify({
+        success: isVerified,
+        verification: {
+          gps_verified: gpsVerified,
+          content_verified: contentVerified,
+          nonce_verified: nonceVerified,
+          distance_meters: Math.round(distance),
+          ai_confidence: aiConfidence,
+          final_score: finalScore,
+          status: newStatus
+        },
+        xp_earned: xpEarned,
+        message: isVerified 
+          ? 'Task verified successfully!' 
+          : `Verification failed. Score: ${(finalScore * 100).toFixed(0)}% (need 60%)`
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Error verifying photo:', error);
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.error('Verification Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ 
+        success: false,
+        error: error.message || 'Verification failed'
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

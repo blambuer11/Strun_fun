@@ -19,13 +19,13 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.verify-photo-task]
-verify_jwt = false
+verify_jwt = true
 
 [functions.request-nonce]
-verify_jwt = false
+verify_jwt = true
 
 [functions.join-task]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-generate-tasks]
 verify_jwt = true
