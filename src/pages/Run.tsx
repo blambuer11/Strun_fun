@@ -280,8 +280,8 @@ const Run = () => {
       // Calculate polygon area
       const area = calculatePolygonArea(coordinates);
 
-      // Call edge function to mint NFT with Pinata
-      const { data, error } = await supabase.functions.invoke('mint-land-nft', {
+      // Step 1: Upload metadata to IPFS
+      const { data: ipfsData, error: ipfsError } = await supabase.functions.invoke('mint-land-nft', {
         body: {
           coordinates,
           runId: runData.id,
@@ -290,16 +290,31 @@ const Run = () => {
         },
       });
 
-      if (error) throw error;
+      if (ipfsError) throw ipfsError;
+
+      toast({
+        title: "Metadata Uploaded 📝",
+        description: "Minting NFT on Solana blockchain...",
+      });
+
+      // Step 2: Mint NFT on Solana blockchain
+      const centerCoord = coordinates[Math.floor(coordinates.length / 2)];
+      const { data: solanaData, error: solanaError } = await supabase.functions.invoke('solana-mint-land', {
+        body: {
+          coordinates: centerCoord, // Use center coordinate for PDA
+        },
+      });
+
+      if (solanaError) throw solanaError;
 
       toast({
         title: "NFT Successfully Minted! 🎉",
-        description: `Your territory saved to IPFS. CID: ${data.ipfsCid.substring(0, 12)}...`,
+        description: `Territory claimed on Solana! TX: ${solanaData.signature.substring(0, 12)}...`,
       });
 
       setShowSummary(false);
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/my-land");
       }, 2000);
     } catch (error) {
       console.error("Error minting NFT:", error);

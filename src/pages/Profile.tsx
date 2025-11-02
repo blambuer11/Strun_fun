@@ -25,10 +25,13 @@ import {
   X,
   Instagram,
   Twitter,
-  Music
+  Music,
+  Wallet,
+  Copy
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@/hooks/useWallet";
 import strunLogo from "@/assets/strun-logo.jpg";
 
 const Profile = () => {
@@ -47,6 +50,7 @@ const Profile = () => {
   const [newTiktok, setNewTiktok] = useState("");
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const { publicKey, isMobileWallet, isCapacitor } = useWallet();
   
   // If no userId param, show current user's profile
   const profileUserId = userId || user?.id;
@@ -439,6 +443,52 @@ const Profile = () => {
             )}
           </div>
         </Card>
+
+        {/* Solana Wallet Info (only for own profile) */}
+        {isOwnProfile && publicKey && (
+          <Card className="p-6 glass">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-accent to-accent-glow rounded-full flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-accent-foreground" />
+              </div>
+              <div>
+                <h3 className="font-bold">Solana Wallet</h3>
+                <p className="text-xs text-muted-foreground">
+                  {isMobileWallet ? "Mobile Wallet Connected" : "Custodial Wallet"}
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Wallet Address</label>
+                <div className="flex items-center gap-2 p-2 bg-background/50 rounded-lg">
+                  <code className="text-xs flex-1 truncate">{publicKey}</code>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(publicKey);
+                      toast({
+                        title: "Copied!",
+                        description: "Wallet address copied to clipboard",
+                      });
+                    }}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+              
+              {isCapacitor && (
+                <div className="text-xs text-muted-foreground">
+                  <p>✅ Solana Mobile dApp Store Compatible</p>
+                  <p>✅ Deep Links Enabled</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 border-b border-border/50">
