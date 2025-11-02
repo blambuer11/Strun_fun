@@ -34,8 +34,8 @@ const MyLand = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch minted NFTs (only those with 'minted' status)
-  const { data: mintedNFTs } = useQuery({
+  // Fetch ALL land NFTs (pending, failed, and minted)
+  const { data: allNFTs } = useQuery({
     queryKey: ["my-land-nfts", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -43,8 +43,7 @@ const MyLand = () => {
         .from("land_nfts")
         .select("*")
         .eq("user_id", user.id)
-        .eq("status", "minted")
-        .order("minted_at", { ascending: false });
+        .order("created_at", { ascending: false });
       return data || [];
     },
     enabled: !!user?.id,
@@ -70,6 +69,30 @@ const MyLand = () => {
       toast({
         title: "Mint Failed",
         description: error?.message || "Failed to mint land NFT",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMintNFT = async (nft: any) => {
+    try {
+      const coordinates = JSON.parse(nft.polygon_coordinates);
+      const center = {
+        lat: coordinates[0].lat,
+        lng: coordinates[0].lng,
+      };
+      const result = await mintLand(center);
+      if (result) {
+        toast({
+          title: "Success!",
+          description: "NFT minted on Solana blockchain",
+        });
+        queryClient.invalidateQueries({ queryKey: ["my-land-nfts", user?.id] });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Mint Failed",
+        description: error?.message || "Failed to mint on Solana",
         variant: "destructive",
       });
     }
@@ -119,26 +142,42 @@ const MyLand = () => {
               </Card>
             )}
 
-            {/* Minted NFTs Section */}
-            {mintedNFTs && mintedNFTs.length > 0 && (
+            {/* All Land NFTs Section */}
+            {allNFTs && allNFTs.length > 0 && (
               <Card className="p-6 glass">
                 <h3 className="font-bold mb-4 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-primary" />
-                  Minted NFTs ({mintedNFTs.length})
+                  My Land NFTs ({allNFTs.length})
                 </h3>
                 <div className="space-y-3">
-                  {mintedNFTs.map((nft) => (
+                  {allNFTs.map((nft) => (
                     <div key={nft.id} className="flex items-center justify-between p-4 glass rounded-lg hover-lift">
                       <div className="flex-1">
                         <div className="font-medium text-foreground">{nft.name}</div>
                         <div className="text-xs text-muted-foreground">
                           Area: {parseFloat(String(nft.area_size)).toFixed(2)} m² • 
-                          Minted {new Date(nft.minted_at).toLocaleDateString()}
+                          Created {new Date(nft.created_at).toLocaleDateString()}
                         </div>
+                        {nft.status === 'minted' && nft.minted_at && (
+                          <div className="text-xs text-primary mt-1">
+                            ✓ Minted on Solana {new Date(nft.minted_at).toLocaleDateString()}
+                          </div>
+                        )}
                       </div>
-                      <Badge variant="default" className="text-xs">
-                        Owned
-                      </Badge>
+                      {nft.status === 'minted' ? (
+                        <Badge variant="default" className="text-xs bg-primary">
+                          Minted ✓
+                        </Badge>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          variant="accent"
+                          onClick={() => handleMintNFT(nft)}
+                          disabled={mintLoading}
+                        >
+                          {mintLoading ? "Minting..." : "Mint on Solana"}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -167,7 +206,7 @@ const MyLand = () => {
             {/* Empty State */}
             {(!parcels || parcels.length === 0) && 
              (!unmintedParcels || unmintedParcels.length === 0) && 
-             (!mintedNFTs || mintedNFTs.length === 0) && (
+             (!allNFTs || allNFTs.length === 0) && (
               <Card>
                 <CardContent className="py-12 text-center">
                   <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
