@@ -24,6 +24,13 @@ const config: CapacitorConfig = {
     },
     Geolocation: {
       requestPermission: true
+    },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"]
+    },
+    LocalNotifications: {
+      smallIcon: "ic_stat_icon_config_sample",
+      iconColor: "#0EA5E9"
     }
   }
 };
