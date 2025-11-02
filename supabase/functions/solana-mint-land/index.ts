@@ -21,8 +21,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let requestBody: any;
   try {
-    const { coordinates, nftId } = await req.json();
+    requestBody = await req.json();
+    const { coordinates, nftId } = requestBody;
     
     if (!coordinates || !coordinates.lat || !coordinates.lng) {
       return new Response(
@@ -171,9 +173,8 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const adminClient = createClient(supabaseUrl, supabaseKey);
 
-      // Try to get nftId from request body
-      const body = await req.clone().json();
-      const nftId = body?.nftId;
+      // Use the nftId from requestBody if available
+      const nftId = requestBody?.nftId;
 
       // Try to get user from auth header if available
       const authHeader = req.headers.get('Authorization');
