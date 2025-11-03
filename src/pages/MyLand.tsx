@@ -1,3 +1,4 @@
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserParcels } from "@/hooks/useParcelInfo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 const MyLand = () => {
   const { user } = useAuth();
   const { data: parcels, isLoading, refetch } = useUserParcels(user?.id || null);
-  const { mintLand, loading: mintLoading } = useStrunProgram();
+  const { mintLand } = useStrunProgram();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [mintingIds, setMintingIds] = React.useState<Set<string>>(new Set());
 
   // Fetch unminted parcels
   const { data: unmintedParcels } = useQuery({
@@ -50,6 +52,9 @@ const MyLand = () => {
   });
 
   const handleMintLand = async (parcel: any) => {
+    const parcelId = parcel.id;
+    setMintingIds(prev => new Set(prev).add(parcelId));
+    
     try {
       const coordinates = {
         lat: parcel.center_lat,
@@ -66,15 +71,25 @@ const MyLand = () => {
         refetch();
       }
     } catch (error: any) {
+      console.error("Mint land error:", error);
       toast({
         title: "Mint Failed",
         description: error?.message || "Failed to mint land NFT",
         variant: "destructive",
       });
+    } finally {
+      setMintingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(parcelId);
+        return newSet;
+      });
     }
   };
 
   const handleMintNFT = async (nft: any) => {
+    const nftId = nft.id;
+    setMintingIds(prev => new Set(prev).add(nftId));
+    
     try {
       // polygon_coordinates is already an object from Supabase
       const coordinates = typeof nft.polygon_coordinates === 'string' 
@@ -84,7 +99,11 @@ const MyLand = () => {
         lat: coordinates[0].lat,
         lng: coordinates[0].lng,
       };
-      const result = await mintLand(center, nft.id);
+      
+      console.log("Minting NFT on Solana:", { nftId, center });
+      const result = await mintLand(center, nftId);
+      console.log("Mint result:", result);
+      
       if (result) {
         toast({
           title: "Success!",
@@ -93,11 +112,17 @@ const MyLand = () => {
         queryClient.invalidateQueries({ queryKey: ["my-land-nfts", user?.id] });
       }
     } catch (error: any) {
-      console.error("Mint error:", error);
+      console.error("Mint NFT error:", error);
       toast({
         title: "Mint Failed",
         description: error?.message || "Failed to mint on Solana",
         variant: "destructive",
+      });
+    } finally {
+      setMintingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(nftId);
+        return newSet;
       });
     }
   };
@@ -136,9 +161,9 @@ const MyLand = () => {
                         size="sm" 
                         variant="accent"
                         onClick={() => handleMintLand(parcel)}
-                        disabled={mintLoading}
+                        disabled={mintingIds.has(parcel.id)}
                       >
-                        {mintLoading ? "Minting..." : "Mint NFT"}
+                        {mintingIds.has(parcel.id) ? "Minting..." : "Mint NFT"}
                       </Button>
                     </div>
                   ))}
@@ -177,9 +202,9 @@ const MyLand = () => {
                           size="sm" 
                           variant="accent"
                           onClick={() => handleMintNFT(nft)}
-                          disabled={mintLoading}
+                          disabled={mintingIds.has(nft.id)}
                         >
-                          {mintLoading ? "Minting..." : "Mint on Solana"}
+                          {mintingIds.has(nft.id) ? "Minting..." : "Mint on Solana"}
                         </Button>
                       )}
                     </div>
