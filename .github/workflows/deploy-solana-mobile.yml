@@ -1,0 +1,174 @@
+name: Deploy to Solana Mobile dApp Store
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build PWA
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Decode Android Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/strun-release.keystore
+
+      - name: Copy Capacitor Production Config
+        run: |
+          cp capacitor.config.production.ts capacitor.config.ts
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/android/app/strun-release.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+
+      - name: Copy APK to publishing folder
+        run: |
+          mkdir -p publishing/files
+          cp android/app/build/outputs/apk/release/app-release.apk publishing/files/strun-release.apk
+
+      - name: Setup Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v1.18.0/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install dApp Store CLI
+        run: npm install -g @solana-mobile/dapp-store-cli
+
+      - name: Setup Solana Keypair
+        run: |
+          mkdir -p ~/.config/solana
+          echo "${{ secrets.SOLANA_KEYPAIR }}" > ~/.config/solana/id.json
+          chmod 600 ~/.config/solana/id.json
+
+      - name: Create Publisher (if not exists)
+        id: publisher
+        continue-on-error: true
+        run: |
+          cd publishing
+          dapp-store create publisher \
+            --name "Strun Team" \
+            --website "https://strun.app" \
+            --keypair ~/.config/solana/id.json \
+            --url https://api.devnet.solana.com \
+            --priority-fee 500000
+
+      - name: Create App (if not exists)
+        id: app
+        continue-on-error: true
+        run: |
+          cd publishing
+          dapp-store create app \
+            --keypair ~/.config/solana/id.json \
+            --url https://api.devnet.solana.com \
+            --priority-fee 500000
+
+      - name: Get version from tag or input
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          VERSION_CODE=$(echo $VERSION | sed 's/\.//g')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
+
+      - name: Create Release NFT
+        id: release
+        run: |
+          cd publishing
+          dapp-store create release \
+            --keypair ~/.config/solana/id.json \
+            --url https://api.devnet.solana.com \
+            --priority-fee 500000
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          VERSION_CODE: ${{ steps.version.outputs.VERSION_CODE }}
+
+      - name: Submit to dApp Store
+        run: |
+          cd publishing
+          dapp-store publish submit \
+            --keypair ~/.config/solana/id.json \
+            --url https://api.devnet.solana.com \
+            --requestor-is-authorized \
+            --complies-with-solana-dapp-store-policies
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: strun-release-apk
+          path: publishing/files/strun-release.apk
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: publishing/files/strun-release.apk
+          body: |
+            ## Strun v${{ steps.version.outputs.VERSION }}
+            
+            ### Deployed to Solana Mobile dApp Store
+            
+            This release has been automatically deployed to the Solana Mobile dApp Store (Devnet).
+            
+            ### Changes in this release
+            - Check the commits for details
+            
+            ### Download
+            - APK is available as an artifact
+            - Will be available on Solana dApp Store after review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post deployment info
+        run: |
+          echo "✅ Deployment completed!"
+          echo "📱 APK built and uploaded"
+          echo "🚀 Submitted to Solana Mobile dApp Store (Devnet)"
+          echo "⏳ Wait for review at: https://dapp-store.solanamobile.com/"
