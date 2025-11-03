@@ -76,7 +76,10 @@ const MyLand = () => {
 
   const handleMintNFT = async (nft: any) => {
     try {
-      const coordinates = JSON.parse(nft.polygon_coordinates);
+      // polygon_coordinates is already an object from Supabase
+      const coordinates = typeof nft.polygon_coordinates === 'string' 
+        ? JSON.parse(nft.polygon_coordinates) 
+        : nft.polygon_coordinates;
       const center = {
         lat: coordinates[0].lat,
         lng: coordinates[0].lng,
