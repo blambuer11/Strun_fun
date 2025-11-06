@@ -125,6 +125,21 @@ const Run = () => {
   const toRad = (value: number) => (value * Math.PI) / 180;
 
   const handleStart = async () => {
+    console.log('handleStart: Button clicked');
+    
+    // Check if geolocation is available
+    if (!navigator.geolocation) {
+      console.error('handleStart: Geolocation not supported');
+      toast({
+        title: "Not Supported",
+        description: "Your browser doesn't support location tracking.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('handleStart: Requesting location permission...');
+    
     try {
       // Request location permission and get initial position
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -135,10 +150,14 @@ const Run = () => {
         });
       });
 
+      console.log('handleStart: Got initial position:', position);
+
       const initialLocation = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       };
+
+      console.log('handleStart: Starting run with location:', initialLocation);
 
       setCoordinates([initialLocation]);
       setIsRunning(true);
@@ -155,7 +174,7 @@ const Run = () => {
         description: "GPS tracking activated. Good luck!",
       });
     } catch (error: any) {
-      console.error("Location permission error:", error);
+      console.error("handleStart: Location permission error:", error);
       
       let errorMessage = "Could not access location.";
       if (error.code === 1) {

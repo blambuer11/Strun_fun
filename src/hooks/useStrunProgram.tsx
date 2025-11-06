@@ -103,16 +103,23 @@ export const useStrunProgram = () => {
 
     setLoading(true);
     try {
+      console.log('useStrunProgram: Calling solana-mint-land with:', { coordinates, nftId });
+      
       const { data, error } = await supabase.functions.invoke('solana-mint-land', {
         body: { coordinates, nftId },
       });
 
-      if (error) throw error;
+      console.log('useStrunProgram: Response:', { data, error });
+
+      if (error) {
+        console.error('useStrunProgram: Edge function error:', error);
+        throw error;
+      }
 
       toast.success('Land NFT minted on Solana!');
       return data;
     } catch (error) {
-      console.error('Mint land error:', error);
+      console.error('useStrunProgram: Mint land error:', error);
       toast.error('Failed to mint land');
       return null;
     } finally {
