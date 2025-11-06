@@ -24,9 +24,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Create wallet for new signups
+        if (event === 'SIGNED_IN' && session?.user) {
+          setTimeout(() => {
+            checkAndCreateWallet(session.user.id);
+          }, 0);
+        }
       }
     );
 
@@ -39,6 +47,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check and create wallet for user if it doesn't exist
+  const checkAndCreateWallet = async (userId: string) => {
+    try {
+      console.log('Checking wallet for user:', userId);
+      
+      // Check if user already has a wallet
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('solana_public_key')
+        .eq('id', userId)
+        .single();
+
+      if (profile?.solana_public_key) {
+        console.log('User already has wallet:', profile.solana_public_key);
+        return;
+      }
+
+      console.log('Creating Solana wallet for user...');
+      
+      // Create wallet via edge function
+      const { data, error } = await supabase.functions.invoke('create-solana-wallet', {
+        body: { userId }
+      });
+
+      if (error) {
+        console.error('Error creating wallet:', error);
+        return;
+      }
+
+      console.log('Wallet created successfully:', data?.publicKey);
+    } catch (error) {
+      console.error('Error in checkAndCreateWallet:', error);
+    }
+  };
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
