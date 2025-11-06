@@ -7,7 +7,7 @@ import { useSolanaMobileWallet } from "@/contexts/SolanaMobileWalletContext";
 export const useWallet = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isCapacitor, connectWallet: connectMobileWallet } = useSolanaMobileWallet();
+  const { isCapacitor } = useSolanaMobileWallet();
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobileWallet, setIsMobileWallet] = useState(false);
@@ -61,33 +61,7 @@ export const useWallet = () => {
 
   const createWallet = async () => {
     try {
-      // Try mobile wallet first if on Capacitor
-      if (isCapacitor) {
-        console.log("Attempting to connect Solana mobile wallet...");
-        const mobilePublicKey = await connectMobileWallet();
-        
-        if (mobilePublicKey) {
-          console.log("Mobile wallet connected:", mobilePublicKey);
-          setPublicKey(mobilePublicKey);
-          setIsMobileWallet(true);
-          
-          // Save mobile wallet to profile
-          await supabase
-            .from("profiles")
-            .update({
-              solana_public_key: mobilePublicKey,
-            })
-            .eq("id", user?.id);
-          
-          toast({
-            title: "Mobile Wallet Connected",
-            description: "Your Solana mobile wallet has been connected!",
-          });
-          return;
-        }
-      }
-
-      // Fallback to custodial wallet creation
+      // Create custodial wallet
       console.log("Creating custodial Solana wallet for user:", user?.id);
       
       const { data, error } = await supabase.functions.invoke("create-solana-wallet", {
