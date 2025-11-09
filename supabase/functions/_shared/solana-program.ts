@@ -11,7 +11,7 @@ import {
   LAMPORTS_PER_SOL,
   Keypair,
   TransactionInstruction,
-} from "https://esm.sh/@solana/web3.js@1.95.0";
+} from "https://esm.sh/@solana/web3.js@1.98.4";
 
 // Program constants
 export const STRUN_PROGRAM_ID = new PublicKey('9qpcky7wTGD3VHMMzVdaG2G2WrEi8SgpmVhhbyzJG8Mf');

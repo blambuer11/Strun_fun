@@ -3,7 +3,7 @@
  * Verifies SPL token (USDC) and SOL transfers on Solana blockchain
  */
 
-import { Connection, PublicKey, ParsedTransactionWithMeta } from "https://esm.sh/@solana/web3.js@1.87.6";
+import { Connection, PublicKey, ParsedTransactionWithMeta } from "https://esm.sh/@solana/web3.js@1.98.4";
 
 export interface ExpectedPayment {
   amount: string; // decimal string, e.g. "0.10"
