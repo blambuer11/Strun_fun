@@ -141,20 +141,118 @@ export async function sendAndConfirmTransaction(
 }
 
 /**
- * Create instruction data buffer
+ * Create instruction data buffer with borsh serialization
  */
 export function createInstructionData(instruction: number, data?: any): Uint8Array {
   if (!data) {
     return new Uint8Array([instruction]);
   }
   
-  const encoder = new TextEncoder();
-  const dataBuffer = encoder.encode(JSON.stringify(data));
-  const instructionBuffer = new Uint8Array(1 + dataBuffer.length);
-  instructionBuffer[0] = instruction;
-  instructionBuffer.set(dataBuffer, 1);
+  // For land coordinates
+  if (data.coordinates) {
+    const buf = new ArrayBuffer(1 + 8 + 8 + 1); // instruction + lat(f64) + lng(f64) + bump
+    const view = new DataView(buf);
+    let offset = 0;
+    
+    view.setUint8(offset, instruction);
+    offset += 1;
+    
+    view.setFloat64(offset, data.coordinates.lat, true); // little-endian
+    offset += 8;
+    
+    view.setFloat64(offset, data.coordinates.lng, true);
+    offset += 8;
+    
+    if (data.bump !== undefined) {
+      view.setUint8(offset, data.bump);
+    }
+    
+    return new Uint8Array(buf);
+  }
   
-  return instructionBuffer;
+  // For task creation
+  if (data.taskId) {
+    const encoder = new TextEncoder();
+    const taskIdBytes = encoder.encode(data.taskId);
+    const titleBytes = encoder.encode(data.title || '');
+    
+    const buf = new ArrayBuffer(
+      1 + // instruction
+      4 + taskIdBytes.length + // taskId length + bytes
+      4 + titleBytes.length + // title length + bytes
+      8 + 8 + // location lat + lng
+      8 + 8 + // rewardSol + rewardXp
+      8 + // rentUsdc
+      1 // bump
+    );
+    
+    const view = new DataView(buf);
+    let offset = 0;
+    
+    view.setUint8(offset, instruction);
+    offset += 1;
+    
+    view.setUint32(offset, taskIdBytes.length, true);
+    offset += 4;
+    new Uint8Array(buf).set(taskIdBytes, offset);
+    offset += taskIdBytes.length;
+    
+    view.setUint32(offset, titleBytes.length, true);
+    offset += 4;
+    new Uint8Array(buf).set(titleBytes, offset);
+    offset += titleBytes.length;
+    
+    view.setFloat64(offset, data.location.lat, true);
+    offset += 8;
+    view.setFloat64(offset, data.location.lng, true);
+    offset += 8;
+    
+    view.setBigUint64(offset, BigInt(data.rewardSol || 0), true);
+    offset += 8;
+    view.setBigUint64(offset, BigInt(data.rewardXp || 0), true);
+    offset += 8;
+    view.setBigUint64(offset, BigInt(data.rentUsdc || 0), true);
+    offset += 8;
+    
+    view.setUint8(offset, data.bump || 0);
+    
+    return new Uint8Array(buf);
+  }
+  
+  // For run data
+  if (data.routeHash) {
+    const buf = new ArrayBuffer(
+      1 + // instruction
+      4 + data.routeHash.length + // routeHash length + bytes
+      8 + 8 + // distance + duration
+      1 // bump
+    );
+    
+    const view = new DataView(buf);
+    let offset = 0;
+    
+    view.setUint8(offset, instruction);
+    offset += 1;
+    
+    view.setUint32(offset, data.routeHash.length, true);
+    offset += 4;
+    new Uint8Array(buf).set(new Uint8Array(data.routeHash), offset);
+    offset += data.routeHash.length;
+    
+    view.setBigUint64(offset, BigInt(data.distance || 0), true);
+    offset += 8;
+    view.setBigUint64(offset, BigInt(data.duration || 0), true);
+    offset += 8;
+    
+    if (data.bump !== undefined) {
+      view.setUint8(offset, data.bump);
+    }
+    
+    return new Uint8Array(buf);
+  }
+  
+  // Fallback: just instruction byte
+  return new Uint8Array([instruction]);
 }
 
 /**
