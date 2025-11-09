@@ -1,14 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { Transaction, SystemProgram } from "https://esm.sh/@solana/web3.js@1.98.4";
+import { Transaction, SystemProgram, TransactionInstruction } from "https://esm.sh/@solana/web3.js@1.98.4";
 import { 
   getConnection, 
   decodePrivateKey,
   findLandPDA,
-  buildInstruction,
   sendAndConfirmTransaction,
   getBalance,
-  airdropSol
+  airdropSol,
+  STRUN_PROGRAM_ID
 } from "../_shared/solana-program.ts";
 
 const corsHeaders = {
@@ -91,19 +91,23 @@ serve(async (req) => {
     const [landPDA, landBump] = await findLandPDA(coordinates);
     console.log('Land PDA:', landPDA.toString());
 
+    // Build instruction data with Anchor discriminator
+    const { buildInstructionData } = await import("../_shared/solana-program.ts");
+    const instructionData = await buildInstructionData('mint_land', { coordinates });
+    
+    console.log('Instruction data length:', instructionData.length);
+    console.log('Discriminator (first 8 bytes):', Array.from(instructionData.slice(0, 8)));
+
     // Build mint land instruction
-    const instruction = buildInstruction(
-      3, // Mint land instruction
-      [
+    const instruction = new TransactionInstruction({
+      keys: [
         { pubkey: userKeypair.publicKey, isSigner: true, isWritable: true },
         { pubkey: landPDA, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
-      {
-        coordinates,
-        bump: landBump,
-      }
-    );
+      programId: STRUN_PROGRAM_ID,
+      data: instructionData as any,
+    });
 
     // Create and send transaction
     const transaction = new Transaction().add(instruction);

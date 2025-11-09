@@ -143,27 +143,25 @@ export async function sendAndConfirmTransaction(
 /**
  * Calculate Anchor discriminator (first 8 bytes of sha256 hash)
  */
-async function getAnchorDiscriminator(name: string): Promise<Uint8Array> {
+export async function getAnchorDiscriminator(name: string): Promise<Uint8Array> {
   const preimage = `global:${name}`;
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(preimage));
   return new Uint8Array(hash).slice(0, 8);
 }
 
 /**
- * Create instruction data buffer with Anchor discriminator and borsh serialization
+ * Build instruction data with proper Anchor discriminator
  */
-export function createInstructionData(instruction: number, data?: any): Uint8Array {
-  if (!data) {
-    return new Uint8Array([instruction]);
+export async function buildInstructionData(functionName: string, params?: any): Promise<Uint8Array> {
+  const discriminator = await getAnchorDiscriminator(functionName);
+  
+  if (!params) {
+    return discriminator;
   }
   
-  // For land coordinates - use Anchor discriminator
-  if (data.coordinates) {
-    // For now, use a synchronous discriminator calculation
-    // Anchor discriminator for "mint_land" function
-    const discriminator = new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]); // Pre-calculated
-    
-    const buf = new ArrayBuffer(8 + 8 + 8 + 1); // discriminator + lat(f64) + lng(f64) + bump
+  // For land coordinates (mint_land)
+  if (params.coordinates) {
+    const buf = new ArrayBuffer(8 + 8 + 8); // discriminator + lat(f64) + lng(f64)
     const view = new DataView(buf);
     let offset = 0;
     
@@ -171,104 +169,34 @@ export function createInstructionData(instruction: number, data?: any): Uint8Arr
     new Uint8Array(buf).set(discriminator, offset);
     offset += 8;
     
-    view.setFloat64(offset, data.coordinates.lat, true); // little-endian
+    view.setFloat64(offset, params.coordinates.lat, true); // little-endian
     offset += 8;
     
-    view.setFloat64(offset, data.coordinates.lng, true);
-    offset += 8;
-    
-    if (data.bump !== undefined) {
-      view.setUint8(offset, data.bump);
-    }
+    view.setFloat64(offset, params.coordinates.lng, true);
     
     return new Uint8Array(buf);
   }
   
-  // For task creation - use Anchor discriminator
-  if (data.taskId) {
-    const discriminator = new Uint8Array([242, 35, 198, 137, 82, 225, 242, 182]); // "create_task"
-    const encoder = new TextEncoder();
-    const taskIdBytes = encoder.encode(data.taskId);
-    const titleBytes = encoder.encode(data.title || '');
-    
-    const buf = new ArrayBuffer(
-      8 + // discriminator
-      4 + taskIdBytes.length + // taskId length + bytes
-      4 + titleBytes.length + // title length + bytes
-      8 + 8 + // location lat + lng
-      8 + 8 + // rewardSol + rewardXp
-      8 + // rentUsdc
-      1 // bump
-    );
-    
-    const view = new DataView(buf);
-    let offset = 0;
-    
-    new Uint8Array(buf).set(discriminator, offset);
-    offset += 8;
-    
-    view.setUint32(offset, taskIdBytes.length, true);
-    offset += 4;
-    new Uint8Array(buf).set(taskIdBytes, offset);
-    offset += taskIdBytes.length;
-    
-    view.setUint32(offset, titleBytes.length, true);
-    offset += 4;
-    new Uint8Array(buf).set(titleBytes, offset);
-    offset += titleBytes.length;
-    
-    view.setFloat64(offset, data.location.lat, true);
-    offset += 8;
-    view.setFloat64(offset, data.location.lng, true);
-    offset += 8;
-    
-    view.setBigUint64(offset, BigInt(data.rewardSol || 0), true);
-    offset += 8;
-    view.setBigUint64(offset, BigInt(data.rewardXp || 0), true);
-    offset += 8;
-    view.setBigUint64(offset, BigInt(data.rentUsdc || 0), true);
-    offset += 8;
-    
-    view.setUint8(offset, data.bump || 0);
-    
-    return new Uint8Array(buf);
+  return discriminator;
+}
+
+/**
+ * Create instruction data buffer (deprecated - use buildInstructionData)
+ * @deprecated Use buildInstructionData with function name instead
+ */
+export function createInstructionData(instruction: number, data?: any): Uint8Array {
+  if (!data) {
+    return new Uint8Array([instruction]);
   }
   
-  // For run data - use Anchor discriminator
-  if (data.routeHash) {
-    const discriminator = new Uint8Array([226, 123, 89, 110, 13, 206, 251, 146]); // "record_run"
-    const buf = new ArrayBuffer(
-      8 + // discriminator
-      4 + data.routeHash.length + // routeHash length + bytes
-      8 + 8 + // distance + duration
-      1 // bump
-    );
-    
-    const view = new DataView(buf);
-    let offset = 0;
-    
-    new Uint8Array(buf).set(discriminator, offset);
-    offset += 8;
-    
-    view.setUint32(offset, data.routeHash.length, true);
-    offset += 4;
-    new Uint8Array(buf).set(new Uint8Array(data.routeHash), offset);
-    offset += data.routeHash.length;
-    
-    view.setBigUint64(offset, BigInt(data.distance || 0), true);
-    offset += 8;
-    view.setBigUint64(offset, BigInt(data.duration || 0), true);
-    offset += 8;
-    
-    if (data.bump !== undefined) {
-      view.setUint8(offset, data.bump);
-    }
-    
-    return new Uint8Array(buf);
-  }
+  // Legacy fallback
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(JSON.stringify(data));
+  const instructionBuffer = new Uint8Array(1 + dataBuffer.length);
+  instructionBuffer[0] = instruction;
+  instructionBuffer.set(dataBuffer, 1);
   
-  // Fallback: just instruction byte
-  return new Uint8Array([instruction]);
+  return instructionBuffer;
 }
 
 /**
