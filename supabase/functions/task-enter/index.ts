@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { Connection } from "https://esm.sh/@solana/web3.js@1.87.6";
+import { Connection } from "https://esm.sh/@solana/web3.js@1.98.4";
 import { calculatePaidUntil } from "../_shared/parcel-utils.ts";
 import { verifyPayment, ExpectedPayment } from "../_shared/solana-verify.ts";
 

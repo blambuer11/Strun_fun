@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { Transaction, PublicKey } from "https://esm.sh/@solana/web3.js@1.95.0";
+import { Transaction, PublicKey } from "https://esm.sh/@solana/web3.js@1.98.4";
 import { 
   getConnection, 
   decodePrivateKey,

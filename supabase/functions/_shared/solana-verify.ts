@@ -235,11 +235,9 @@ function checkMintInTokenBalances(
       const acct = tx.transaction.message.accountKeys[entry.accountIndex];
       const acctPub = acct.pubkey ? acct.pubkey.toString() : acct.toString();
       
-      if ((acctPub === destTokenAccount || entry.address === destTokenAccount) && entry.mint === expectedMint) {
+      if (acctPub === destTokenAccount && entry.mint === expectedMint) {
         return true;
       }
-    } else if (entry.address && entry.address === destTokenAccount && entry.mint === expectedMint) {
-      return true;
     }
   }
 
