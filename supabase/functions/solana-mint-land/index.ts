@@ -99,11 +99,13 @@ serve(async (req) => {
     console.log('Discriminator (first 8 bytes):', Array.from(instructionData.slice(0, 8)));
 
     // Build mint land instruction
+    // CRITICAL: Account order must match Rust struct order!
+    // MintLand struct: land, user, system_program
     const instruction = new TransactionInstruction({
       keys: [
-        { pubkey: userKeypair.publicKey, isSigner: true, isWritable: true },
-        { pubkey: landPDA, isSigner: false, isWritable: true },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: landPDA, isSigner: false, isWritable: true },           // land (PDA being initialized)
+        { pubkey: userKeypair.publicKey, isSigner: true, isWritable: true }, // user (signer & payer)
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system_program
       ],
       programId: STRUN_PROGRAM_ID,
       data: instructionData as any,
