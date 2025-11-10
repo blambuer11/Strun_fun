@@ -87,9 +87,11 @@ serve(async (req) => {
       await airdropSol(connection, userKeypair.publicKey, 1);
     }
 
-    // Find land PDA
-    const [landPDA, landBump] = await findLandPDA(coordinates);
-    console.log('Land PDA:', landPDA.toString());
+    // IMPORTANT: Rust program expects a NEW keypair (not PDA) for land account
+    // because it uses #[account(init)] without seeds/bump constraints
+    const { Keypair } = await import("https://esm.sh/@solana/web3.js@1.98.4");
+    const landKeypair = Keypair.generate();
+    console.log('Generated land account:', landKeypair.publicKey.toString());
 
     // Build instruction data with Anchor discriminator
     const { buildInstructionData } = await import("../_shared/solana-program.ts");
@@ -101,9 +103,10 @@ serve(async (req) => {
     // Build mint land instruction
     // CRITICAL: Account order must match Rust struct order!
     // MintLand struct: land, user, system_program
+    // land must be SIGNER because init requires it
     const instruction = new TransactionInstruction({
       keys: [
-        { pubkey: landPDA, isSigner: false, isWritable: true },           // land (PDA being initialized)
+        { pubkey: landKeypair.publicKey, isSigner: true, isWritable: true },  // land (new account, must sign)
         { pubkey: userKeypair.publicKey, isSigner: true, isWritable: true }, // user (signer & payer)
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system_program
       ],
@@ -111,15 +114,16 @@ serve(async (req) => {
       data: instructionData as any,
     });
 
-    // Create and send transaction
+    // Create and send transaction with BOTH signers
     const transaction = new Transaction().add(instruction);
     const signature = await sendAndConfirmTransaction(
       connection,
       transaction,
-      [userKeypair]
+      [userKeypair, landKeypair] // Both must sign!
     );
 
     console.log('Land minted successfully:', signature);
+    console.log('Land account address:', landKeypair.publicKey.toString());
 
     // Update land_nfts table with mint status and transaction hash
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -135,6 +139,7 @@ serve(async (req) => {
         .update({
           status: 'minted',
           mint_transaction_hash: signature,
+          nft_address: landKeypair.publicKey.toString(), // Store actual land account address
           minted_at: new Date().toISOString(),
         })
         .eq('id', nftId)
@@ -147,6 +152,7 @@ serve(async (req) => {
         .update({
           status: 'minted',
           mint_transaction_hash: signature,
+          nft_address: landKeypair.publicKey.toString(),
           minted_at: new Date().toISOString(),
         })
         .eq('user_id', user.id)
@@ -164,7 +170,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         signature,
-        landPDA: landPDA.toString(),
+        landAccount: landKeypair.publicKey.toString(),
         coordinates,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
