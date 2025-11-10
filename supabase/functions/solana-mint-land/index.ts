@@ -14,8 +14,6 @@ import {
   createInitializeMintInstruction,
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
-  createSetAuthorityInstruction,
-  AuthorityType,
   getAssociatedTokenAddress,
   MINT_SIZE,
   getMinimumBalanceForRentExemptMint,
@@ -163,35 +161,26 @@ serve(async (req) => {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    // Step 4: Mint 1 token to user (NFT = supply of 1)
+    // Step 4: Mint 1 token to user (this makes it an NFT)
     const mintToIx = createMintToInstruction(
       nftMintKeypair.publicKey,
       ata,
       userKeypair.publicKey,
-      1, // amount (1 for NFT)
+      1, // Mint exactly 1 token (NFT standard)
       [],
       TOKEN_PROGRAM_ID
     );
 
-    // Step 5: Remove mint authority to make it NFT (supply locked at 1)
-    const removeMintAuthorityIx = createSetAuthorityInstruction(
-      nftMintKeypair.publicKey,
-      userKeypair.publicKey,
-      AuthorityType.MintTokens,
-      null, // Remove authority
-      [],
-      TOKEN_PROGRAM_ID
-    );
-
-    // Combine all instructions
+    // Combine all instructions into single transaction
     const transaction = new Transaction().add(
-      landInstruction,
-      createMintAccountIx,
-      initMintIx,
-      createATAIx,
-      mintToIx,
-      removeMintAuthorityIx
+      landInstruction,       // Create land account in Rust program
+      createMintAccountIx,   // Create mint account
+      initMintIx,            // Initialize mint with 0 decimals
+      createATAIx,           // Create associated token account
+      mintToIx               // Mint 1 token to user
     );
+
+    console.log('Sending transaction with', transaction.instructions.length, 'instructions');
 
     const signature = await sendAndConfirmTransaction(
       connection,
