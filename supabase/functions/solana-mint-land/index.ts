@@ -14,6 +14,8 @@ import {
   createInitializeMintInstruction,
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
+  createSetAuthorityInstruction,
+  AuthorityType,
   getAssociatedTokenAddress,
   MINT_SIZE,
   getMinimumBalanceForRentExemptMint,
@@ -27,144 +29,6 @@ import {
   airdropSol,
   STRUN_PROGRAM_ID
 } from "../_shared/solana-program.ts";
-
-// Metaplex Token Metadata Program ID
-const TOKEN_METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
-
-// Helper to create metadata instruction
-function createMetadataInstruction(
-  metadataPDA: PublicKey,
-  mint: PublicKey,
-  mintAuthority: PublicKey,
-  payer: PublicKey,
-  updateAuthority: PublicKey,
-  metadata: any
-): TransactionInstruction {
-  const keys = [
-    { pubkey: metadataPDA, isSigner: false, isWritable: true },
-    { pubkey: mint, isSigner: false, isWritable: false },
-    { pubkey: mintAuthority, isSigner: true, isWritable: false },
-    { pubkey: payer, isSigner: true, isWritable: false },
-    { pubkey: updateAuthority, isSigner: false, isWritable: false },
-    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-  ];
-
-  const encoder = new TextEncoder();
-  const nameBytes = encoder.encode(metadata.name);
-  const symbolBytes = encoder.encode(metadata.symbol);
-  const uriBytes = encoder.encode(metadata.uri);
-
-  // CreateMetadataAccountV3 instruction
-  const discriminator = new Uint8Array([33, 165, 251, 238, 27, 197, 199, 184]);
-  
-  // Calculate total size
-  const size = 8 + // discriminator
-    4 + nameBytes.length + // name
-    4 + symbolBytes.length + // symbol
-    4 + uriBytes.length + // uri
-    2 + // seller_fee_basis_points
-    1 + 4 + (metadata.creators.length * 34) + // creators (Option + Vec)
-    1 + // collection (None)
-    1 + // uses (None)
-    1 + // is_mutable
-    1; // collection_details (None)
-
-  const data = new Uint8Array(size);
-  let offset = 0;
-
-  // Discriminator
-  data.set(discriminator, offset);
-  offset += 8;
-
-  // Name
-  new DataView(data.buffer).setUint32(offset, nameBytes.length, true);
-  offset += 4;
-  data.set(nameBytes, offset);
-  offset += nameBytes.length;
-
-  // Symbol
-  new DataView(data.buffer).setUint32(offset, symbolBytes.length, true);
-  offset += 4;
-  data.set(symbolBytes, offset);
-  offset += symbolBytes.length;
-
-  // URI
-  new DataView(data.buffer).setUint32(offset, uriBytes.length, true);
-  offset += 4;
-  data.set(uriBytes, offset);
-  offset += uriBytes.length;
-
-  // Seller fee basis points
-  new DataView(data.buffer).setUint16(offset, metadata.sellerFeeBasisPoints, true);
-  offset += 2;
-
-  // Creators (Some)
-  data[offset++] = 1;
-  new DataView(data.buffer).setUint32(offset, metadata.creators.length, true);
-  offset += 4;
-  for (const creator of metadata.creators) {
-    data.set(creator.address.toBytes(), offset);
-    offset += 32;
-    data[offset++] = creator.verified ? 1 : 0;
-    data[offset++] = creator.share;
-  }
-
-  // Collection (None)
-  data[offset++] = 0;
-  // Uses (None)
-  data[offset++] = 0;
-  // Is mutable
-  data[offset++] = 1;
-  // Collection details (None)
-  data[offset++] = 0;
-
-  return new TransactionInstruction({
-    keys,
-    programId: TOKEN_METADATA_PROGRAM_ID,
-    data: data as any,
-  });
-}
-
-// Helper to create master edition instruction
-function createMasterEditionInstruction(
-  masterEditionPDA: PublicKey,
-  mint: PublicKey,
-  updateAuthority: PublicKey,
-  mintAuthority: PublicKey,
-  metadataPDA: PublicKey,
-  maxSupply: number
-): TransactionInstruction {
-  const keys = [
-    { pubkey: masterEditionPDA, isSigner: false, isWritable: true },
-    { pubkey: mint, isSigner: false, isWritable: true },
-    { pubkey: updateAuthority, isSigner: true, isWritable: false },
-    { pubkey: mintAuthority, isSigner: true, isWritable: false },
-    { pubkey: metadataPDA, isSigner: false, isWritable: false },
-    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-  ];
-
-  // CreateMasterEditionV3 instruction
-  const discriminator = new Uint8Array([179, 50, 36, 133, 242, 149, 223, 46]);
-  const data = new Uint8Array(8 + (maxSupply > 0 ? 9 : 1));
-  let offset = 0;
-
-  data.set(discriminator, offset);
-  offset += 8;
-
-  if (maxSupply > 0) {
-    data[offset++] = 1; // Some
-    new DataView(data.buffer).setBigUint64(offset, BigInt(maxSupply), true);
-  } else {
-    data[offset++] = 0; // None
-  }
-
-  return new TransactionInstruction({
-    keys,
-    programId: TOKEN_METADATA_PROGRAM_ID,
-    data: data as any,
-  });
-}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -299,7 +163,7 @@ serve(async (req) => {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    // Step 4: Mint 1 token to user
+    // Step 4: Mint 1 token to user (NFT = supply of 1)
     const mintToIx = createMintToInstruction(
       nftMintKeypair.publicKey,
       ata,
@@ -309,60 +173,14 @@ serve(async (req) => {
       TOKEN_PROGRAM_ID
     );
 
-    // Step 5: Create Metadata Account
-    const [metadataPDA] = PublicKey.findProgramAddressSync(
-      [
-        new TextEncoder().encode('metadata'),
-        TOKEN_METADATA_PROGRAM_ID.toBytes(),
-        nftMintKeypair.publicKey.toBytes(),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    );
-
-    const metadata = {
-      name: `Strun Land ${coordinates.lat.toFixed(4)},${coordinates.lng.toFixed(4)}`,
-      symbol: 'LAND',
-      uri: '', // We'll use on-chain metadata for now
-      sellerFeeBasisPoints: 0,
-      creators: [
-        {
-          address: userKeypair.publicKey,
-          verified: true,
-          share: 100,
-        }
-      ],
-      collection: null,
-      uses: null,
-    };
-
-    // Metaplex CreateMetadataAccountV3 instruction
-    const createMetadataIx = createMetadataInstruction(
-      metadataPDA,
+    // Step 5: Remove mint authority to make it NFT (supply locked at 1)
+    const removeMintAuthorityIx = createSetAuthorityInstruction(
       nftMintKeypair.publicKey,
       userKeypair.publicKey,
-      userKeypair.publicKey,
-      userKeypair.publicKey,
-      metadata
-    );
-
-    // Step 6: Create Master Edition (makes it NFT with supply=1)
-    const [masterEditionPDA] = PublicKey.findProgramAddressSync(
-      [
-        new TextEncoder().encode('metadata'),
-        TOKEN_METADATA_PROGRAM_ID.toBytes(),
-        nftMintKeypair.publicKey.toBytes(),
-        new TextEncoder().encode('edition'),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
-    );
-
-    const createMasterEditionIx = createMasterEditionInstruction(
-      masterEditionPDA,
-      nftMintKeypair.publicKey,
-      userKeypair.publicKey,
-      userKeypair.publicKey,
-      metadataPDA,
-      0 // maxSupply = 0 means unlimited editions, but we'll mint only 1
+      AuthorityType.MintTokens,
+      null, // Remove authority
+      [],
+      TOKEN_PROGRAM_ID
     );
 
     // Combine all instructions
@@ -372,8 +190,7 @@ serve(async (req) => {
       initMintIx,
       createATAIx,
       mintToIx,
-      createMetadataIx,
-      createMasterEditionIx
+      removeMintAuthorityIx
     );
 
     const signature = await sendAndConfirmTransaction(
@@ -385,9 +202,8 @@ serve(async (req) => {
     console.log('Land NFT minted successfully!');
     console.log('Transaction:', signature);
     console.log('Land account:', landKeypair.publicKey.toString());
-    console.log('NFT Mint:', nftMintKeypair.publicKey.toString());
-    console.log('Metadata:', metadataPDA.toString());
-    console.log('Master Edition:', masterEditionPDA.toString());
+    console.log('NFT Mint (SPL Token):', nftMintKeypair.publicKey.toString());
+    console.log('User Token Account:', ata.toString());
 
     // Update land_nfts table with NFT info
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -436,8 +252,7 @@ serve(async (req) => {
         signature,
         landAccount: landKeypair.publicKey.toString(),
         nftMint: nftMintKeypair.publicKey.toString(),
-        metadata: metadataPDA.toString(),
-        masterEdition: masterEditionPDA.toString(),
+        tokenAccount: ata.toString(),
         coordinates,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
