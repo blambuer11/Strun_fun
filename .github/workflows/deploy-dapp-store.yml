@@ -99,26 +99,41 @@ jobs:
           VERSION_CODE=${{ github.run_number }}
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
       
+      - name: Copy APK to Publishing
+        run: |
+          mkdir -p publishing/files
+          cp twa/app/build/outputs/apk/release/app-release.apk publishing/files/strun-release.apk
+      
+      - name: Install Publishing Dependencies
+        run: |
+          cd publishing
+          npm install
+      
+      - name: Validate Configuration
+        run: |
+          cd publishing
+          npx dapp-store validate -k ../publisher-keypair.json -b $ANDROID_HOME/build-tools/34.0.0
+      
       - name: Create Release NFT
         id: create_release
         run: |
-          RELEASE_ADDRESS=$(dapp-store create release \
-            --app-address ${{ secrets.DAPP_STORE_APP_ADDRESS }} \
-            --version-name ${{ env.VERSION }} \
-            --version-code ${{ env.VERSION_CODE }} \
-            --apk ./twa/app/build/outputs/apk/release/app-release.apk \
-            --keypair ./publisher-keypair.json \
-            --network mainnet \
-            | grep -oP 'Release address: \K[A-Za-z0-9]+')
-          echo "RELEASE_ADDRESS=$RELEASE_ADDRESS" >> $GITHUB_ENV
-          echo "::set-output name=release_address::$RELEASE_ADDRESS"
+          cd publishing
+          npx dapp-store create release \
+            -k ../publisher-keypair.json \
+            -b $ANDROID_HOME/build-tools/34.0.0 \
+            -u https://api.mainnet-beta.solana.com \
+            -p 500000
+        env:
+          SOLANA_RPC_URL: https://api.mainnet-beta.solana.com
       
       - name: Submit to dApp Store
         run: |
-          dapp-store submit release \
-            --release-address ${{ env.RELEASE_ADDRESS }} \
-            --keypair ./publisher-keypair.json \
-            --network mainnet
+          cd publishing
+          npx dapp-store publish submit \
+            -k ../publisher-keypair.json \
+            -u https://api.mainnet-beta.solana.com \
+            --requestor-is-authorized \
+            --complies-with-solana-dapp-store-policies
       
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v3
